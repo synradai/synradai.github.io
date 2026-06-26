@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { STORAGE_KEYS, PHASE_NAMES, createNewShift } from './constants'
 import { safeSetItem } from './utils/storage'
+import { isProxyMode } from './utils/api'
 import { supabase, isBackendEnabled } from './utils/supabase'
 import { pushItems, pullItems, mergeById, clearOwner } from './utils/sync'
 import { getSubscription, computeAccess, isBillingEnabled, startCheckout } from './utils/billing'
@@ -31,6 +32,10 @@ export default function App() {
   const [currentShift, setCurrentShift] = useState(null)
   const [shiftHistory, setShiftHistory] = useState([])
   const [apiKey, setApiKey] = useState('')
+  // In proxy mode the Anthropic key lives server-side, so the user has no local
+  // key — but AI is still available. Pass a truthy value so feature buttons
+  // don't gate themselves off (callAnthropicAPI ignores it in proxy mode).
+  const aiKey = apiKey || (isProxyMode ? 'proxy' : '')
   const [showIncident, setShowIncident] = useState(false)
   const [showAskSafety, setShowAskSafety] = useState(false)
   const [theme, setTheme] = useState('dark')
@@ -268,7 +273,7 @@ export default function App() {
   ].sort((a, b) => new Date(b.time) - new Date(a.time))
 
   const renderPhase = () => {
-    const props = { shift: currentShift, updateShift, apiKey }
+    const props = { shift: currentShift, updateShift, apiKey: aiKey }
     const phases = [IncomingHandover, MorningMeeting, SiteRounds, FindingsMeeting, DebriefHandover]
     const Phase = phases[currentPhase]
     if (!Phase) return null
@@ -408,7 +413,7 @@ export default function App() {
           entries={learnings}
           onAdd={addLearning}
           onRemove={removeLearning}
-          apiKey={apiKey}
+          apiKey={aiKey}
           onBack={() => setView(currentShift ? 'shift' : 'home')}
         />
       )}
@@ -418,14 +423,14 @@ export default function App() {
           entries={dailyLog}
           onAdd={addDailyEntry}
           onRemove={removeDailyEntry}
-          apiKey={apiKey}
+          apiKey={aiKey}
           onBack={() => setView(currentShift ? 'shift' : 'home')}
         />
       )}
 
       {view === 'settings' && (
         <Settings
-          apiKey={apiKey}
+          apiKey={aiKey}
           onSave={saveApiKey}
           onBack={() => setView(currentShift ? 'shift' : 'home')}
           userEmail={session?.user?.email}
@@ -435,7 +440,7 @@ export default function App() {
 
       {showIncident && (
         <IncidentReport
-          apiKey={apiKey}
+          apiKey={aiKey}
           onClose={() => setShowIncident(false)}
           onSave={(incident) => {
             if (currentShift) {
@@ -450,7 +455,7 @@ export default function App() {
 
       {showFieldReport && (
         <FieldLeadershipReport
-          apiKey={apiKey}
+          apiKey={aiKey}
           onClose={() => setShowFieldReport(false)}
           onSave={(report) => {
             addFieldReport(report)
@@ -464,7 +469,7 @@ export default function App() {
           entries={askHistory}
           onAdd={addAskEntry}
           onRemove={removeAskEntry}
-          apiKey={apiKey}
+          apiKey={aiKey}
           learnings={learnings}
           onClose={() => setShowAskSafety(false)}
         />
