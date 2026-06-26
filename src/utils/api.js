@@ -102,9 +102,9 @@ export function buildFindingsPrompt(rounds) {
     })
     .join('\n')
 
-  return `You are a safety advisor on a FIFO mining site. Below are observations from today's site rounds. Write up the findings for the safety findings meeting as natural, flowing notes — the way an experienced advisor would write them by hand, not a templated form with numbered headings.
+  return `You are a safety advisor on a FIFO mining site. Below are observations from today's site rounds. Write up the findings for the safety findings meeting.
 
-Cover, in your own words and order: what stood out overall, the hazards found and their status, anything still needing action, any near misses, general observations from the rounds, and what should be followed up next. Group related points into short paragraphs rather than long bullet lists. Use exact times where relevant. Be professional, factual, and concise.
+Keep it concise and easy to scan — a short paragraph or two under a few clear, plain section headings (e.g. Overview, Hazards, Near misses, Follow-up actions). Lead with what matters most. 2–3 sentences per paragraph, not exhaustive. Use exact times only where they matter. Professional and factual. Write it so it's ready to send or present as-is, with no editing needed.
 
 ROUNDS ENTRIES:
 ${entries}`
@@ -128,9 +128,9 @@ export function buildHandoverPrompt(shift) {
   const actions = (shift.rounds || []).filter(r => r.tag === 'Action').map(r => `- ${r.text}`).join('\n')
   const incidents = (shift.incidents || []).map(i => `- [${formatT(i.time)}] ${i.description}`).join('\n')
 
-  return `You are a safety advisor completing a FIFO shift handover. Write the handover note for the incoming safety advisor as natural, flowing notes — the way you'd actually write a handover by hand, not a templated form with numbered headings.
+  return `You are a safety advisor completing a FIFO shift handover. Write the handover note for the incoming safety advisor.
 
-Cover, in your own words and a sensible order: how the shift went overall, the key findings and hazards from site rounds, anything outstanding that still needs action, any incidents (or note clearly that there were none), and what the incoming advisor should prioritise or watch out for. Write it as a few short paragraphs rather than a list of headings. Be concise but thorough. 24hr time format.
+Keep it concise and easy to scan — short paragraphs under a few clear, plain section headings (e.g. Shift overview, Hazards & findings, Outstanding actions, Incidents, Watch out for). Lead with what the next advisor most needs to know. 2–3 sentences per paragraph. 24hr time format. Write it so it can be read or sent straight away with no editing.
 
 INCOMING HANDOVER NOTES: ${shift.handover?.notes || 'None'}
 
@@ -151,9 +151,9 @@ ${shift.findingsReport || 'Not generated'}`
 }
 
 export function buildIncidentPrompt(fields, time) {
-  return `You are a safety advisor on a FIFO mining site. Write up a formal incident report from the details below as natural, flowing prose — a few well-organised paragraphs, not a templated form with numbered headings.
+  return `You are a safety advisor on a FIFO mining site. Write up a formal incident report from the details below.
 
-Cover: what happened and when, where it happened and what type of incident it was, who was involved or witnessed it, what immediate actions were taken, what likely contributed to it, what corrective actions are needed, and whether it needs to be escalated and why. If a JSA/permit summary is provided, comment on whether the work appears to have been carried out in line with it. Use professional safety reporting language and note clearly where information wasn't provided and you're making a reasonable assumption.
+Structure it under clear, plain headings (e.g. What happened, Immediate actions, Contributing factors, Corrective actions, Escalation) with short, factual paragraphs — concise, not exhaustive. Cover what/when/where and the type, who was involved or witnessed it, immediate actions taken, likely contributing factors, corrective actions needed, and whether it needs escalating and why. If a JSA/permit summary is provided, note whether the work appears in line with it. Professional reporting language; flag clearly where info wasn't provided and you're making a reasonable assumption. Write it so it's ready to send as-is.
 
 Time: ${formatT(time)}
 Company: ${fields.companyName || 'Not specified'}
@@ -183,9 +183,9 @@ Read the document in the image(s) and summarise it in a short paragraph: the tas
 }
 
 export function buildFieldLeadershipPrompt(fields, time) {
-  return `You are a safety advisor on a FIFO mining site, writing up a Field Leadership / Visible Felt Leadership (VFL) observation report after visiting a work area. Write it as natural, flowing prose — a few well-organised paragraphs, not a templated form with numbered headings.
+  return `You are a safety advisor on a FIFO mining site, writing up a Field Leadership / Visible Felt Leadership (VFL) observation report after visiting a work area.
 
-Cover: when and where the observation took place and what activity was being carried out, the positive safety behaviours observed and why they're worth reinforcing, any at-risk behaviours observed and the conversation/feedback given, hazards identified and their status, and actions taken or required as a result of the visit. Use professional safety leadership language and note clearly where information wasn't provided.
+Structure it under clear, plain headings (e.g. Observation, Positives, At-risk behaviours & feedback, Hazards, Actions) with short, factual paragraphs. KEEP IT TRIMMED AND SAFETY-FOCUSED: describe the activity itself in just a line — spend the words on the safety (behaviours, hazards, controls, feedback, actions), not on operational detail of the task. Concise, not exhaustive. Professional safety leadership language; flag clearly where info wasn't provided. Make it clean, precise and presentable — ready to show a client or contractor as-is.
 
 Time: ${formatT(time)}
 Location/Area: ${fields.location || 'Not specified'}
