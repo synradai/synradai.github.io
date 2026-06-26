@@ -45,6 +45,7 @@ export default function SafetyTextarea({ value, onChange, placeholder, rows = 3,
   const recRef = useRef(null)
   const valueRef = useRef(value)
   const listeningRef = useRef(false)
+  const silenceTimerRef = useRef(null)
   valueRef.current = value
 
   const setNativeValue = (newVal) => {
@@ -102,6 +103,19 @@ export default function SafetyTextarea({ value, onChange, placeholder, rows = 3,
     'network': 'Voice recognition needs an internet connection.',
   }
 
+  // Auto-stop after 30s of true silence so the mic doesn't run forever — but
+  // keep listening through normal thinking pauses (timer resets on any speech).
+  const SILENCE_MS = 30000
+  const armSilence = () => {
+    clearTimeout(silenceTimerRef.current)
+    silenceTimerRef.current = setTimeout(() => {
+      listeningRef.current = false
+      try { recRef.current?.stop() } catch (_) {}
+      setListening(false)
+      setInterim('')
+    }, SILENCE_MS)
+  }
+
   const startVoice = () => {
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition
     if (!SpeechRec) { setVoiceErr('Voice input is not supported in this browser. On iPhone, use the microphone on your keyboard instead.'); return }
@@ -113,6 +127,7 @@ export default function SafetyTextarea({ value, onChange, placeholder, rows = 3,
     setSuggestions([])
     listeningRef.current = true
     setListening(true)
+    armSilence()
     beginRec(SpeechRec)
   }
 
@@ -136,10 +151,12 @@ export default function SafetyTextarea({ value, onChange, placeholder, rows = 3,
         setNativeValue(cur + sep + final.trim() + ' ')
       }
       setInterim(inter)
+      if (final.trim() || inter.trim()) armSilence() // speech heard — reset the 30s clock
     }
     rec.onerror = (e) => {
       if (e.error === 'no-speech' || e.error === 'aborted') return // pause — let onend restart
       listeningRef.current = false
+      clearTimeout(silenceTimerRef.current)
       setListening(false)
       setVoiceErr(VOICE_ERROR_MESSAGES[e.error] || 'Voice input stopped — tap Voice to try again.')
     }
@@ -150,6 +167,7 @@ export default function SafetyTextarea({ value, onChange, placeholder, rows = 3,
           try { beginRec(SpeechRec) } catch (_) { listeningRef.current = false; setListening(false) }
         }
       } else {
+        clearTimeout(silenceTimerRef.current)
         setListening(false)
       }
     }
@@ -165,6 +183,7 @@ export default function SafetyTextarea({ value, onChange, placeholder, rows = 3,
 
   const stopVoice = () => {
     listeningRef.current = false
+    clearTimeout(silenceTimerRef.current)
     recRef.current?.stop()
     setListening(false)
     setInterim('')
