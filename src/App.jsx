@@ -338,7 +338,7 @@ export default function App() {
       )}
 
       {access.trial && (
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', padding: '0.5rem 0.875rem', backgroundColor: 'var(--bg-panel)', borderBottom: '1px solid var(--border-accent)' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', padding: 'calc(0.5rem + env(safe-area-inset-top)) 0.875rem 0.5rem', backgroundColor: 'var(--bg-panel)', borderBottom: '1px solid var(--border-accent)' }}>
           <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--accent-soft)' }}>
             {access.daysLeft} day{access.daysLeft === 1 ? '' : 's'} left in your free trial
           </span>
