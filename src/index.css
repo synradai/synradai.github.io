@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Industrial dark — warm charcoal/steel ground, hi-vis safety-amber accent.
+     Grounded in the mining-safety world (hi-vis, hazard signalling, instrument
+     panels) rather than a generic tech-blue. */
+  --bg-page: #0c0d0f;
+  --bg-header: #141619;
+  --bg-card: #191b1f;
+  --bg-input: #0f1113;
+  --bg-panel: #1c1f24;
+  --bg-stat: #141619;
+  --bg-highlight: #2e1d09;
+  --border: #25282e;
+  --border-accent: #353941;
+  --border-strong: #484e58;
+  --text-primary: #f3f4f6;
+  --text-muted: #8b919c;
+  --text-faint: #565c66;
+  --accent: #e8651a;
+  --accent-strong: #c9530e;
+  --accent-soft: #f59e5c;
+  --on-accent: #fff;
+  --danger: #dc2626;
+  --error-text: #fca5a5;
+  --error-border: #7f1d1d;
+  --error-bg: #1a0808;
+  --error-bg-strong: #3b0a0a;
+  --success: #22c55e;
+  --success-text: #86efac;
+  --success-border: #166534;
+  --success-bg: #052e16;
+  --warning-bg: #3b2a0a;
+  --warning-text: #fcd34d;
+  --warning-border: #b45309;
+}
+
+[data-theme="light"] {
+  --bg-page: #f5f4f2;
+  --bg-header: #ffffff;
+  --bg-card: #ffffff;
+  --bg-input: #faf9f7;
+  --bg-panel: #fdf3ec;
+  --bg-stat: #faf9f7;
+  --bg-highlight: #ffe8d6;
+  --border: #e7e4df;
+  --border-accent: #d6d2cb;
+  --border-strong: #9a948b;
+  --text-primary: #16181c;
+  --text-muted: #65696f;
+  --text-faint: #a8a49c;
+  --accent: #c2410c;
+  --accent-strong: #9a3412;
+  --accent-soft: #c2410c;
+  --on-accent: #fff;
+  --danger: #dc2626;
+  --error-text: #b91c1c;
+  --error-border: #fca5a5;
+  --error-bg: #fef2f2;
+  --error-bg-strong: #fee2e2;
+  --success: #16a34a;
+  --success-text: #15803d;
+  --success-border: #86efac;
+  --success-bg: #f0fdf4;
+  --warning-bg: #fffbeb;
+  --warning-text: #92400e;
+  --warning-border: #fcd34d;
+}
+
+@layer base {
+  * { box-sizing: border-box; }
+
+  html, body, #root {
+    width: 100%;
+    max-width: 100vw;
+    /* `clip` prevents horizontal overflow without turning these into vertical
+       scroll containers (which `hidden` does), so the page scrolls naturally
+       with the wheel — not only when the cursor is over the scrollbar. */
+    overflow-x: clip;
+  }
+
+  body {
+    background-color: var(--bg-page);
+    color: var(--text-primary);
+    font-family: 'Nunito', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+    transition: background-color 0.2s, color 0.2s;
+  }
+
+  textarea, input, select, button {
+    font-family: 'Nunito', sans-serif;
+    outline: none;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-accent) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar { width: 4px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background-color: var(--border-accent); border-radius: 2px; }
+}

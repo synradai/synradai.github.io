@@ -1,0 +1,16 @@
+{
+  "name": "Safe Intelligence",
+  "short_name": "Safe Intel",
+  "description": "Safety intelligence for FIFO advisors — site rounds, handovers, incident reports, document scanning, and an AI safety assistant.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0c0d0f",
+  "theme_color": "#0c0d0f",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
