@@ -49,11 +49,12 @@ export function PageShell({ title, onBack, children }) {
 
 // Full-screen overlay with a pinned safe-area header and scrollable body.
 // `badge` renders inside a coloured circle (or pass `badgeEl` for custom chips).
-export function FullScreenModal({ badge, badgeColor = 'var(--accent)', badgeEl, title, titleColor = 'var(--accent-soft)', headerBg = 'var(--bg-panel)', headerBorder = 'var(--border-accent)', onClose, footer, children }) {
+export function FullScreenModal({ badge, badgeColor = 'var(--accent)', badgeEl, title, titleColor = 'var(--accent-soft)', headerBg = 'var(--bg-panel)', headerBorder = 'var(--border-accent)', onClose, footer, headerLeft, overlay, children }) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 50, backgroundColor: 'var(--bg-header)', display: 'flex', flexDirection: 'column' }}>
       <div style={{ backgroundColor: headerBg, borderBottom: `1px solid ${headerBorder}`, padding: '0.875rem 1rem', paddingTop: 'calc(0.875rem + env(safe-area-inset-top))', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          {headerLeft}
           {badgeEl || (
             <div style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: badgeColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <span style={{ fontSize: '0.9rem', lineHeight: 1, color: 'var(--on-accent)', fontWeight: 800 }}>{badge}</span>
@@ -71,6 +72,7 @@ export function FullScreenModal({ badge, badgeColor = 'var(--accent)', badgeEl, 
           {footer}
         </div>
       )}
+      {overlay}
     </div>
   )
 }

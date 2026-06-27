@@ -20,6 +20,7 @@ export const STORAGE_KEYS = {
   API_KEY: 'sa_api_key',
   LEARNINGS: 'sa_learnings',
   ASK_HISTORY: 'sa_ask_history',
+  ASK_CHATS: 'sa_ask_chats',
   THEME: 'sa_theme',
   FIELD_REPORTS: 'sa_field_reports',
   FIELD_REPORT_COMPANY: 'sa_field_report_company',

@@ -41,6 +41,7 @@ export default function App() {
   const [theme, setTheme] = useState('dark')
   const [learnings, setLearnings] = useState([])
   const [askHistory, setAskHistory] = useState([])
+  const [askChats, setAskChats] = useState([])
   const [fieldReports, setFieldReports] = useState([])
   const [showFieldReport, setShowFieldReport] = useState(false)
   const [incidents, setIncidents] = useState([])
@@ -74,6 +75,7 @@ export default function App() {
       const k = localStorage.getItem(STORAGE_KEYS.API_KEY)
       const l = localStorage.getItem(STORAGE_KEYS.LEARNINGS)
       const a = localStorage.getItem(STORAGE_KEYS.ASK_HISTORY)
+      const ac = localStorage.getItem(STORAGE_KEYS.ASK_CHATS)
       const t = localStorage.getItem(STORAGE_KEYS.THEME)
       const f = localStorage.getItem(STORAGE_KEYS.FIELD_REPORTS)
       const inc = localStorage.getItem(STORAGE_KEYS.INCIDENTS)
@@ -83,6 +85,7 @@ export default function App() {
       if (k) setApiKey(k)
       if (l) setLearnings(JSON.parse(l))
       if (a) setAskHistory(JSON.parse(a))
+      if (ac) setAskChats(JSON.parse(ac))
       if (t) setTheme(t)
       if (f) setFieldReports(JSON.parse(f))
       if (inc) setIncidents(JSON.parse(inc))
@@ -157,6 +160,10 @@ export default function App() {
   useEffect(() => {
     persist(STORAGE_KEYS.ASK_HISTORY, JSON.stringify(askHistory))
   }, [askHistory, persist])
+
+  useEffect(() => {
+    persist(STORAGE_KEYS.ASK_CHATS, JSON.stringify(askChats))
+  }, [askChats, persist])
 
   useEffect(() => {
     persist(STORAGE_KEYS.FIELD_REPORTS, JSON.stringify(fieldReports))
@@ -466,9 +473,8 @@ export default function App() {
 
       {showAskSafety && (
         <AskSafety
-          entries={askHistory}
-          onAdd={addAskEntry}
-          onRemove={removeAskEntry}
+          initialChats={askChats}
+          onPersist={setAskChats}
           apiKey={aiKey}
           learnings={learnings}
           onClose={() => setShowAskSafety(false)}
