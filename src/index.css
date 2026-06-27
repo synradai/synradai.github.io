@@ -6,6 +6,7 @@
   /* Industrial dark — warm charcoal/steel ground, hi-vis safety-amber accent.
      Grounded in the mining-safety world (hi-vis, hazard signalling, instrument
      panels) rather than a generic tech-blue. */
+  color-scheme: dark; /* tells iOS/Safari to render form controls + typed text for a dark UI */
   --bg-page: #0c0d0f;
   --bg-header: #141619;
   --bg-card: #191b1f;
@@ -38,6 +39,7 @@
 }
 
 [data-theme="light"] {
+  color-scheme: light;
   --bg-page: #f5f4f2;
   --bg-header: #ffffff;
   --bg-card: #ffffff;
@@ -93,6 +95,18 @@
   textarea, input, select, button {
     font-family: 'Nunito', sans-serif;
     outline: none;
+  }
+
+  /* iOS Safari can render typed text in its own (dark) colour, making input
+     invisible on the dark fields. Force the app's text colour explicitly. */
+  textarea, input, select {
+    color: var(--text-primary);
+    -webkit-text-fill-color: var(--text-primary);
+    caret-color: var(--accent);
+  }
+  textarea::placeholder, input::placeholder {
+    color: var(--text-faint);
+    -webkit-text-fill-color: var(--text-faint);
   }
 }
 
