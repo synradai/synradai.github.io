@@ -23,6 +23,7 @@ const THINKING = [
   'Gaz is doin a quick risk assessment…',
   'Gaz is checkin his clipboard…',
   'Gaz is havin a proper think, mate…',
+  "Gaz is just at the pub, it's Friday lol…",
 ]
 const randThinking = () => THINKING[Math.floor(Math.random() * THINKING.length)]
 
