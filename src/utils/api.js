@@ -104,7 +104,7 @@ export function buildFindingsPrompt(rounds) {
 
   return `You are a safety advisor on a FIFO mining site. Below are observations from today's site rounds. Write up the findings for the safety findings meeting.
 
-Keep it concise and easy to scan — a short paragraph or two under a few clear, plain section headings (e.g. Overview, Hazards, Near misses, Follow-up actions). Lead with what matters most. 2–3 sentences per paragraph, not exhaustive. Use exact times only where they matter. Professional and factual. Write it so it's ready to send or present as-is, with no editing needed.
+Keep it concise and easy to scan — a short paragraph or two under a few clear, plain section headings (e.g. Overview, Hazards, Near misses, Follow-up actions). Lead with what matters most. 2–3 sentences per paragraph, not exhaustive. Use exact times only where they matter. Professional and factual. Write it so it's ready to send or present as-is, with no editing needed. Plain text only — no markdown symbols (#, *), and do NOT add a title or placeholder fields like Date, Name or Company (the app adds those); just the report content under plain headings.
 
 ROUNDS ENTRIES:
 ${entries}`
@@ -130,7 +130,7 @@ export function buildHandoverPrompt(shift) {
 
   return `You are a safety advisor completing a FIFO shift handover. Write the handover note for the incoming safety advisor.
 
-Keep it concise and easy to scan — short paragraphs under a few clear, plain section headings (e.g. Shift overview, Hazards & findings, Outstanding actions, Incidents, Watch out for). Lead with what the next advisor most needs to know. 2–3 sentences per paragraph. 24hr time format. Write it so it can be read or sent straight away with no editing.
+Keep it concise and easy to scan — short paragraphs under a few clear, plain section headings (e.g. Shift overview, Hazards & findings, Outstanding actions, Incidents, Watch out for). Lead with what the next advisor most needs to know. 2–3 sentences per paragraph. 24hr time format. Write it so it can be read or sent straight away with no editing. Plain text only — no markdown symbols (#, *), and do NOT add a title or placeholder fields like Date, Name or Company (the app adds those); just the report content under plain headings.
 
 INCOMING HANDOVER NOTES: ${shift.handover?.notes || 'None'}
 
@@ -153,7 +153,7 @@ ${shift.findingsReport || 'Not generated'}`
 export function buildIncidentPrompt(fields, time) {
   return `You are a safety advisor on a FIFO mining site. Write up a formal incident report from the details below.
 
-Structure it under clear, plain headings (e.g. What happened, Immediate actions, Contributing factors, Corrective actions, Escalation) with short, factual paragraphs — concise, not exhaustive. Cover what/when/where and the type, who was involved or witnessed it, immediate actions taken, likely contributing factors, corrective actions needed, and whether it needs escalating and why. If a JSA/permit summary is provided, note whether the work appears in line with it. Professional reporting language; flag clearly where info wasn't provided and you're making a reasonable assumption. Write it so it's ready to send as-is.
+Structure it under clear, plain headings (e.g. What happened, Immediate actions, Contributing factors, Corrective actions, Escalation) with short, factual paragraphs — concise, not exhaustive. Cover what/when/where and the type, who was involved or witnessed it, immediate actions taken, likely contributing factors, corrective actions needed, and whether it needs escalating and why. If a JSA/permit summary is provided, note whether the work appears in line with it. Professional reporting language; flag clearly where info wasn't provided and you're making a reasonable assumption. Write it so it's ready to send as-is. Plain text only — no markdown symbols (#, *), and do NOT add a title block or repeat placeholder fields like Date, Name or Company (the app adds those); just the report content under plain headings.
 
 Time: ${formatT(time)}
 Company: ${fields.companyName || 'Not specified'}
@@ -185,7 +185,7 @@ Read the document in the image(s) and summarise it in a short paragraph: the tas
 export function buildFieldLeadershipPrompt(fields, time) {
   return `You are a safety advisor on a FIFO mining site, writing up a Field Leadership / Visible Felt Leadership (VFL) observation report after visiting a work area.
 
-Structure it under clear, plain headings (e.g. Observation, Positives, At-risk behaviours & feedback, Hazards, Actions) with short, factual paragraphs. KEEP IT TRIMMED AND SAFETY-FOCUSED: describe the activity itself in just a line — spend the words on the safety (behaviours, hazards, controls, feedback, actions), not on operational detail of the task. Concise, not exhaustive. Professional safety leadership language; flag clearly where info wasn't provided. Make it clean, precise and presentable — ready to show a client or contractor as-is.
+Structure it under clear, plain headings (e.g. Observation, Positives, At-risk behaviours & feedback, Hazards, Actions) with short, factual paragraphs. KEEP IT TRIMMED AND SAFETY-FOCUSED: describe the activity itself in just a line — spend the words on the safety (behaviours, hazards, controls, feedback, actions), not on operational detail of the task. Concise, not exhaustive. Professional safety leadership language; flag clearly where info wasn't provided. Make it clean, precise and presentable — ready to show a client or contractor as-is. Plain text only — no markdown symbols (#, *), and do NOT add a title or placeholder fields like Date, Name or Company (the app adds those); just the report content under plain headings.
 
 Time: ${formatT(time)}
 Location/Area: ${fields.location || 'Not specified'}
