@@ -6,6 +6,26 @@ import { FullScreenModal, TEXTAREA, ErrorBox } from './ui'
 
 const BUBBLE_BASE = { maxWidth: '85%', padding: '0.6rem 0.875rem', fontSize: '0.875rem', lineHeight: 1.6, whiteSpace: 'pre-wrap' }
 
+// Cycled while Gaz is thinking — keep 'em short and cheeky.
+const THINKING = [
+  'Gaz is having a squiz…',
+  'Gaz is scratchin his head…',
+  'Gaz is checkin the SWMS…',
+  'Gaz is flickin through the reg book…',
+  'Gaz is havin a yarn with head office…',
+  'Gaz is sussin it out…',
+  'Gaz is havin a gander…',
+  'Gaz is crunchin the hazards…',
+  'Gaz is consultin the hard hat…',
+  'Gaz is duckin out for a smoko…',
+  'Gaz is diggin through the codes…',
+  'Gaz is reckonin on it…',
+  'Gaz is doin a quick risk assessment…',
+  'Gaz is checkin his clipboard…',
+  'Gaz is havin a proper think, mate…',
+]
+const randThinking = () => THINKING[Math.floor(Math.random() * THINKING.length)]
+
 const nowISO = () => new Date().toISOString()
 const titleFrom = (q) => (q.length > 42 ? q.slice(0, 42).trim() + '…' : q)
 
@@ -30,9 +50,18 @@ export default function AskSafety({ initialChats = [], onPersist, apiKey, learni
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [thinking, setThinking] = useState(THINKING[0])
   const bottomRef = useRef(null)
 
   useEffect(() => { onPersist && onPersist(chats) }, [chats])
+
+  // Cycle the cheeky "thinking" line while Gaz works.
+  useEffect(() => {
+    if (!loading) return
+    setThinking(randThinking())
+    const id = setInterval(() => setThinking(randThinking()), 1900)
+    return () => clearInterval(id)
+  }, [loading])
 
   const activeChat = chats.find(c => c.id === activeId)
   const messages = activeChat ? activeChat.messages : []
@@ -189,7 +218,7 @@ export default function AskSafety({ initialChats = [], onPersist, apiKey, learni
           {loading && (
             <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '0.75rem' }}>
               <div style={{ ...BUBBLE_BASE, backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-faint)', borderRadius: '1rem 1rem 1rem 0.25rem', fontStyle: 'italic' }}>
-                Gaz is thinking...
+                {thinking}
               </div>
             </div>
           )}
