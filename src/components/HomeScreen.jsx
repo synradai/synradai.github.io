@@ -75,14 +75,15 @@ export default function HomeScreen({ currentShift, shiftHistory, incidentCount, 
           )}
         </div>
 
-        {/* Ask AI Safety */}
+        {/* Ask Gaz */}
         <div style={CARD}>
           <div style={{ ...SECTION_LABEL, marginBottom: '1rem' }}>Quick Help</div>
           <button
             onClick={onAskAI}
             style={{ width: '100%', padding: '1rem', backgroundColor: 'var(--accent)', border: 'none', borderRadius: '0.75rem', color: 'var(--on-accent)', fontSize: '1.05rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
           >
-            <SparkleIcon size={20} /> Ask AI Safety
+            <span style={{ fontSize: '1.25rem' }}>👷</span> Ask Gaz
+            <span style={{ fontSize: '0.78rem', fontWeight: 700, opacity: 0.85 }}>· your safety mate</span>
           </button>
         </div>
 

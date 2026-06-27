@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
 import { generateId } from '../utils/storage'
-import { formatDateTime } from '../utils/format'
 import { callAnthropicAPI, buildAskSafetyPrompt } from '../utils/api'
 import SafetyTextarea from './SafetyTextarea'
 import { FullScreenModal, TEXTAREA, ErrorBox } from './ui'
@@ -8,6 +7,10 @@ import { FullScreenModal, TEXTAREA, ErrorBox } from './ui'
 const BUBBLE_BASE = { maxWidth: '85%', padding: '0.6rem 0.875rem', fontSize: '0.875rem', lineHeight: 1.6, whiteSpace: 'pre-wrap' }
 
 export default function AskSafety({ entries, onAdd, onRemove, apiKey, learnings, onClose }) {
+  // Fresh conversation every time you open Gaz. We still quietly persist each
+  // Q&A via onAdd (for future history + question analytics), but the visible
+  // chat starts clean on each open, Claude-style.
+  const [session, setSession] = useState([])
   const [question, setQuestion] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -15,7 +18,7 @@ export default function AskSafety({ entries, onAdd, onRemove, apiKey, learnings,
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
-  }, [entries.length, loading])
+  }, [session.length, loading])
 
   const ask = async () => {
     if (!question.trim() || loading) return
@@ -23,9 +26,11 @@ export default function AskSafety({ entries, onAdd, onRemove, apiKey, learnings,
     setQuestion('')
     setLoading(true); setError('')
     try {
-      const priorQA = entries.slice(-3).map(e => ({ question: e.question, answer: e.answer }))
+      const priorQA = session.slice(-3).map(e => ({ question: e.question, answer: e.answer }))
       const answer = await callAnthropicAPI(apiKey, buildAskSafetyPrompt(q, learnings, priorQA), 400)
-      onAdd({ id: generateId(), time: new Date().toISOString(), question: q, answer })
+      const entry = { id: generateId(), time: new Date().toISOString(), question: q, answer }
+      setSession(s => [...s, entry])
+      onAdd(entry)
     } catch (e) {
       setError(e.message)
       setQuestion(q)
@@ -34,19 +39,19 @@ export default function AskSafety({ entries, onAdd, onRemove, apiKey, learnings,
 
   return (
     <FullScreenModal
-      badge="✨"
-      title="Ask AI Safety"
+      badge="👷"
+      title="Ask Gaz"
       onClose={onClose}
       footer={
         <div>
           <ErrorBox style={{ marginBottom: '0.5rem' }}>{error}</ErrorBox>
-          {!apiKey && <p style={{ fontSize: '0.7rem', color: 'var(--text-faint)', margin: '0 0 0.5rem', fontWeight: 600 }}>No API key — go to Settings to enable Ask AI Safety.</p>}
+          {!apiKey && <p style={{ fontSize: '0.7rem', color: 'var(--text-faint)', margin: '0 0 0.5rem', fontWeight: 600 }}>No API key — go to Settings to enable Gaz.</p>}
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end' }}>
             <div style={{ flex: 1 }}>
               <SafetyTextarea
                 value={question}
                 onChange={e => setQuestion(e.target.value)}
-                placeholder="Ask a safety question..."
+                placeholder="Ask Gaz anything..."
                 rows={2}
                 style={{ ...TEXTAREA, resize: 'none' }}
                 apiKey={apiKey}
@@ -63,29 +68,27 @@ export default function AskSafety({ entries, onAdd, onRemove, apiKey, learnings,
         </div>
       }
     >
-      {entries.length === 0 ? (
-        <div style={{ backgroundColor: 'var(--bg-card)', border: '1.5px solid var(--border-accent)', borderRadius: '0.75rem', padding: '1rem' }}>
-          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.5, fontWeight: 600 }}>
-            Get a quick answer based on Australian WHS/mining law, common practice at major operators (FMG, BHP, Rio Tinto, Woodside), incident investigation methods (ICAM, TapRooT, 5 Whys, etc.), and your own logged Learnings. Ask follow-ups — it remembers the last few messages.
+      {session.length === 0 ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '2.5rem 1rem', minHeight: '40vh' }}>
+          <div style={{ fontSize: '2.75rem', marginBottom: '0.5rem' }}>👷</div>
+          <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 0.4rem' }}>G'day, I'm Gaz.</h2>
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.5, fontWeight: 600, maxWidth: '20rem' }}>
+            Your safety offsider. Ask me anything — a hazard, an incident, site rules, what the law says. Quick, straight answers.
           </p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-          {entries.map(entry => (
+          {session.map(entry => (
             <div key={entry.id}>
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.35rem' }}>
                 <div style={{ ...BUBBLE_BASE, backgroundColor: 'var(--accent)', color: 'var(--on-accent)', fontWeight: 600, borderRadius: '1rem 1rem 0.25rem 1rem' }}>
                   {entry.question}
                 </div>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '0.75rem' }}>
                 <div style={{ ...BUBBLE_BASE, backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: '1rem 1rem 1rem 0.25rem' }}>
                   {entry.answer}
                 </div>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.25rem', marginBottom: '0.75rem' }}>
-                <span style={{ fontSize: '0.65rem', color: 'var(--text-faint)', fontWeight: 600 }}>{formatDateTime(entry.time)}</span>
-                <button onClick={() => onRemove(entry.id)} style={{ color: 'var(--text-faint)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.65rem', fontWeight: 600, padding: 0 }}>Remove</button>
               </div>
             </div>
           ))}
