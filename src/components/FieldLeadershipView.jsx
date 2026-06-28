@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { formatDateTime } from '../utils/format'
-import { PageShell, EMPTY_PAGE, ExpandableCard, SECTION_LABEL, ShareButton } from './ui'
+import { PageShell, EMPTY_PAGE, ExpandableCard, SECTION_LABEL, ShareButton, PdfButton } from './ui'
 
 function reportText(r) {
   const field = (label, value) => value ? `${label}: ${value}` : null
@@ -21,7 +21,31 @@ function reportText(r) {
   return lines.join('\n')
 }
 
-export default function FieldLeadershipView({ reports, onBack }) {
+function fieldReportPdf(r, advisor) {
+  return {
+    filename: `field-leadership-report-${(r.time || '').slice(0, 10)}.pdf`,
+    title: 'Field Leadership Report',
+    dateLabel: formatDateTime(r.time),
+    advisor,
+    blocks: [
+      { type: 'meta', rows: [
+        { label: 'Location / Area', value: r.location },
+        { label: 'Company Assessed', value: r.companyAssessed },
+        { label: "Observer's Company", value: r.yourCompany },
+        { label: 'Activity Observed', value: r.activity },
+      ] },
+      { type: 'section', heading: 'Positive Behaviours', body: r.positives },
+      { type: 'section', heading: 'At-Risk Behaviours', body: r.atRisk },
+      { type: 'section', heading: 'Hazards Identified', body: r.hazards },
+      { type: 'section', heading: 'Actions Taken / Required', body: r.actions },
+      { type: 'section', heading: 'Additional Notes', body: r.notes },
+      { type: 'photos', heading: 'Photos', photos: r.photos },
+      { type: 'section', heading: 'Formal Report', body: r.formalReport },
+    ],
+  }
+}
+
+export default function FieldLeadershipView({ reports, onBack, advisorName = '' }) {
   const [expanded, setExpanded] = useState(null)
 
   return (
@@ -37,8 +61,9 @@ export default function FieldLeadershipView({ reports, onBack }) {
           header={<div style={{ color: 'var(--accent-soft)', fontWeight: 700, fontSize: '0.85rem' }}>{formatDateTime(r.time)}</div>}
           sub={<>{r.companyAssessed || 'No company recorded'}{r.activity ? ` · ${r.activity}` : ''}</>}
         >
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginBottom: '0.5rem' }}>
             <ShareButton title="Field Leadership Report" getText={() => reportText(r)} />
+            <PdfButton getReport={() => fieldReportPdf(r, advisorName)} />
           </div>
           <DetailRow label="Location / Area" value={r.location} />
           <DetailRow label="Company Assessed" value={r.companyAssessed} />

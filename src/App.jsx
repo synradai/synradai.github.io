@@ -408,11 +408,11 @@ export default function App() {
       )}
 
       {view === 'incidents' && (
-        <IncidentsView incidents={allIncidents} onBack={() => setView(currentShift ? 'shift' : 'home')} />
+        <IncidentsView incidents={allIncidents} onBack={() => setView(currentShift ? 'shift' : 'home')} advisorName={session?.user?.user_metadata?.full_name || session?.user?.email || ''} />
       )}
 
       {view === 'fieldreports' && (
-        <FieldLeadershipView reports={fieldReports} onBack={() => setView(currentShift ? 'shift' : 'home')} />
+        <FieldLeadershipView reports={fieldReports} onBack={() => setView(currentShift ? 'shift' : 'home')} advisorName={session?.user?.user_metadata?.full_name || session?.user?.email || ''} />
       )}
 
       {view === 'learnings' && (

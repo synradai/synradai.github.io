@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { formatDate, formatTime } from '../utils/format'
-import { PageShell, EMPTY_PAGE, ExpandableCard, SECTION_LABEL, ShareButton } from './ui'
+import { PageShell, EMPTY_PAGE, ExpandableCard, SECTION_LABEL, ShareButton, PdfButton } from './ui'
 
 function incidentText(inc) {
   const field = (label, value) => value ? `${label}: ${value}` : null
@@ -18,7 +18,30 @@ function incidentText(inc) {
   return lines.join('\n')
 }
 
-export default function IncidentsView({ incidents, onBack }) {
+function incidentReportPdf(inc, photos, advisor) {
+  const dateLabel = `${formatDate(inc.shiftDate || inc.time)} · ${formatTime(inc.time)}`
+  return {
+    filename: `incident-report-${(inc.shiftDate || inc.time || '').slice(0, 10)}.pdf`,
+    title: 'Incident Report',
+    dateLabel,
+    advisor,
+    blocks: [
+      { type: 'meta', rows: [
+        { label: 'Company', value: inc.companyName },
+        { label: 'Location / Area', value: inc.location },
+        { label: 'Type of Incident', value: inc.incidentType },
+        { label: 'Persons Involved', value: inc.personsInvolved },
+      ] },
+      { type: 'section', heading: 'Description', body: inc.description },
+      { type: 'photos', heading: 'Photos', photos },
+      { type: 'section', heading: 'JSA / Permit Summary', body: inc.jsaSummary },
+      { type: 'photos', heading: 'JSA / Permit Documents', photos: inc.jsaPhotos },
+      { type: 'section', heading: 'Formal Report', body: inc.formalReport },
+    ],
+  }
+}
+
+export default function IncidentsView({ incidents, onBack, advisorName = '' }) {
   const [expanded, setExpanded] = useState(null)
 
   return (
@@ -36,8 +59,9 @@ export default function IncidentsView({ incidents, onBack }) {
             header={<div style={{ color: 'var(--error-text)', fontWeight: 700, fontSize: '0.85rem' }}>{formatDate(inc.shiftDate || inc.time)} · {formatTime(inc.time)}{inc.incidentType ? ` · ${inc.incidentType}` : ''}</div>}
             sub={inc.companyName ? `${inc.companyName}${inc.location ? ` · ${inc.location}` : ''}` : inc.description}
           >
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginBottom: '0.5rem' }}>
               <ShareButton title="Incident Report" getText={() => incidentText(inc)} />
+              <PdfButton getReport={() => incidentReportPdf(inc, photos, advisorName)} />
             </div>
             <DetailRow label="Company" value={inc.companyName} />
             <DetailRow label="Location / Area" value={inc.location} />

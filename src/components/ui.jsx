@@ -3,6 +3,7 @@
 
 import { useState } from 'react'
 import { shareText } from '../utils/share'
+import { exportReportPdf } from '../utils/pdf'
 
 /* ---------- tokens ---------- */
 
@@ -136,6 +137,30 @@ export function ShareButton({ title, getText, label = 'Share', style }) {
       style={{ padding: '0.25rem 0.625rem', border: 'none', borderRadius: '0.25rem', backgroundColor: status === '✓ Copied' ? 'var(--success-border)' : 'var(--border)', color: status === '✓ Copied' ? 'var(--success-text)' : 'var(--text-muted)', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 700, ...style }}
     >
       {status || `↗ ${label}`}
+    </button>
+  )
+}
+
+// Build + share a presentable PDF (photos inline). `getReport` is called at tap
+// time and returns { filename, title, dateLabel, advisor, blocks }.
+export function PdfButton({ getReport, label = 'PDF', style }) {
+  const [status, setStatus] = useState('')
+
+  const handle = async () => {
+    setStatus('…')
+    try {
+      const r = await exportReportPdf(getReport())
+      setStatus(r === 'failed' ? 'Failed' : (r === 'downloaded' ? '✓ Saved' : (r === 'shared' ? '✓ Sent' : '')))
+    } catch (_) { setStatus('Failed') }
+    setTimeout(() => setStatus(''), 2500)
+  }
+
+  return (
+    <button
+      onClick={handle}
+      style={{ padding: '0.25rem 0.625rem', border: 'none', borderRadius: '0.25rem', backgroundColor: status.startsWith('✓') ? 'var(--success-border)' : 'var(--accent)', color: status.startsWith('✓') ? 'var(--success-text)' : 'var(--on-accent)', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 700, ...style }}
+    >
+      {status || `📄 ${label}`}
     </button>
   )
 }
