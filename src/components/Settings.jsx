@@ -4,6 +4,7 @@ import { isBackendEnabled } from '../utils/supabase'
 import { isBillingEnabled, openPortal } from '../utils/billing'
 import { loadTerms, saveTerms, deidentifyText } from '../utils/deident'
 import TwoFactor from './TwoFactor'
+import Legal from './Legal'
 import { PageShell, SECTION_LABEL, CARD, INPUT } from './ui'
 
 // Strip whitespace and invisible characters that sneak in when copying keys
@@ -15,6 +16,7 @@ function cleanKey(raw) {
 export default function Settings({ apiKey, onSave, onBack, userEmail, onSignOut }) {
   const [key, setKey] = useState(apiKey)
   const [visible, setVisible] = useState(false)
+  const [showLegal, setShowLegal] = useState(false)
   const [saved, setSaved] = useState(false)
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState(null) // { ok: bool, msg: string }
@@ -193,13 +195,26 @@ export default function Settings({ apiKey, onSave, onBack, userEmail, onSignOut 
         </button>
       </div>
 
+      <div style={CARD}>
+        <div style={SECTION_LABEL}>Legal &amp; Privacy</div>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem', lineHeight: 1.6, fontWeight: 500 }}>
+          How your data is handled, our terms, and the AI &amp; safety disclaimer.
+        </p>
+        <button onClick={() => setShowLegal(true)} style={{ padding: '0.6rem 1.25rem', backgroundColor: 'var(--bg-panel)', border: '1.5px solid var(--border-accent)', borderRadius: '0.5rem', color: 'var(--accent-soft)', fontSize: '0.875rem', fontWeight: 700, cursor: 'pointer' }}>
+          View Legal &amp; Privacy
+        </button>
+      </div>
+
       <div style={{ ...CARD, padding: '1rem' }}>
         <div style={{ ...SECTION_LABEL, color: 'var(--text-faint)', marginBottom: '0.5rem' }}>About</div>
         <p style={{ fontSize: '0.8rem', color: 'var(--text-faint)', lineHeight: 1.6, fontWeight: 500 }}>
-          Safety Advice Shift App — personal use only. All data stored locally in your browser.
-          Photos compressed to JPEG at 70% quality before storage. No data leaves your device except API calls to Anthropic.
+          Safe Intelligence by Synrad AI. Your data is stored securely in the cloud, isolated to your account,
+          and encrypted in transit and at rest. Content you submit to the AI is processed by Anthropic (USA) —
+          see Legal &amp; Privacy for details.
         </p>
       </div>
+
+      {showLegal && <Legal onClose={() => setShowLegal(false)} />}
     </PageShell>
   )
 }

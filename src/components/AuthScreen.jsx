@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../utils/supabase'
 import { FIELD_LABEL, INPUT, PrimaryButton, ErrorBox } from './ui'
+import Legal from './Legal'
 
 // Email + password sign in / sign up. On success the auth state change in
 // App.jsx swaps this screen out for the app. New signups auto-get an
@@ -13,6 +14,7 @@ export default function AuthScreen() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [showLegal, setShowLegal] = useState(false)
 
   const submit = async () => {
     setError(''); setNotice('')
@@ -100,7 +102,15 @@ export default function AuthScreen() {
         >
           {mode === 'signin' ? "No account? Create one" : 'Already have an account? Sign in'}
         </button>
+
+        <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.72rem', color: 'var(--text-faint)', fontWeight: 600, lineHeight: 1.5 }}>
+          By continuing you agree to our{' '}
+          <button onClick={() => setShowLegal(true)} style={{ background: 'none', border: 'none', padding: 0, color: 'var(--accent)', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', textDecoration: 'underline' }}>
+            Terms &amp; Privacy Policy
+          </button>
+        </p>
       </div>
+      {showLegal && <Legal onClose={() => setShowLegal(false)} initialTab="terms" />}
     </div>
   )
 }
