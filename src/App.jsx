@@ -185,8 +185,9 @@ export default function App() {
     if (!isBackendEnabled || !session || restored) return
     let cancelled = false
     ;(async () => {
-      const [cShifts, cIncidents, cLearnings, cFieldReports] = await Promise.all([
+      const [cShifts, cIncidents, cLearnings, cFieldReports, cDailyLog, cAskChats] = await Promise.all([
         pullItems('shifts'), pullItems('incidents'), pullItems('learnings'), pullItems('field_reports'),
+        pullItems('daily_log'), pullItems('ask_chats'),
       ])
       if (cancelled) return
       // Don't drop the active shift into history if it's still in progress.
@@ -195,6 +196,8 @@ export default function App() {
       setIncidents(prev => mergeById(prev, cIncidents))
       setLearnings(prev => mergeById(prev, cLearnings))
       setFieldReports(prev => mergeById(prev, cFieldReports))
+      setDailyLog(prev => mergeById(prev, cDailyLog))
+      setAskChats(prev => mergeById(prev, cAskChats))
       setRestored(true)
     })()
     return () => { cancelled = true }
@@ -226,6 +229,16 @@ export default function App() {
     if (!isBackendEnabled || !session) return
     pushItems('field_reports', fieldReports)
   }, [fieldReports, session])
+
+  useEffect(() => {
+    if (!isBackendEnabled || !session) return
+    pushItems('daily_log', dailyLog, e => ({ }))
+  }, [dailyLog, session])
+
+  useEffect(() => {
+    if (!isBackendEnabled || !session) return
+    pushItems('ask_chats', askChats, c => ({ }))
+  }, [askChats, session])
 
   const updateShift = useCallback((updates) => {
     setCurrentShift(prev => ({ ...prev, ...updates }))
