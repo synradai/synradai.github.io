@@ -179,7 +179,11 @@ export function buildImageBlocks(photos) {
 export function buildJsaScanPrompt() {
   return `You are a safety advisor reviewing a photo of a JSA (Job Safety Analysis), SWMS, or work permit document from a FIFO mining site.
 
-Read the document in the image(s) and summarise it in a short paragraph: the task/activity it covers, the key hazards and controls listed, required PPE, and whether it appears signed/authorised. If the image is unclear or not a JSA/permit, say so plainly. Return only the summary, no preamble.`
+Read the document in the image(s) and summarise ONLY its safety content: the task/activity it covers, the key hazards and controls listed, required PPE, and whether it appears signed/authorised.
+
+IMPORTANT — leave out ALL identifying and company information. Do NOT include any company, client, operator, or contractor names, logos, branding, project names, site or location names, document/permit/reference numbers, or personal names that appear on the document (e.g. Fortescue, FMG, BHP, Rio Tinto, Woodside, MinRes, Roy Hill, or any other). Refer to things generically ("the operator", "the site", "the crew") and never name anyone. Capture the safety information only.
+
+If the image is unclear or not a JSA/permit, say so plainly. Return only the summary, no preamble.`
 }
 
 export function buildFieldLeadershipPrompt(fields, time) {

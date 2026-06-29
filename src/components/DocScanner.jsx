@@ -217,6 +217,12 @@ export default function DocScanner({ onClose, onSave }) {
 
       {step === 'capture' && (
         <div>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', padding: '0.7rem 0.8rem', marginBottom: '1rem', borderRadius: '0.6rem', backgroundColor: 'var(--bg-panel)', border: '1px solid var(--border-accent)' }}>
+            <span style={{ fontSize: '0.95rem', lineHeight: 1.2 }}>🔒</span>
+            <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600, lineHeight: 1.5, margin: 0 }}>
+              We capture the safety content only — <strong style={{ color: 'var(--text-primary)' }}>company names, logos, site details and reference numbers are left out</strong> of the summary. Just the hazards, controls and PPE are kept.
+            </p>
+          </div>
           {cameraError ? (
             <div style={{ textAlign: 'center', marginTop: '2rem' }}>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.25rem', fontWeight: 600, lineHeight: 1.6 }}>
