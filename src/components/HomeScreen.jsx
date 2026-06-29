@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { PHASE_NAMES } from '../constants'
 import { formatDate, formatTime } from '../utils/format'
-import { SettingsIcon, ThemeIcon } from './icons'
+import { SettingsIcon, ThemeIcon, MicIcon } from './icons'
 import { SECTION_LABEL } from './ui'
 
 // Small glowing icon "orb" — the signature element across the app.
@@ -146,7 +146,7 @@ export default function HomeScreen({ currentShift, shiftHistory, incidentCount, 
       <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, padding: '0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom))', background: 'linear-gradient(180deg, transparent, var(--bg-page) 45%)', pointerEvents: 'none' }}>
         <button onClick={onAskAI} style={{ pointerEvents: 'auto', display: 'flex', width: '100%', maxWidth: 700, margin: '0 auto', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', padding: '0.7rem 0.75rem 0.7rem 1.1rem', borderRadius: '999px', border: '1px solid var(--border-accent)', backgroundColor: 'var(--bg-panel)', color: 'var(--text-muted)', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,0,0,0.45)' }}>
           <span>Ask Gaz anything…</span>
-          <span style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', background: 'linear-gradient(135deg, var(--glow-a), var(--glow-c))', boxShadow: '0 0 16px rgba(59,130,246,0.6)' }}>🎤</span>
+          <span style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', background: 'linear-gradient(135deg, var(--glow-a), var(--glow-c))', boxShadow: '0 0 16px rgba(59,130,246,0.6)' }}><MicIcon size={17} /></span>
         </button>
       </div>
     </div>

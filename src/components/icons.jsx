@@ -58,6 +58,24 @@ export function SparkleIcon({ size = 17 }) {
   )
 }
 
+export function MicIcon({ size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="9" y="2" width="6" height="11" rx="3" />
+      <path d="M5 10v1a7 7 0 0014 0v-1" />
+      <path d="M12 18v3M8.5 21h7" />
+    </svg>
+  )
+}
+
+export function StopIcon({ size = 13 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+      <rect x="6" y="6" width="12" height="12" rx="2.5" />
+    </svg>
+  )
+}
+
 export function AlertCircleIcon({ size = 17 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

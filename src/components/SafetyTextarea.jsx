@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { callAnthropicAPI, buildPolishPrompt } from '../utils/api'
+import { MicIcon, StopIcon, SparkleIcon } from './icons'
 
 const SAFETY_WORDS = [
   'hazard identified', 'hazard', 'near miss', 'PPE not worn', 'PPE required', 'PPE',
@@ -241,7 +242,7 @@ export default function SafetyTextarea({ value, onChange, placeholder, rows = 3,
               boxShadow: listening ? '0 0 12px rgba(244,63,94,0.5)' : 'none',
             }}
           >
-            {listening ? '■' : '🎤'}
+            {listening ? <StopIcon size={13} /> : <MicIcon size={17} />}
           </button>
           {!minimal && (
             <button
@@ -259,7 +260,7 @@ export default function SafetyTextarea({ value, onChange, placeholder, rows = 3,
                 opacity: (!apiKey || !value?.trim() || listening) ? 0.4 : 1,
               }}
             >
-              {polishing ? '…' : '✨'}
+              {polishing ? '…' : <SparkleIcon size={15} />}
             </button>
           )}
         </div>
