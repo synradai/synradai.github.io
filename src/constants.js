@@ -21,6 +21,7 @@ export const STORAGE_KEYS = {
   LEARNINGS: 'sa_learnings',
   ASK_HISTORY: 'sa_ask_history',
   ASK_CHATS: 'sa_ask_chats',
+  KNOWN_PEOPLE: 'sa_known_people',
   THEME: 'sa_theme',
   FIELD_REPORTS: 'sa_field_reports',
   FIELD_REPORT_COMPANY: 'sa_field_report_company',

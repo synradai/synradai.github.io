@@ -1,5 +1,6 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { generateId } from '../../utils/storage'
+import { STORAGE_KEYS } from '../../constants'
 import { callAnthropicAPI, buildTalkingPointsPrompt } from '../../utils/api'
 import SectionBlock from '../SectionBlock'
 import SafetyTextarea from '../SafetyTextarea'
@@ -11,9 +12,38 @@ export default function MorningMeeting({ shift, updateShift, apiKey }) {
   const [loadingTopics, setLoadingTopics] = useState({})
   const [topicErrors, setTopicErrors] = useState({})
   const [openPoints, setOpenPoints] = useState({})
+  const [pName, setPName] = useState('')
+  const [pRole, setPRole] = useState('')
+  const [known, setKnown] = useState([])
+  useEffect(() => {
+    try { const k = localStorage.getItem(STORAGE_KEYS.KNOWN_PEOPLE); if (k) setKnown(JSON.parse(k)) } catch (_) {}
+  }, [])
 
   const mtg = shift.meeting || { topics: [], agendaNotes: '', attendees: '' }
   const update = (u) => updateShift({ meeting: { ...mtg, ...u } })
+
+  // Attendees — first name + role only (anonymity), with a remembered crew list.
+  const attendeeList = mtg.attendeeList || []
+  const samePerson = (a, b) => a.name.toLowerCase() === b.name.toLowerCase() && (a.role || '').toLowerCase() === (b.role || '').toLowerCase()
+  const attendeesString = (list) => list.map(p => p.role ? `${p.name} (${p.role})` : p.name).join(', ')
+  const rememberPerson = (name, role) => setKnown(prev => {
+    if (prev.some(p => samePerson(p, { name, role }))) return prev
+    const next = [...prev, { name, role }].slice(-40)
+    try { localStorage.setItem(STORAGE_KEYS.KNOWN_PEOPLE, JSON.stringify(next)) } catch (_) {}
+    return next
+  })
+  const addAttendee = (name, role) => {
+    name = (name || '').trim(); role = (role || '').trim()
+    if (!name || attendeeList.some(a => samePerson(a, { name, role }))) return
+    const list = [...attendeeList, { id: generateId(), name, role }]
+    update({ attendeeList: list, attendees: attendeesString(list) })
+    rememberPerson(name, role)
+  }
+  const removeAttendee = (id) => {
+    const list = attendeeList.filter(a => a.id !== id)
+    update({ attendeeList: list, attendees: attendeesString(list) })
+  }
+  const manualAdd = () => { addAttendee(pName, pRole); setPName(''); setPRole('') }
   const confirm = (i) => setConfirmed(prev => { const n = [...prev]; n[i] = !n[i]; return n })
 
   const topics = mtg.topics || []
@@ -178,19 +208,42 @@ export default function MorningMeeting({ shift, updateShift, apiKey }) {
       <div ref={ref2} style={{ marginBottom: '1.75rem', scrollMarginTop: '4rem' }}>
         <SectionBlock
           title="Who Attended"
-          hint="Names, roles, or crew numbers"
-          confirmed={confirmed[2]}
-          onConfirm={() => confirm(2)}
-          confirmLabel="attendees"
+          hint="First name + role (keeps it anonymous)"
         >
-          <SafetyTextarea
-            value={mtg.attendees}
-            onChange={e => update({ attendees: e.target.value })}
-            placeholder="e.g. T. Morrison (SA), Crew 4B (8 pax), L. Nguyen (Maintenance lead)"
-            rows={2}
-            style={TEXTAREA}
-            apiKey={apiKey}
-          />
+          {/* Tap to add your regular crew (remembered between meetings) */}
+          {known.filter(k => !attendeeList.some(a => samePerson(a, k))).length > 0 && (
+            <>
+              <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-faint)', marginBottom: '0.4rem' }}>Tap to add your regular crew</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.85rem' }}>
+                {known.filter(k => !attendeeList.some(a => samePerson(a, k))).map((k, i) => (
+                  <button key={i} onClick={() => addAttendee(k.name, k.role)} style={{ padding: '0.3rem 0.7rem', border: '1px solid var(--border-accent)', borderRadius: '1rem', backgroundColor: 'var(--bg-input)', color: 'var(--accent-soft)', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    + {k.name}{k.role ? ` · ${k.role}` : ''}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Add a person */}
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+            <input value={pName} onChange={e => setPName(e.target.value)} onKeyDown={e => e.key === 'Enter' && manualAdd()} placeholder="First name" style={{ ...INPUT_FLEX }} />
+            <input value={pRole} onChange={e => setPRole(e.target.value)} onKeyDown={e => e.key === 'Enter' && manualAdd()} placeholder="Role" style={{ ...INPUT_FLEX }} />
+            <button onClick={manualAdd} style={BTN_ADD}>Add</button>
+          </div>
+
+          {/* Who's in the meeting */}
+          {attendeeList.length === 0 ? (
+            <p style={EMPTY_TEXT}>No-one added yet — tap a crew chip or add a name above.</p>
+          ) : (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+              {attendeeList.map(a => (
+                <span key={a.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.4rem 0.35rem 0.75rem', borderRadius: '1rem', backgroundColor: 'var(--border-accent)', color: 'var(--text-primary)', fontSize: '0.78rem', fontWeight: 700 }}>
+                  {a.name}{a.role ? <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>· {a.role}</span> : null}
+                  <button onClick={() => removeAttendee(a.id)} aria-label="Remove" style={{ width: 18, height: 18, borderRadius: '50%', border: 'none', backgroundColor: 'var(--bg-input)', color: 'var(--text-faint)', cursor: 'pointer', fontSize: '0.7rem', lineHeight: 1, flexShrink: 0 }}>✕</button>
+                </span>
+              ))}
+            </div>
+          )}
         </SectionBlock>
       </div>
     </div>
