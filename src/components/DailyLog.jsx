@@ -6,6 +6,7 @@ import SafetyTextarea from './SafetyTextarea'
 import { PageShell, SECTION_LABEL, TEXTAREA, EMPTY_PAGE, ErrorBox, ShareButton } from './ui'
 
 const dayKey = (iso) => new Date(iso).toDateString()
+const hourLabel = (h) => { const ampm = h < 12 ? 'am' : 'pm'; const hr = h % 12 === 0 ? 12 : h % 12; return `${hr} ${ampm}` }
 
 // A personal, voice-first activity diary — "what I've been up to today" — kept
 // so an advisor can answer "what did you get done?" on the spot. No photos.
@@ -40,19 +41,33 @@ export default function DailyLog({ entries, onAdd, onRemove, apiKey, onBack }) {
     finally { setSummarizing(false) }
   }
 
-  const entryRow = (e, last) => (
-    <div key={e.id} style={{ display: 'flex', gap: '0.75rem', padding: '0.7rem 0', borderBottom: last ? 'none' : '1px solid var(--border)' }}>
-      <span style={{ fontSize: '0.72rem', color: 'var(--accent)', fontWeight: 800, fontFamily: 'monospace', flexShrink: 0, paddingTop: '0.1rem', minWidth: '3rem' }}>{formatTime(e.time)}</span>
-      <p style={{ flex: 1, fontSize: '0.875rem', color: 'var(--text-primary)', margin: 0, lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>{e.text}</p>
-      <button onClick={() => onRemove(e.id)} aria-label="Delete" style={{ color: 'var(--text-faint)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', flexShrink: 0 }}>✕</button>
+  const entryRow = (e) => (
+    <div key={e.id} style={{ display: 'flex', gap: '0.6rem', padding: '0.4rem 0', alignItems: 'flex-start' }}>
+      <span style={{ fontSize: '0.68rem', color: 'var(--text-faint)', fontWeight: 700, fontFamily: 'monospace', flexShrink: 0, paddingTop: '0.15rem', minWidth: '2.7rem' }}>{formatTime(e.time)}</span>
+      <p style={{ flex: 1, fontSize: '0.875rem', color: 'var(--text-primary)', margin: 0, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{e.text}</p>
+      <button onClick={() => onRemove(e.id)} aria-label="Delete" style={{ color: 'var(--text-faint)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75rem', flexShrink: 0 }}>✕</button>
     </div>
   )
 
-  const listCard = (rows) => (
-    <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '0.75rem', padding: '0.3rem 1rem' }}>
-      {rows.map((e, i) => entryRow(e, i === rows.length - 1))}
-    </div>
-  )
+  // Hourly timeline — entries bucketed under the hour they were logged, so the
+  // day reads like a diary you can scan.
+  const dayTimeline = (rows) => {
+    const buckets = {}
+    for (const e of rows) (buckets[new Date(e.time).getHours()] ||= []).push(e)
+    const hours = Object.keys(buckets).map(Number).sort((a, b) => a - b)
+    return (
+      <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '0.85rem', padding: '0.85rem 1rem' }}>
+        {hours.map(h => (
+          <div key={h} style={{ display: 'flex', gap: '0.85rem', marginBottom: '0.5rem' }}>
+            <div style={{ width: '2.6rem', flexShrink: 0, fontSize: '0.7rem', fontWeight: 800, color: 'var(--accent-soft)', textAlign: 'right', paddingTop: '0.5rem' }}>{hourLabel(h)}</div>
+            <div style={{ flex: 1, borderLeft: '2px solid var(--border-accent)', paddingLeft: '0.85rem' }}>
+              {buckets[h].map(entryRow)}
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
 
   return (
     <PageShell title="Daily Log" onBack={onBack}>
@@ -63,8 +78,8 @@ export default function DailyLog({ entries, onAdd, onRemove, apiKey, onBack }) {
           value={text}
           onChange={e => setText(e.target.value)}
           placeholder="Tap the mic and talk — e.g. 'had the 10 o'clock pre-start, then did rounds and checked on the crew at the workshop...'"
-          rows={6}
-          style={{ ...TEXTAREA, minHeight: '9rem' }}
+          rows={8}
+          style={{ ...TEXTAREA, minHeight: '13rem' }}
           apiKey={apiKey}
         />
         <ErrorBox style={{ marginTop: '0.5rem' }}>{error}</ErrorBox>
@@ -103,13 +118,13 @@ export default function DailyLog({ entries, onAdd, onRemove, apiKey, onBack }) {
 
       {today.length === 0
         ? <p style={{ ...EMPTY_PAGE, marginTop: 0, marginBottom: '1.5rem' }}>Nothing logged today yet — tap the mic and talk.</p>
-        : <div style={{ marginBottom: '1.75rem' }}>{listCard(today)}</div>}
+        : <div style={{ marginBottom: '1.75rem' }}>{dayTimeline(today)}</div>}
 
       {/* Earlier days */}
       {earlierDays.map(k => (
         <div key={k} style={{ marginBottom: '1.25rem' }}>
           <div style={{ ...SECTION_LABEL, color: 'var(--text-muted)' }}>{formatDate(earlierByDay[k][0].time)}</div>
-          {listCard(earlierByDay[k])}
+          {dayTimeline(earlierByDay[k])}
         </div>
       ))}
     </PageShell>

@@ -32,14 +32,15 @@ export const EMPTY_PAGE = { textAlign: 'center', color: 'var(--text-faint)', fon
 
 /* ---------- components ---------- */
 
-// Full page with a safe-area "← Back" header and centred 720px content column.
+// Full page with a safe-area header that closes top-right (✕) — same pattern as
+// FullScreenModal so every screen is consistent — and a centred 720px column.
 export function PageShell({ title, onBack, children }) {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-page)' }}>
       <div style={{ backgroundColor: 'var(--bg-header)', borderBottom: '1px solid var(--border)', paddingTop: 'env(safe-area-inset-top)' }}>
-        <div style={{ maxWidth: 720, margin: '0 auto', padding: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <button onClick={onBack} style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>← Back</button>
-          <span style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{title}</span>
+        <div style={{ maxWidth: 720, margin: '0 auto', padding: '0.875rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--accent-soft)', letterSpacing: '0.02em' }}>{title}</span>
+          <button onClick={onBack} aria-label="Close" style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.5rem', lineHeight: 1, padding: '0.25rem 0.5rem' }}>×</button>
         </div>
       </div>
       <div style={{ maxWidth: 720, margin: '0 auto', padding: '1rem' }}>

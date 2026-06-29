@@ -4,7 +4,7 @@ import { STORAGE_KEYS } from '../../constants'
 import { callAnthropicAPI, buildTalkingPointsPrompt } from '../../utils/api'
 import SectionBlock from '../SectionBlock'
 import SafetyTextarea from '../SafetyTextarea'
-import { PhaseHeader, TEXTAREA, INPUT_FLEX, BTN_ADD, EMPTY_TEXT } from '../ui'
+import { PhaseHeader, TEXTAREA, INPUT, INPUT_FLEX, BTN_ADD, EMPTY_TEXT } from '../ui'
 
 export default function MorningMeeting({ shift, updateShift, apiKey }) {
   const [newTopic, setNewTopic] = useState('')
@@ -224,11 +224,13 @@ export default function MorningMeeting({ shift, updateShift, apiKey }) {
             </>
           )}
 
-          {/* Add a person */}
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
-            <input value={pName} onChange={e => setPName(e.target.value)} onKeyDown={e => e.key === 'Enter' && manualAdd()} placeholder="First name" style={{ ...INPUT_FLEX }} />
-            <input value={pRole} onChange={e => setPRole(e.target.value)} onKeyDown={e => e.key === 'Enter' && manualAdd()} placeholder="Role" style={{ ...INPUT_FLEX }} />
-            <button onClick={manualAdd} style={BTN_ADD}>Add</button>
+          {/* Add a person — stacked so it always fits, no sideways scroll */}
+          <div style={{ marginBottom: '0.75rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
+              <input value={pName} onChange={e => setPName(e.target.value)} onKeyDown={e => e.key === 'Enter' && manualAdd()} placeholder="First name" style={INPUT} />
+              <input value={pRole} onChange={e => setPRole(e.target.value)} onKeyDown={e => e.key === 'Enter' && manualAdd()} placeholder="Role" style={INPUT} />
+            </div>
+            <button onClick={manualAdd} disabled={!pName.trim()} style={{ ...BTN_ADD, width: '100%', padding: '0.6rem', opacity: pName.trim() ? 1 : 0.4, cursor: pName.trim() ? 'pointer' : 'not-allowed' }}>+ Add person</button>
           </div>
 
           {/* Who's in the meeting */}
