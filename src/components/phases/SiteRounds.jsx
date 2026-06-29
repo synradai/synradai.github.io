@@ -3,6 +3,7 @@ import { generateId, compressPhoto } from '../../utils/storage'
 import { TAG_STYLES } from '../../constants'
 import { formatTime, formatDateTime } from '../../utils/format'
 import SafetyTextarea from '../SafetyTextarea'
+import { CameraIcon, AlertCircleIcon } from '../icons'
 import { FullScreenModal, PhaseHeader, SECTION_LABEL, TEXTAREA } from '../ui'
 
 const TAGS = ['Hazard', 'Action', 'Observation', 'Near Miss']
@@ -78,20 +79,25 @@ export default function SiteRounds({ shift, updateShift, apiKey }) {
           {TAGS.map(t => {
             const s = TAG_STYLES[t]
             const active = tag === t
+            const isHazard = t === 'Hazard'
+            // Hazard always shows its colour + an alert icon so it stands out and
+            // is quick to tap; the others stay quiet until selected.
             return (
               <button
                 key={t}
                 onClick={() => setTag(t)}
                 style={{
-                  padding: '0.3rem 0.75rem', borderRadius: '0.375rem',
-                  border: `1.5px solid ${active ? s.border : 'var(--border)'}`,
-                  backgroundColor: active ? s.bg : 'transparent',
-                  color: active ? s.text : 'var(--text-faint)',
-                  fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase',
+                  padding: isHazard ? '0.4rem 0.9rem' : '0.3rem 0.75rem', borderRadius: '0.375rem',
+                  border: `${isHazard ? 2 : 1.5}px solid ${active || isHazard ? s.border : 'var(--border)'}`,
+                  backgroundColor: active || isHazard ? s.bg : 'transparent',
+                  color: active || isHazard ? s.text : 'var(--text-faint)',
+                  fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase',
                   letterSpacing: '0.05em', cursor: 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                  boxShadow: isHazard && active ? `0 0 12px ${s.border}` : 'none',
                 }}
               >
-                {t}
+                {isHazard && <AlertCircleIcon size={13} />}{t}
               </button>
             )
           })}
@@ -101,9 +107,9 @@ export default function SiteRounds({ shift, updateShift, apiKey }) {
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
           <button
             onClick={() => photoRef.current?.click()}
-            style={{ padding: '0.4rem 0.75rem', border: 'none', borderRadius: '0.5rem', backgroundColor: 'var(--border)', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}
+            style={{ padding: '0.45rem 0.75rem', border: 'none', borderRadius: '0.5rem', backgroundColor: 'var(--border)', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
           >
-            {tag === 'Hazard' ? '📷 HAZARD PHOTO' : '📷 PHOTO'}
+            <CameraIcon size={14} /> {tag === 'Hazard' ? 'HAZARD PHOTO' : 'PHOTO'}
           </button>
           <input ref={photoRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
         </div>
@@ -145,9 +151,9 @@ export default function SiteRounds({ shift, updateShift, apiKey }) {
             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
               <button
                 onClick={() => rectifiedPhotoRef.current?.click()}
-                style={{ padding: '0.4rem 0.75rem', border: 'none', borderRadius: '0.5rem', backgroundColor: 'var(--border)', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}
+                style={{ padding: '0.45rem 0.75rem', border: 'none', borderRadius: '0.5rem', backgroundColor: 'var(--border)', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
               >
-                📷 RECTIFIED PHOTO
+                <CameraIcon size={14} /> RECTIFIED PHOTO
               </button>
               <input ref={rectifiedPhotoRef} type="file" accept="image/*" capture="environment" onChange={handleRectifiedPhoto} style={{ display: 'none' }} />
             </div>
@@ -392,9 +398,9 @@ function EntryDetail({ entry, onClose, onRemove, onUpdate, apiKey }) {
               <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
                 <button
                   onClick={() => rectifiedPhotoRef.current?.click()}
-                  style={{ padding: '0.4rem 0.75rem', border: 'none', borderRadius: '0.5rem', backgroundColor: 'var(--border)', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}
+                  style={{ padding: '0.45rem 0.75rem', border: 'none', borderRadius: '0.5rem', backgroundColor: 'var(--border)', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
                 >
-                  📷 RECTIFIED PHOTO
+                  <CameraIcon size={14} /> RECTIFIED PHOTO
                 </button>
                 <input ref={rectifiedPhotoRef} type="file" accept="image/*" capture="environment" onChange={handleRectifiedPhoto} style={{ display: 'none' }} />
               </div>

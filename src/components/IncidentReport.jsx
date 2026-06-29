@@ -5,9 +5,10 @@ import { STORAGE_KEYS, INCIDENT_TYPES } from '../constants'
 import { callAnthropicAPI, buildIncidentPrompt, buildImageBlocks, buildJsaScanPrompt } from '../utils/api'
 import SafetyTextarea from './SafetyTextarea'
 import DocScanner from './DocScanner'
+import { CameraIcon, DocIcon } from './icons'
 import { FullScreenModal, FIELD_LABEL, TEXTAREA, INPUT, ErrorBox, PrimaryButton } from './ui'
 
-const PICKER_BTN = { padding: '0.4rem 0.875rem', border: '1.5px solid var(--border-accent)', borderRadius: '0.5rem', backgroundColor: 'var(--bg-panel)', color: 'var(--accent-soft)', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }
+const PICKER_BTN = { padding: '0.45rem 0.875rem', border: '1.5px solid var(--border-accent)', borderRadius: '0.5rem', backgroundColor: 'var(--bg-panel)', color: 'var(--accent-soft)', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }
 
 function PhotoPicker({ photos, onAdd, onRemove, onScan, label }) {
   const ref = useRef()
@@ -15,11 +16,11 @@ function PhotoPicker({ photos, onAdd, onRemove, onScan, label }) {
     <>
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
         <button onClick={() => ref.current?.click()} style={PICKER_BTN}>
-          📷 {label}
+          <CameraIcon size={15} /> {label}
         </button>
         {onScan && (
           <button onClick={onScan} style={PICKER_BTN}>
-            📄 Doc Scan
+            <DocIcon size={15} /> Doc Scan
           </button>
         )}
       </div>

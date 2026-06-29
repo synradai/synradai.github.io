@@ -62,7 +62,7 @@ export default function AuthScreen() {
           </div>
 
           <div style={{ fontSize: '0.66rem', fontWeight: 800, letterSpacing: '0.3em', textTransform: 'uppercase', color: 'var(--accent-soft)', marginBottom: '0.9rem' }}>Safe Intelligence</div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 800, margin: '0 0 0.5rem', letterSpacing: '-0.02em', lineHeight: 1.05, whiteSpace: 'pre-line', background: 'linear-gradient(180deg, #ffffff 0%, #bcd2ef 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <h1 style={{ fontSize: '2rem', fontWeight: 800, margin: '0 0 0.5rem', letterSpacing: '-0.02em', lineHeight: 1.05, whiteSpace: 'pre-line', background: (typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light') ? 'linear-gradient(180deg, #1e293b 0%, #2563eb 130%)' : 'linear-gradient(180deg, #ffffff 0%, #bcd2ef 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             {mode === 'signin' ? 'Welcome back' : 'Create your\naccount'}
           </h1>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0, fontWeight: 600 }}>

@@ -68,6 +68,25 @@ export function MicIcon({ size = 18 }) {
   )
 }
 
+export function CameraIcon({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14.5 4l1.2 2H20a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h4.3l1.2-2z" />
+      <circle cx="12" cy="13" r="3.4" />
+    </svg>
+  )
+}
+
+export function DocIcon({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+      <path d="M14 2v6h6" />
+      <path d="M8 13h8M8 17h6" />
+    </svg>
+  )
+}
+
 export function StopIcon({ size = 13 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">

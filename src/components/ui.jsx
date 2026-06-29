@@ -4,6 +4,7 @@
 import { useState } from 'react'
 import { shareText } from '../utils/share'
 import { exportReportPdf } from '../utils/pdf'
+import { DocIcon } from './icons'
 
 /* ---------- tokens ---------- */
 
@@ -158,9 +159,9 @@ export function PdfButton({ getReport, label = 'PDF', style }) {
   return (
     <button
       onClick={handle}
-      style={{ padding: '0.25rem 0.625rem', border: 'none', borderRadius: '0.25rem', backgroundColor: status.startsWith('✓') ? 'var(--success-border)' : 'var(--accent)', color: status.startsWith('✓') ? 'var(--success-text)' : 'var(--on-accent)', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 700, ...style }}
+      style={{ padding: '0.25rem 0.625rem', border: 'none', borderRadius: '0.25rem', backgroundColor: status.startsWith('✓') ? 'var(--success-border)' : 'var(--accent)', color: status.startsWith('✓') ? 'var(--success-text)' : 'var(--on-accent)', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.3rem', ...style }}
     >
-      {status || `📄 ${label}`}
+      {status || <><DocIcon size={13} /> {label}</>}
     </button>
   )
 }

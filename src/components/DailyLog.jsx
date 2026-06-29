@@ -62,9 +62,9 @@ export default function DailyLog({ entries, onAdd, onRemove, apiKey, onBack }) {
         <SafetyTextarea
           value={text}
           onChange={e => setText(e.target.value)}
-          placeholder="Tap 🎤 and talk — e.g. 'had the 10 o'clock pre-start, then did rounds and checked on the crew at the workshop...'"
-          rows={3}
-          style={TEXTAREA}
+          placeholder="Tap the mic and talk — e.g. 'had the 10 o'clock pre-start, then did rounds and checked on the crew at the workshop...'"
+          rows={6}
+          style={{ ...TEXTAREA, minHeight: '9rem' }}
           apiKey={apiKey}
         />
         <ErrorBox style={{ marginTop: '0.5rem' }}>{error}</ErrorBox>

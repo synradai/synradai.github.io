@@ -75,7 +75,7 @@ export default function HomeScreen({ currentShift, shiftHistory, incidentCount, 
 
         {/* Greeting */}
         <div style={{ marginTop: '1.25rem', marginBottom: '1.5rem' }}>
-          <h1 style={{ fontSize: '2rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em', lineHeight: 1.1, background: 'linear-gradient(180deg, #ffffff 0%, #bcd2ef 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <h1 style={{ fontSize: '2rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em', lineHeight: 1.1, background: theme === 'light' ? 'linear-gradient(180deg, #1e293b 0%, #2563eb 130%)' : 'linear-gradient(180deg, #ffffff 0%, #bcd2ef 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             {greeting}
           </h1>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0.35rem 0 0', fontWeight: 600 }}>

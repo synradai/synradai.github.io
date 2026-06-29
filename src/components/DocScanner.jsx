@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { loadImage, warpPerspective, applyEnhancement, cloneCanvas, dist, detectDocumentCorners } from '../utils/docScan'
 import { FullScreenModal, PrimaryButton, ErrorBox } from './ui'
+import { CameraIcon } from './icons'
 
 const ENHANCE_MODES = [
   { id: 'bw', label: 'B & W' },
@@ -221,8 +222,8 @@ export default function DocScanner({ onClose, onSave }) {
               <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.25rem', fontWeight: 600, lineHeight: 1.6 }}>
                 Take a photo of the JSA, permit, or other document. You'll be able to drag the corners to straighten it and clean it up next.
               </p>
-              <button onClick={() => fileRef.current?.click()} style={{ padding: '1rem 1.5rem', backgroundColor: 'var(--accent)', border: 'none', borderRadius: '0.75rem', color: 'var(--on-accent)', fontWeight: 800, fontSize: '1rem', cursor: 'pointer' }}>
-                📷 Take Photo
+              <button onClick={() => fileRef.current?.click()} style={{ padding: '1rem 1.5rem', backgroundColor: 'var(--accent)', border: 'none', borderRadius: '0.75rem', color: 'var(--on-accent)', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                <CameraIcon size={18} /> Take Photo
               </button>
             </div>
           ) : (
@@ -253,7 +254,7 @@ export default function DocScanner({ onClose, onSave }) {
                 )}
               </div>
               <PrimaryButton onClick={capturePhoto} disabled={!cameraReady} style={{ marginTop: '0.75rem' }}>
-                📷 Capture
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}><CameraIcon size={16} /> Capture</span>
               </PrimaryButton>
             </div>
           )}
