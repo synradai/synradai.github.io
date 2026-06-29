@@ -3,7 +3,7 @@ import { generateId, compressPhoto } from '../../utils/storage'
 import { TAG_STYLES } from '../../constants'
 import { formatTime, formatDateTime } from '../../utils/format'
 import SafetyTextarea from '../SafetyTextarea'
-import { CameraIcon, AlertCircleIcon } from '../icons'
+import { CameraIcon, AlertCircleIcon, UploadIcon } from '../icons'
 import { FullScreenModal, PhaseHeader, SECTION_LABEL, TEXTAREA } from '../ui'
 
 const TAGS = ['Hazard', 'Action', 'Observation', 'Near Miss']
@@ -18,7 +18,9 @@ export default function SiteRounds({ shift, updateShift, apiKey }) {
   const [selectedId, setSelectedId] = useState(null)
   const [filter, setFilter] = useState('All')
   const photoRef = useRef()
+  const photoUploadRef = useRef()
   const rectifiedPhotoRef = useRef()
+  const rectifiedUploadRef = useRef()
 
   const rounds = shift.rounds || []
   const selected = rounds.find(r => r.id === selectedId) || null
@@ -111,7 +113,14 @@ export default function SiteRounds({ shift, updateShift, apiKey }) {
           >
             <CameraIcon size={14} /> {tag === 'Hazard' ? 'HAZARD PHOTO' : 'PHOTO'}
           </button>
+          <button
+            onClick={() => photoUploadRef.current?.click()}
+            style={{ padding: '0.45rem 0.75rem', border: 'none', borderRadius: '0.5rem', backgroundColor: 'var(--border)', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            <UploadIcon size={14} /> UPLOAD
+          </button>
           <input ref={photoRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
+          <input ref={photoUploadRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: 'none' }} />
         </div>
 
         <SafetyTextarea
@@ -155,7 +164,7 @@ export default function SiteRounds({ shift, updateShift, apiKey }) {
               >
                 <CameraIcon size={14} /> RECTIFIED PHOTO
               </button>
-              <input ref={rectifiedPhotoRef} type="file" accept="image/*" capture="environment" onChange={handleRectifiedPhoto} style={{ display: 'none' }} />
+              <input ref={rectifiedPhotoRef} type="file" accept="image/*" onChange={handleRectifiedPhoto} style={{ display: 'none' }} />
             </div>
             {rectifiedPhoto && (
               <div style={{ position: 'relative', display: 'inline-block', marginTop: '0.5rem' }}>
@@ -402,7 +411,7 @@ function EntryDetail({ entry, onClose, onRemove, onUpdate, apiKey }) {
                 >
                   <CameraIcon size={14} /> RECTIFIED PHOTO
                 </button>
-                <input ref={rectifiedPhotoRef} type="file" accept="image/*" capture="environment" onChange={handleRectifiedPhoto} style={{ display: 'none' }} />
+                <input ref={rectifiedPhotoRef} type="file" accept="image/*" onChange={handleRectifiedPhoto} style={{ display: 'none' }} />
               </div>
               {draftRectifiedPhoto && (
                 <div style={{ position: 'relative', display: 'inline-block', marginTop: '0.5rem' }}>

@@ -5,18 +5,22 @@ import { STORAGE_KEYS, INCIDENT_TYPES } from '../constants'
 import { callAnthropicAPI, buildIncidentPrompt, buildImageBlocks, buildJsaScanPrompt } from '../utils/api'
 import SafetyTextarea from './SafetyTextarea'
 import DocScanner from './DocScanner'
-import { CameraIcon, DocIcon } from './icons'
+import { CameraIcon, DocIcon, UploadIcon } from './icons'
 import { FullScreenModal, FIELD_LABEL, TEXTAREA, INPUT, ErrorBox, PrimaryButton } from './ui'
 
 const PICKER_BTN = { padding: '0.45rem 0.875rem', border: '1.5px solid var(--border-accent)', borderRadius: '0.5rem', backgroundColor: 'var(--bg-panel)', color: 'var(--accent-soft)', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }
 
-function PhotoPicker({ photos, onAdd, onRemove, onScan, label }) {
-  const ref = useRef()
+function PhotoPicker({ photos, onAdd, onRemove, onScan }) {
+  const camRef = useRef()
+  const upRef = useRef()
   return (
     <>
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-        <button onClick={() => ref.current?.click()} style={PICKER_BTN}>
-          <CameraIcon size={15} /> {label}
+        <button onClick={() => camRef.current?.click()} style={PICKER_BTN}>
+          <CameraIcon size={15} /> Camera
+        </button>
+        <button onClick={() => upRef.current?.click()} style={PICKER_BTN}>
+          <UploadIcon size={15} /> Upload
         </button>
         {onScan && (
           <button onClick={onScan} style={PICKER_BTN}>
@@ -24,7 +28,8 @@ function PhotoPicker({ photos, onAdd, onRemove, onScan, label }) {
           </button>
         )}
       </div>
-      <input ref={ref} type="file" accept="image/*" capture="environment" onChange={onAdd} style={{ display: 'none' }} />
+      <input ref={camRef} type="file" accept="image/*" capture="environment" onChange={onAdd} style={{ display: 'none' }} />
+      <input ref={upRef} type="file" accept="image/*" onChange={onAdd} style={{ display: 'none' }} />
       {photos.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
           {photos.map((p, idx) => (

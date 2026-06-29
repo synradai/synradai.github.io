@@ -4,7 +4,7 @@ import { formatDateTime } from '../utils/format'
 import { STORAGE_KEYS } from '../constants'
 import { callAnthropicAPI, buildFieldLeadershipPrompt } from '../utils/api'
 import SafetyTextarea from './SafetyTextarea'
-import { CameraIcon } from './icons'
+import { CameraIcon, UploadIcon } from './icons'
 import { FullScreenModal, FIELD_LABEL, TEXTAREA, INPUT, ErrorBox, PrimaryButton } from './ui'
 
 export default function FieldLeadershipReport({ apiKey, onClose, onSave }) {
@@ -24,6 +24,7 @@ export default function FieldLeadershipReport({ apiKey, onClose, onSave }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const photoRef = useRef()
+  const uploadRef = useRef()
   const time = useRef(new Date().toISOString())
 
   const handlePhoto = async (e) => {
@@ -110,10 +111,16 @@ export default function FieldLeadershipReport({ apiKey, onClose, onSave }) {
 
       <div style={{ marginBottom: '1rem' }}>
         <div style={FIELD_LABEL}>Photos</div>
-        <button onClick={() => photoRef.current?.click()} style={{ padding: '0.45rem 0.875rem', border: '1.5px solid var(--border-accent)', borderRadius: '0.5rem', backgroundColor: 'var(--bg-panel)', color: 'var(--accent-soft)', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-          <CameraIcon size={15} /> Add Photo
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button onClick={() => photoRef.current?.click()} style={{ padding: '0.45rem 0.875rem', border: '1.5px solid var(--border-accent)', borderRadius: '0.5rem', backgroundColor: 'var(--bg-panel)', color: 'var(--accent-soft)', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+            <CameraIcon size={15} /> Camera
+          </button>
+          <button onClick={() => uploadRef.current?.click()} style={{ padding: '0.45rem 0.875rem', border: '1.5px solid var(--border-accent)', borderRadius: '0.5rem', backgroundColor: 'var(--bg-panel)', color: 'var(--accent-soft)', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+            <UploadIcon size={15} /> Upload
+          </button>
+        </div>
         <input ref={photoRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
+        <input ref={uploadRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: 'none' }} />
         {photos.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
             {photos.map((p, idx) => (
