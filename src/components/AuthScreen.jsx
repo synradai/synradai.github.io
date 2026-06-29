@@ -47,22 +47,22 @@ export default function AuthScreen() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-page)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', position: 'relative', overflow: 'hidden' }}>
       {/* ambient glow behind everything */}
-      <div style={{ position: 'absolute', top: '-12%', left: '50%', transform: 'translateX(-50%)', width: 460, height: 460, background: 'radial-gradient(circle, rgba(168,85,247,0.30), rgba(217,70,239,0.12) 45%, transparent 70%)', filter: 'blur(20px)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', top: '-12%', left: '50%', transform: 'translateX(-50%)', width: 460, height: 460, background: 'radial-gradient(circle, rgba(59,130,246,0.30), rgba(34,211,238,0.12) 45%, transparent 70%)', filter: 'blur(20px)', pointerEvents: 'none' }} />
 
       <div style={{ width: '100%', maxWidth: 360, position: 'relative' }}>
         <div style={{ textAlign: 'center', marginBottom: '2.25rem' }}>
           {/* glowing hero orb */}
           <div style={{ position: 'relative', width: 104, height: 104, margin: '0 auto 1.5rem' }}>
-            <div style={{ position: 'absolute', inset: -18, borderRadius: '50%', border: '1px solid rgba(192,132,252,0.25)' }} />
+            <div style={{ position: 'absolute', inset: -18, borderRadius: '50%', border: '1px solid rgba(96,165,250,0.25)' }} />
             <div style={{
               width: 104, height: 104, borderRadius: '50%',
-              background: 'radial-gradient(circle at 50% 36%, #f5d0fe 0%, var(--glow-b) 34%, var(--glow-a) 62%, #6b21a8 88%)',
-              boxShadow: '0 0 48px 6px rgba(168,85,247,0.55), 0 0 110px 26px rgba(217,70,239,0.30), inset 0 -10px 22px rgba(236,72,153,0.55), inset 0 8px 16px rgba(255,255,255,0.30)',
+              background: 'radial-gradient(circle at 50% 36%, #dbeafe 0%, var(--glow-b) 34%, var(--glow-a) 62%, #1e3a8a 88%)',
+              boxShadow: '0 0 48px 6px rgba(59,130,246,0.55), 0 0 110px 26px rgba(34,211,238,0.30), inset 0 -10px 22px rgba(99,102,241,0.55), inset 0 8px 16px rgba(255,255,255,0.30)',
             }} />
           </div>
 
           <div style={{ fontSize: '0.66rem', fontWeight: 800, letterSpacing: '0.3em', textTransform: 'uppercase', color: 'var(--accent-soft)', marginBottom: '0.9rem' }}>Safe Intelligence</div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 800, margin: '0 0 0.5rem', letterSpacing: '-0.02em', lineHeight: 1.05, whiteSpace: 'pre-line', background: 'linear-gradient(180deg, #ffffff 0%, #cabfe4 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <h1 style={{ fontSize: '2rem', fontWeight: 800, margin: '0 0 0.5rem', letterSpacing: '-0.02em', lineHeight: 1.05, whiteSpace: 'pre-line', background: 'linear-gradient(180deg, #ffffff 0%, #bcd2ef 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             {mode === 'signin' ? 'Welcome back' : 'Create your\naccount'}
           </h1>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0, fontWeight: 600 }}>
@@ -110,7 +110,7 @@ export default function AuthScreen() {
             background: 'linear-gradient(135deg, var(--glow-a) 0%, var(--glow-b) 55%, var(--glow-c) 100%)',
             color: '#fff', fontWeight: 800, fontSize: '0.95rem', letterSpacing: '0.01em',
             cursor: loading ? 'wait' : 'pointer', opacity: loading ? 0.7 : 1,
-            boxShadow: '0 8px 26px rgba(168,85,247,0.45)', marginTop: '0.25rem',
+            boxShadow: '0 8px 26px rgba(59,130,246,0.45)', marginTop: '0.25rem',
           }}
         >
           {loading ? 'Please wait…' : mode === 'signin' ? 'Sign In' : 'Create Account'}
