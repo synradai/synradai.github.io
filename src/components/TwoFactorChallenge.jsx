@@ -38,6 +38,7 @@ export default function TwoFactorChallenge({ onVerified, onSignOut }) {
             onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
             placeholder="123456"
             inputMode="numeric"
+            autoComplete="one-time-code"
             autoFocus
             onKeyDown={e => e.key === 'Enter' && submit()}
             style={{ ...INPUT, fontSize: '1.4rem', letterSpacing: '0.3em', textAlign: 'center', fontFamily: 'monospace' }}
