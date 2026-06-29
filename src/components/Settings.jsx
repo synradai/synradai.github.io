@@ -208,9 +208,12 @@ export default function Settings({ apiKey, onSave, onBack, userEmail, onSignOut 
       <div style={{ ...CARD, padding: '1rem' }}>
         <div style={{ ...SECTION_LABEL, color: 'var(--text-faint)', marginBottom: '0.5rem' }}>About</div>
         <p style={{ fontSize: '0.8rem', color: 'var(--text-faint)', lineHeight: 1.6, fontWeight: 500 }}>
-          Safe Intelligence by Synrad AI. Your data is stored securely in the cloud, isolated to your account,
-          and encrypted in transit and at rest. Content you submit to the AI is processed by Anthropic (USA) —
+          Safe Intelligence — built by <strong style={{ color: 'var(--text-muted)' }}>Synrad AI</strong>. Your data is stored securely in the cloud,
+          isolated to your account, and encrypted in transit and at rest. Content you submit to the AI is processed by Anthropic (USA) —
           see Legal &amp; Privacy for details.
+        </p>
+        <p style={{ fontSize: '0.72rem', color: 'var(--text-faint)', lineHeight: 1.5, fontWeight: 600, marginTop: '0.6rem' }}>
+          © {new Date().getFullYear()} Synrad AI. All rights reserved. · synradai@outlook.com
         </p>
       </div>
 

@@ -129,6 +129,9 @@ export default function AuthScreen() {
             Terms &amp; Privacy Policy
           </button>
         </p>
+        <p style={{ textAlign: 'center', marginTop: '0.6rem', fontSize: '0.66rem', color: 'var(--text-faint)', fontWeight: 600 }}>
+          Built by Synrad AI · © {new Date().getFullYear()}
+        </p>
       </div>
       {showLegal && <Legal onClose={() => setShowLegal(false)} initialTab="terms" />}
     </div>

@@ -5,7 +5,7 @@ import { FullScreenModal } from './ui'
 // Australian law. NOT a substitute for a lawyer's review before commercial sale
 // to companies — but covers testing/early use and looks professional.
 const BUSINESS = 'Synrad AI'
-const CONTACT = 'nextlevelaccess@outlook.com'
+const CONTACT = 'synradai@outlook.com'
 const EFFECTIVE = '28 June 2026'
 
 const H = ({ children }) => <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--accent-soft)', margin: '1.25rem 0 0.4rem' }}>{children}</h3>
@@ -95,6 +95,9 @@ function Terms() {
 
       <H>Your content</H>
       <P>You own the content you enter. You grant us the limited rights needed to store, process, and display it to provide the service (including sending it to our AI provider to generate results).</P>
+
+      <H>Our intellectual property</H>
+      <P>The Safe Intelligence app — including its software, source code, design, layout, look and feel, text, logos and branding — is owned by {BUSINESS} and protected by copyright. © {new Date().getFullYear()} {BUSINESS}. All rights reserved. You may use the app under these terms, but you must not copy, reproduce, modify, reverse-engineer, distribute, resell, or create derivative works from any part of it without our written permission. Access for evaluation or testing does not transfer any ownership or licence beyond using the app as intended.</P>
 
       <H>Consumer guarantees &amp; liability</H>
       <P>Nothing in these terms excludes rights you have under the Australian Consumer Law. To the maximum extent permitted by law, the app is provided "as is", and {BUSINESS} is not liable for indirect or consequential loss, or for decisions made in reliance on AI output. Where liability cannot be excluded, it is limited to resupplying the service or the amount you paid in the prior 12 months.</P>
