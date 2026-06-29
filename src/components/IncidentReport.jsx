@@ -61,6 +61,7 @@ export default function IncidentReport({ apiKey, onClose, onSave }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showScanner, setShowScanner] = useState(false)
+  const [bigText, setBigText] = useState(null) // null | 'jsa' | 'report' — full-screen read/edit
   const time = useRef(new Date().toISOString())
 
   const addPhoto = (setter) => async (e) => {
@@ -121,6 +122,20 @@ export default function IncidentReport({ apiKey, onClose, onSave }) {
       headerBg="var(--error-bg)"
       headerBorder="var(--error-border)"
       onClose={onClose}
+      overlay={bigText && (
+        <div style={{ position: 'absolute', inset: 0, zIndex: 70, backgroundColor: 'var(--bg-page)', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '0.875rem 1rem', paddingTop: 'calc(0.875rem + env(safe-area-inset-top))', borderBottom: '1px solid var(--border-accent)', backgroundColor: 'var(--bg-panel)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+            <span style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--accent-soft)' }}>{bigText === 'jsa' ? 'JSA / Permit Summary' : 'Incident Report'}</span>
+            <button onClick={() => setBigText(null)} aria-label="Done" style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.5rem', lineHeight: 1, padding: '0.25rem 0.5rem' }}>×</button>
+          </div>
+          <textarea
+            value={bigText === 'jsa' ? jsaSummary : report}
+            onChange={e => (bigText === 'jsa' ? setJsaSummary(e.target.value) : setReport(e.target.value))}
+            autoFocus
+            style={{ flex: 1, width: '100%', border: 'none', outline: 'none', resize: 'none', backgroundColor: 'var(--bg-page)', color: 'var(--text-primary)', WebkitTextFillColor: 'var(--text-primary)', fontSize: '1rem', lineHeight: 1.7, padding: '1rem', paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))', fontFamily: 'inherit' }}
+          />
+        </div>
+      )}
     >
       <div style={{ fontSize: '0.75rem', color: 'var(--text-faint)', fontWeight: 600, marginBottom: '1rem' }}>{formatDateTime(time.current)}</div>
 
@@ -184,7 +199,10 @@ export default function IncidentReport({ apiKey, onClose, onSave }) {
         <ErrorBox style={{ marginTop: '0.6rem' }}>{jsaError}</ErrorBox>
         {jsaSummary && (
           <div style={{ marginTop: '0.6rem' }}>
-            <div style={FIELD_LABEL}>JSA Summary (editable)</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+              <div style={{ ...FIELD_LABEL, marginBottom: 0 }}>JSA Summary (editable)</div>
+              <button onClick={() => setBigText('jsa')} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}>⤢ Full screen</button>
+            </div>
             <SafetyTextarea value={jsaSummary} onChange={e => setJsaSummary(e.target.value)} rows={4} style={TEXTAREA} apiKey={apiKey} />
           </div>
         )}
@@ -198,7 +216,10 @@ export default function IncidentReport({ apiKey, onClose, onSave }) {
 
       {report && (
         <div style={{ marginBottom: '1rem' }}>
-          <div style={FIELD_LABEL}>Generated Report (editable)</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+            <div style={{ ...FIELD_LABEL, marginBottom: 0 }}>Generated Report (editable)</div>
+            <button onClick={() => setBigText('report')} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}>⤢ Full screen</button>
+          </div>
           <SafetyTextarea value={report} onChange={e => setReport(e.target.value)} rows={14} style={TEXTAREA} apiKey={apiKey} />
         </div>
       )}
