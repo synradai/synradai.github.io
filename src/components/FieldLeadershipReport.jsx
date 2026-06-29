@@ -5,7 +5,7 @@ import { STORAGE_KEYS } from '../constants'
 import { callAnthropicAPI, buildFieldLeadershipPrompt } from '../utils/api'
 import SafetyTextarea from './SafetyTextarea'
 import { CameraIcon, UploadIcon, MicIcon, StopIcon } from './icons'
-import { FullScreenModal, FIELD_LABEL, TEXTAREA, INPUT, ErrorBox, PrimaryButton } from './ui'
+import { FullScreenModal, FIELD_LABEL, TEXTAREA, INPUT, ErrorBox, PrimaryButton, ExpandableTextarea } from './ui'
 
 // The sections the voice walkthrough steps through, in order.
 const STEPS = [
@@ -232,8 +232,7 @@ export default function FieldLeadershipReport({ apiKey, onClose, onSave }) {
 
       {report && (
         <div style={{ marginBottom: '1rem' }}>
-          <div style={FIELD_LABEL}>Generated Report (editable)</div>
-          <SafetyTextarea value={report} onChange={e => setReport(e.target.value)} rows={14} style={TEXTAREA} apiKey={apiKey} />
+          <ExpandableTextarea label="Generated Report (editable)" value={report} onChange={e => setReport(e.target.value)} rows={14} apiKey={apiKey} />
         </div>
       )}
 

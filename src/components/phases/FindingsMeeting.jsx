@@ -3,7 +3,7 @@ import { callAnthropicAPI, buildFindingsPrompt } from '../../utils/api'
 import { TAG_STYLES } from '../../constants'
 import SectionBlock from '../SectionBlock'
 import SafetyTextarea from '../SafetyTextarea'
-import { PhaseHeader, TEXTAREA, ErrorBox, ShareButton } from '../ui'
+import { PhaseHeader, TEXTAREA, ErrorBox, ShareButton, FullScreenButton } from '../ui'
 
 export default function FindingsMeeting({ shift, updateShift, apiKey }) {
   const [loading, setLoading] = useState(false)
@@ -81,7 +81,8 @@ export default function FindingsMeeting({ shift, updateShift, apiKey }) {
 
           {report && (
             <>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.4rem', marginBottom: '0.4rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem' }}>
+                <FullScreenButton label="Findings Report" value={report} onChange={e => updateShift({ findingsReport: e.target.value })} />
                 <ShareButton title="Findings Report" getText={() => shift.findingsReport || ''} />
                 <button
                   onClick={copy}

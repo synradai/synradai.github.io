@@ -3,7 +3,7 @@ import { generateId } from '../utils/storage'
 import { formatTime, formatDate } from '../utils/format'
 import { callAnthropicAPI, buildDaySummaryPrompt } from '../utils/api'
 import SafetyTextarea from './SafetyTextarea'
-import { PageShell, SECTION_LABEL, TEXTAREA, EMPTY_PAGE, ErrorBox, ShareButton } from './ui'
+import { PageShell, SECTION_LABEL, TEXTAREA, EMPTY_PAGE, ErrorBox, ShareButton, FullScreenButton } from './ui'
 
 const dayKey = (iso) => new Date(iso).toDateString()
 const hourLabel = (h) => { const ampm = h < 12 ? 'am' : 'pm'; const hr = h % 12 === 0 ? 12 : h % 12; return `${hr} ${ampm}` }
@@ -110,7 +110,10 @@ export default function DailyLog({ entries, onAdd, onRemove, apiKey, onBack }) {
         <div style={{ backgroundColor: 'var(--bg-panel)', border: '1px solid var(--border-accent)', borderRadius: '0.75rem', padding: '1rem', marginBottom: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
             <span style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--accent)' }}>Your day, summed up</span>
-            <ShareButton title="My day" getText={() => summary} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <FullScreenButton label="Your day, summed up" value={summary} onChange={e => setSummary(e.target.value)} />
+              <ShareButton title="My day" getText={() => summary} />
+            </div>
           </div>
           <textarea value={summary} onChange={e => setSummary(e.target.value)} rows={8} style={TEXTAREA} />
         </div>

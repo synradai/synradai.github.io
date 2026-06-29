@@ -4,7 +4,7 @@ import { STORAGE_KEYS } from '../../constants'
 import { callAnthropicAPI, buildTalkingPointsPrompt } from '../../utils/api'
 import SectionBlock from '../SectionBlock'
 import SafetyTextarea from '../SafetyTextarea'
-import { PhaseHeader, TEXTAREA, INPUT, INPUT_FLEX, BTN_ADD, EMPTY_TEXT } from '../ui'
+import { PhaseHeader, TEXTAREA, INPUT, INPUT_FLEX, BTN_ADD, EMPTY_TEXT, FullScreenButton } from '../ui'
 
 export default function MorningMeeting({ shift, updateShift, apiKey }) {
   const [newTopic, setNewTopic] = useState('')
@@ -194,6 +194,9 @@ export default function MorningMeeting({ shift, updateShift, apiKey }) {
           confirmLabel="notes"
           nextRef={ref2}
         >
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.3rem' }}>
+            <FullScreenButton label="Meeting Notes" value={mtg.agendaNotes || ''} onChange={e => update({ agendaNotes: e.target.value })} />
+          </div>
           <SafetyTextarea
             value={mtg.agendaNotes}
             onChange={e => update({ agendaNotes: e.target.value })}

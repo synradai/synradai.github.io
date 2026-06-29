@@ -4,7 +4,7 @@ import { generateId } from '../../utils/storage'
 import { formatTime } from '../../utils/format'
 import SectionBlock from '../SectionBlock'
 import SafetyTextarea from '../SafetyTextarea'
-import { PhaseHeader, TEXTAREA, INPUT_FLEX, BTN_ADD, ErrorBox, ShareButton } from '../ui'
+import { PhaseHeader, TEXTAREA, INPUT_FLEX, BTN_ADD, ErrorBox, ShareButton, FullScreenButton } from '../ui'
 
 export default function DebriefHandover({ shift, updateShift, apiKey }) {
   const [loading, setLoading] = useState(false)
@@ -81,7 +81,8 @@ export default function DebriefHandover({ shift, updateShift, apiKey }) {
           <ErrorBox style={{ marginBottom: '0.75rem' }}>{error}</ErrorBox>
 
           {deb.handoverNotes && (
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.4rem', marginBottom: '0.4rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem' }}>
+              <FullScreenButton label="Shift Handover Notes" value={deb.handoverNotes || ''} onChange={e => update({ handoverNotes: e.target.value })} />
               <ShareButton title="Shift Handover Notes" getText={() => deb.handoverNotes || ''} />
               <button onClick={copy} style={{ padding: '0.2rem 0.5rem', border: 'none', borderRadius: '0.25rem', backgroundColor: copied ? 'var(--success-border)' : 'var(--border)', color: copied ? 'var(--success-text)' : 'var(--text-muted)', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 700 }}>
                 {copied ? '✓ Copied' : 'Copy'}

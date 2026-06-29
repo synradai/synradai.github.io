@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { shareText } from '../utils/share'
 import { exportReportPdf } from '../utils/pdf'
 import { DocIcon } from './icons'
+import SafetyTextarea from './SafetyTextarea'
 
 /* ---------- tokens ---------- */
 
@@ -164,6 +165,50 @@ export function PdfButton({ getReport, label = 'PDF', style }) {
     >
       {status || <><DocIcon size={13} /> {label}</>}
     </button>
+  )
+}
+
+// A labelled SafetyTextarea with a "⤢ Full screen" button that opens a big,
+// clean, scrollable editor (keyboard kept, no icon clutter). Works on any screen.
+export function ExpandableTextarea({ label, value, onChange, placeholder, rows = 4, apiKey, labelColor }) {
+  const [big, setBig] = useState(false)
+  return (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.3rem', gap: '0.5rem' }}>
+        <div style={{ ...FIELD_LABEL, marginBottom: 0, ...(labelColor ? { color: labelColor } : {}) }}>{label}</div>
+        <button onClick={() => setBig(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', padding: 0, whiteSpace: 'nowrap', flexShrink: 0 }}>⤢ Full screen</button>
+      </div>
+      <SafetyTextarea value={value} onChange={onChange} placeholder={placeholder} rows={rows} style={TEXTAREA} apiKey={apiKey} />
+      {big && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 80, backgroundColor: 'var(--bg-page)', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '0.875rem 1rem', paddingTop: 'calc(0.875rem + env(safe-area-inset-top))', borderBottom: '1px solid var(--border-accent)', backgroundColor: 'var(--bg-panel)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+            <span style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--accent-soft)' }}>{label}</span>
+            <button onClick={() => setBig(false)} aria-label="Done" style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.5rem', lineHeight: 1, padding: '0.25rem 0.5rem' }}>×</button>
+          </div>
+          <textarea value={value} onChange={onChange} autoFocus style={{ flex: 1, width: '100%', border: 'none', outline: 'none', resize: 'none', backgroundColor: 'var(--bg-page)', color: 'var(--text-primary)', WebkitTextFillColor: 'var(--text-primary)', fontSize: '1rem', lineHeight: 1.7, padding: '1rem', paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))', fontFamily: 'inherit' }} />
+        </div>
+      )}
+    </>
+  )
+}
+
+// Standalone "⤢ Full screen" button (drop it into a custom header). Opens a big
+// clean editor over everything; keyboard kept, no clutter.
+export function FullScreenButton({ label = 'Note', value, onChange }) {
+  const [big, setBig] = useState(false)
+  return (
+    <>
+      <button onClick={() => setBig(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', padding: '0.25rem 0.4rem', whiteSpace: 'nowrap' }}>⤢ Full screen</button>
+      {big && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 80, backgroundColor: 'var(--bg-page)', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '0.875rem 1rem', paddingTop: 'calc(0.875rem + env(safe-area-inset-top))', borderBottom: '1px solid var(--border-accent)', backgroundColor: 'var(--bg-panel)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+            <span style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--accent-soft)' }}>{label}</span>
+            <button onClick={() => setBig(false)} aria-label="Done" style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.5rem', lineHeight: 1, padding: '0.25rem 0.5rem' }}>×</button>
+          </div>
+          <textarea value={value} onChange={onChange} autoFocus style={{ flex: 1, width: '100%', border: 'none', outline: 'none', resize: 'none', backgroundColor: 'var(--bg-page)', color: 'var(--text-primary)', WebkitTextFillColor: 'var(--text-primary)', fontSize: '1rem', lineHeight: 1.7, padding: '1rem', paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))', fontFamily: 'inherit' }} />
+        </div>
+      )}
+    </>
   )
 }
 
