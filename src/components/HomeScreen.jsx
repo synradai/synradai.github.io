@@ -92,7 +92,7 @@ export default function HomeScreen({ currentShift, shiftHistory, incidentCount, 
           <div style={{ ...SECTION_LABEL, marginBottom: '1rem' }}>Daily Log</div>
           <button
             onClick={onDailyLog}
-            style={{ width: '100%', padding: '1rem', backgroundColor: 'transparent', border: '1.5px solid var(--border-accent)', borderRadius: '0.75rem', color: 'var(--text-primary)', fontSize: '1.05rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+            style={{ width: '100%', padding: '1rem', backgroundColor: 'var(--accent)', border: 'none', borderRadius: '0.75rem', color: 'var(--on-accent)', fontSize: '1.05rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
           >
             🎤 What I've been up to
           </button>
