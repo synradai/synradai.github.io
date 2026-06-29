@@ -191,23 +191,32 @@ export default function AskSafety({ initialChats = [], onPersist, apiKey, learni
         <div>
           <ErrorBox style={{ marginBottom: '0.5rem' }}>{error}</ErrorBox>
           {!apiKey && <p style={{ fontSize: '0.7rem', color: 'var(--text-faint)', margin: '0 0 0.5rem', fontWeight: 600 }}>No API key — go to Settings to enable Gaz.</p>}
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end', backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-accent)', borderRadius: '1.4rem', padding: '0.5rem 0.5rem 0.5rem 0.9rem' }}>
             <div style={{ flex: 1 }}>
               <SafetyTextarea
                 value={question}
                 onChange={e => setQuestion(e.target.value)}
                 placeholder="Ask Gaz anything..."
-                rows={2}
-                style={{ ...TEXTAREA, resize: 'none' }}
+                rows={1}
+                minimal
+                style={{ ...TEXTAREA, resize: 'none', border: 'none', backgroundColor: 'transparent', padding: '0.4rem 0', minHeight: '1.6rem' }}
                 apiKey={apiKey}
               />
             </div>
             <button
               onClick={ask}
               disabled={loading || !question.trim() || !apiKey}
-              style={{ padding: '0.7rem 1.1rem', backgroundColor: 'var(--accent)', border: 'none', borderRadius: '0.5rem', color: 'var(--on-accent)', fontWeight: 700, fontSize: '0.875rem', cursor: (loading || !question.trim() || !apiKey) ? 'not-allowed' : 'pointer', opacity: (loading || !question.trim() || !apiKey) ? 0.5 : 1, flexShrink: 0 }}
+              aria-label="Send"
+              style={{
+                width: 40, height: 40, flexShrink: 0, borderRadius: '50%', border: 'none',
+                background: (loading || !question.trim() || !apiKey) ? 'var(--border)' : 'linear-gradient(135deg, var(--glow-a), var(--glow-c))',
+                color: '#fff', fontWeight: 800, fontSize: '1.15rem', lineHeight: 1,
+                cursor: (loading || !question.trim() || !apiKey) ? 'not-allowed' : 'pointer',
+                boxShadow: (loading || !question.trim() || !apiKey) ? 'none' : '0 0 16px rgba(59,130,246,0.5)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
             >
-              {loading ? '...' : 'Send'}
+              {loading ? '…' : '↑'}
             </button>
           </div>
         </div>
@@ -215,7 +224,12 @@ export default function AskSafety({ initialChats = [], onPersist, apiKey, learni
     >
       {messages.length === 0 ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '2.5rem 1rem', minHeight: '40vh' }}>
-          <div style={{ fontSize: '2.75rem', marginBottom: '0.5rem' }}>👷</div>
+          <div style={{
+            width: 88, height: 88, borderRadius: '50%', margin: '0 auto 1.1rem',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.4rem',
+            background: 'radial-gradient(circle at 50% 34%, #bfdbfe 0%, var(--glow-a) 60%, #1e3a8a 100%)',
+            boxShadow: '0 0 42px 6px rgba(59,130,246,0.45), inset 0 6px 12px rgba(255,255,255,0.3)',
+          }}>👷</div>
           <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 0.4rem' }}>G'day, I'm Gaz.</h2>
           <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.5, fontWeight: 600, maxWidth: '20rem' }}>
             Your safety offsider. Ask me anything — a hazard, an incident, site rules, what the law says. Quick, straight answers.

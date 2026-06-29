@@ -32,7 +32,7 @@ const SAFETY_WORDS = [
   'tailgate meeting', 'toolbox talk',
 ]
 
-export default function SafetyTextarea({ value, onChange, placeholder, rows = 3, style, apiKey }) {
+export default function SafetyTextarea({ value, onChange, placeholder, rows = 3, style, apiKey, minimal = false }) {
   const [suggestions, setSuggestions] = useState([])
   const [cursorWordStart, setCursorWordStart] = useState(0)
   const [cursorWordEnd, setCursorWordEnd] = useState(0)
@@ -61,6 +61,7 @@ export default function SafetyTextarea({ value, onChange, placeholder, rows = 3,
   }
 
   const updateSuggestions = (val, cursor) => {
+    if (minimal) { setSuggestions([]); return } // no safety-word chips in chat
     const before = val.slice(0, cursor)
     // get last word or phrase fragment (up to 3 words back)
     const match = before.match(/[\w\s]{1,30}$/)
@@ -208,15 +209,15 @@ export default function SafetyTextarea({ value, onChange, placeholder, rows = 3,
 
   return (
     <div style={{ position: 'relative' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.4rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
         <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', flex: 1 }}>
-          {suggestions.map(word => (
+          {!minimal && suggestions.map(word => (
             <button
               key={word}
               onMouseDown={e => { e.preventDefault(); applySuggestion(word) }}
               style={{
-                padding: '0.2rem 0.65rem', border: '1.5px solid var(--accent)',
-                borderRadius: '1rem', backgroundColor: 'var(--border-accent)',
+                padding: '0.2rem 0.65rem', border: '1px solid var(--border-accent)',
+                borderRadius: '1rem', backgroundColor: 'var(--bg-input)',
                 color: 'var(--accent-soft)', fontSize: '0.72rem', fontWeight: 700,
                 cursor: 'pointer', whiteSpace: 'nowrap',
               }}
@@ -225,37 +226,42 @@ export default function SafetyTextarea({ value, onChange, placeholder, rows = 3,
             </button>
           ))}
         </div>
-        <div style={{ display: 'flex', gap: '0.35rem', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: '0.4rem', flexShrink: 0, alignItems: 'center' }}>
           <button
             type="button"
             onMouseDown={e => e.preventDefault()}
             onClick={listening ? stopVoice : startVoice}
+            title={listening ? 'Stop' : 'Voice input'}
             style={{
-              padding: '0.2rem 0.65rem', border: 'none', borderRadius: '1rem', cursor: 'pointer',
-              backgroundColor: listening ? 'var(--error-bg-strong)' : 'var(--border)',
-              color: listening ? 'var(--error-text)' : 'var(--text-muted)',
-              fontSize: '0.7rem', fontWeight: 800, flexShrink: 0,
+              width: 34, height: 34, borderRadius: '50%', cursor: 'pointer', flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.95rem',
+              backgroundColor: listening ? 'var(--error-bg-strong)' : 'var(--bg-input)',
+              border: listening ? '1px solid var(--error-border)' : '1px solid var(--border-accent)',
+              color: listening ? 'var(--error-text)' : 'var(--accent-soft)',
+              boxShadow: listening ? '0 0 12px rgba(244,63,94,0.5)' : 'none',
             }}
           >
-            {listening ? '● Stop' : '🎤 Voice'}
+            {listening ? '■' : '🎤'}
           </button>
-          <button
-            type="button"
-            onMouseDown={e => e.preventDefault()}
-            onClick={runAI}
-            disabled={!apiKey || !value?.trim() || polishing || listening}
-            title={!apiKey ? 'Add an API key in Settings to use AI fixes' : 'Rewrite professionally: concise, formal tone, correct safety terminology'}
-            style={{
-              padding: '0.2rem 0.65rem', border: 'none', borderRadius: '1rem',
-              cursor: (!apiKey || !value?.trim() || polishing || listening) ? 'not-allowed' : 'pointer',
-              backgroundColor: 'var(--border)',
-              color: 'var(--accent-soft)',
-              fontSize: '0.7rem', fontWeight: 800, flexShrink: 0,
-              opacity: (!apiKey || !value?.trim() || listening) ? 0.4 : 1,
-            }}
-          >
-            {polishing ? '✨ AI...' : '✨ AI'}
-          </button>
+          {!minimal && (
+            <button
+              type="button"
+              onMouseDown={e => e.preventDefault()}
+              onClick={runAI}
+              disabled={!apiKey || !value?.trim() || polishing || listening}
+              title={!apiKey ? 'Add an API key in Settings to use AI fixes' : 'Rewrite professionally: concise, formal tone, correct safety terminology'}
+              style={{
+                width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
+                cursor: (!apiKey || !value?.trim() || polishing || listening) ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem',
+                backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-accent)',
+                color: 'var(--accent-soft)',
+                opacity: (!apiKey || !value?.trim() || listening) ? 0.4 : 1,
+              }}
+            >
+              {polishing ? '…' : '✨'}
+            </button>
+          )}
         </div>
       </div>
 

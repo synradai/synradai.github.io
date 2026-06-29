@@ -103,12 +103,22 @@ export default function HomeScreen({ currentShift, shiftHistory, incidentCount, 
         </button>
 
         {/* Action grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
-          <ActionCard emoji="👷" label="Ask Gaz" sub="your safety mate" onClick={onAskAI} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
           <ActionCard emoji="🎤" label="Daily Log" sub="what I've been up to" onClick={onDailyLog} />
           <ActionCard emoji="📋" label="Field Leadership" sub="VFL observation" onClick={onFieldReport} />
-          <ActionCard emoji="⚠️" label="Report Incident" sub="log an incident" onClick={onReportIncident} danger />
         </div>
+
+        {/* Report Incident — full width, prominent */}
+        <button
+          onClick={onReportIncident}
+          style={{ width: '100%', textAlign: 'left', backgroundColor: 'var(--bg-card)', border: '1px solid var(--error-border)', borderRadius: '1.1rem', padding: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '1rem' }}
+        >
+          <IconOrb danger>⚠️</IconOrb>
+          <div>
+            <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>Report Incident</div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-faint)', fontWeight: 600, marginTop: '0.15rem' }}>Log an incident with photos &amp; AI report</div>
+          </div>
+        </button>
 
         {/* Count chips */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.625rem', marginBottom: '0.75rem' }}>
