@@ -386,6 +386,7 @@ export default function App() {
           fieldReportCount={fieldReports.length}
           onReportIncident={() => setShowIncident(true)}
           onDailyLog={() => setView('dailylog')}
+          advisorName={session?.user?.user_metadata?.full_name || session?.user?.email || ''}
           theme={theme}
           onToggleTheme={toggleTheme}
         />
