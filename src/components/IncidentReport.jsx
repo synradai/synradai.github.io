@@ -73,9 +73,20 @@ export default function IncidentReport({ apiKey, onClose, onSave }) {
   }
   const removeAt = (setter) => (idx) => setter(prev => prev.filter((_, i) => i !== idx))
 
-  const handleScanSave = (dataUrl) => {
-    setJsaPhotos(prev => [...prev, dataUrl])
+  // Scan → immediately read to de-identified text, then DISCARD the image so no
+  // company branding/logos/site info is ever stored. Only the safety text is kept.
+  const handleScanSave = async (dataUrl) => {
     setShowScanner(false)
+    setJsaLoading(true); setJsaError('')
+    try {
+      const content = [...buildImageBlocks([dataUrl]), { type: 'text', text: buildJsaScanPrompt() }]
+      const text = await callAnthropicAPI(apiKey, content, 600)
+      setJsaSummary(prev => (prev ? prev + '\n\n' : '') + text.trim())
+    } catch (e) {
+      setJsaError(e.message || 'Could not read the document — try again.')
+    } finally {
+      setJsaLoading(false)
+    }
   }
 
   const scanJsa = async () => {
@@ -195,6 +206,9 @@ export default function IncidentReport({ apiKey, onClose, onSave }) {
           <PrimaryButton onClick={scanJsa} loading={jsaLoading} style={{ marginTop: '0.6rem' }}>
             {jsaLoading ? 'Reading Document...' : 'Read JSA / Permit (AI)'}
           </PrimaryButton>
+        )}
+        {jsaLoading && jsaPhotos.length === 0 && (
+          <p style={{ fontSize: '0.78rem', color: 'var(--accent-soft)', fontWeight: 700, marginTop: '0.6rem' }}>Reading scanned document — stripping company details…</p>
         )}
         <ErrorBox style={{ marginTop: '0.6rem' }}>{jsaError}</ErrorBox>
         {jsaSummary && (
