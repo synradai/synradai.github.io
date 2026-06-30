@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { callAnthropicAPI, isProxyMode } from '../utils/api'
-import { isBackendEnabled } from '../utils/supabase'
+import { isBackendEnabled, supabase } from '../utils/supabase'
 import { isBillingEnabled, openPortal } from '../utils/billing'
 import { loadTerms, saveTerms, deidentifyText } from '../utils/deident'
 import TwoFactor from './TwoFactor'
@@ -17,6 +17,24 @@ export default function Settings({ apiKey, onSave, onBack, userEmail, onSignOut 
   const [key, setKey] = useState(apiKey)
   const [visible, setVisible] = useState(false)
   const [showLegal, setShowLegal] = useState(false)
+  const [delMode, setDelMode] = useState(false)
+  const [delText, setDelText] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const [delErr, setDelErr] = useState('')
+
+  const deleteAccount = async () => {
+    setDeleting(true); setDelErr('')
+    try {
+      const { error } = await supabase.rpc('delete_my_account')
+      if (error) throw error
+      try { localStorage.clear() } catch (_) {}
+      try { await supabase.auth.signOut() } catch (_) {}
+      onSignOut?.()
+    } catch (e) {
+      setDelErr(e?.message || 'Could not delete account — try again, or email synradai@outlook.com.')
+      setDeleting(false)
+    }
+  }
   const [saved, setSaved] = useState(false)
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState(null) // { ok: bool, msg: string }
@@ -89,6 +107,30 @@ export default function Settings({ apiKey, onSave, onBack, userEmail, onSignOut 
             <button onClick={onSignOut} style={{ padding: '0.6rem 1.25rem', backgroundColor: 'var(--border)', border: 'none', borderRadius: '0.5rem', color: 'var(--text-muted)', fontSize: '0.875rem', fontWeight: 700, cursor: 'pointer' }}>
               Sign Out
             </button>
+          </div>
+
+          {/* Danger zone — self-serve account deletion */}
+          <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+            {!delMode ? (
+              <button onClick={() => { setDelMode(true); setDelErr(''); setDelText('') }} style={{ background: 'none', border: 'none', color: 'var(--error-text)', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}>
+                Delete my account
+              </button>
+            ) : (
+              <div style={{ backgroundColor: 'var(--error-bg)', border: '1px solid var(--error-border)', borderRadius: '0.6rem', padding: '0.875rem' }}>
+                <p style={{ fontSize: '0.8rem', color: 'var(--error-text)', fontWeight: 700, margin: '0 0 0.4rem' }}>This permanently deletes your account and all your data.</p>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, margin: '0 0 0.6rem', lineHeight: 1.5 }}>Your shifts, incidents, reports, daily logs, learnings and Gaz chats will be erased and cannot be recovered. Type <b>DELETE</b> to confirm.</p>
+                <input value={delText} onChange={e => setDelText(e.target.value)} placeholder="DELETE" autoCapitalize="characters" style={{ ...INPUT, marginBottom: '0.6rem' }} />
+                {delErr && <p style={{ fontSize: '0.72rem', color: 'var(--error-text)', fontWeight: 600, margin: '0 0 0.5rem' }}>{delErr}</p>}
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button onClick={deleteAccount} disabled={delText.trim().toUpperCase() !== 'DELETE' || deleting} style={{ padding: '0.55rem 1rem', backgroundColor: 'var(--danger)', border: 'none', borderRadius: '0.5rem', color: 'var(--on-accent)', fontSize: '0.82rem', fontWeight: 800, cursor: (delText.trim().toUpperCase() === 'DELETE' && !deleting) ? 'pointer' : 'not-allowed', opacity: (delText.trim().toUpperCase() === 'DELETE' && !deleting) ? 1 : 0.4 }}>
+                    {deleting ? 'Deleting…' : 'Permanently delete'}
+                  </button>
+                  <button onClick={() => { setDelMode(false); setDelErr('') }} disabled={deleting} style={{ padding: '0.55rem 1rem', backgroundColor: 'var(--border)', border: 'none', borderRadius: '0.5rem', color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
