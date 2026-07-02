@@ -16,9 +16,19 @@
           if (!b) return
           var prev = localStorage.getItem('si_build')
           localStorage.setItem('si_build', b)
-          if (prev && prev !== b && location.search.indexOf('u=' + b) === -1) {
-            // New deploy detected — reload past the HTTP cache with a fresh URL.
-            location.replace(location.pathname + '?u=' + encodeURIComponent(b))
+          if (prev && prev !== b) {
+            // New deploy detected. If the offline service worker is running,
+            // ask it to fetch the new build — it installs in the background,
+            // takes over, and the page auto-reloads (registerSW autoUpdate).
+            // Only force-navigate as a fallback when there's no SW in control.
+            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+              navigator.serviceWorker.getRegistration()
+                .then(function (r) { if (r) r.update() })
+                .catch(function () {})
+            } else if (location.search.indexOf('u=' + b) === -1) {
+              // Reload past the HTTP cache with a fresh URL.
+              location.replace(location.pathname + '?u=' + encodeURIComponent(b))
+            }
           }
         })
         .catch(function () {})
