@@ -1,10 +1,11 @@
 // Safety Advisor / SafeIntel — AI proxy (Supabase Edge Function, Deno)
 // ---------------------------------------------------------------------------
-// Holds the Anthropic key server-side, requires a logged-in user, enforces a
-// per-user daily rate limit, validates input, then proxies the call. Returns
-// Anthropic's raw response shape unchanged so the frontend parsing is the same.
+// Holds the Anthropic key server-side, requires a logged-in user WITH an
+// active subscription or unexpired trial, enforces a per-user daily rate
+// limit, validates input, then proxies the call. Returns Anthropic's raw
+// response shape unchanged so the frontend parsing is the same.
 //
-// Deploy:  redeploy this function (it's the AI one) after running
+// Deploy:  redeploy this function (deployed as "quick-worker") after running
 //          migration-ratelimit.sql.
 // Secrets: ANTHROPIC_API_KEY  (SUPABASE_URL / _ANON_KEY / _SERVICE_ROLE_KEY
 //          are injected automatically).
@@ -16,21 +17,25 @@ const MODEL = "claude-sonnet-4-6";
 const DAILY_LIMIT = 150;            // AI calls per user per day
 const MAX_PROMPT_CHARS = 200_000;   // reject absurdly large prompts
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*", // tighten to your domain at launch
-  "Access-Control-Allow-Headers": "authorization, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+// Only the app itself may call this from a browser (plus local dev).
+const ALLOWED_ORIGINS = ["https://synradai.github.io", "http://localhost:5173"];
 
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "content-type": "application/json" },
-  });
+function corsHeaders(req: Request) {
+  const origin = req.headers.get("Origin") ?? "";
+  return {
+    "Access-Control-Allow-Origin": ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0],
+    "Access-Control-Allow-Headers": "authorization, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
+  };
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const cors = corsHeaders(req);
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), { status, headers: { ...cors, "content-type": "application/json" } });
+
+  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   try {
@@ -46,7 +51,21 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authErr } = await userClient.auth.getUser();
     if (authErr || !user) return json({ error: "Not authenticated" }, 401);
 
-    // 2. Validate input.
+    // 2. Require an active subscription or unexpired trial (server-side —
+    //    the client paywall alone can be bypassed by calling this endpoint
+    //    directly, which would run up the Anthropic bill for free).
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+    const { data: profile } = await admin.from("profiles").select("org_id").eq("id", user.id).single();
+    if (!profile) return json({ error: "No organisation for user" }, 403);
+    const { data: org } = await admin.from("organisations")
+      .select("subscription_status, trial_ends_at").eq("id", profile.org_id).single();
+    const subActive = org && (org.subscription_status === "active" || org.subscription_status === "trialing");
+    const trialActive = org && org.trial_ends_at && new Date(org.trial_ends_at).getTime() > Date.now();
+    if (!subActive && !trialActive) {
+      return json({ error: "Subscription required. Your free trial has ended." }, 402);
+    }
+
+    // 3. Validate input.
     let body: { prompt?: unknown; maxTokens?: unknown };
     try { body = await req.json(); } catch { return json({ error: "Bad JSON" }, 400); }
     const { prompt, maxTokens } = body ?? {};
@@ -55,14 +74,18 @@ Deno.serve(async (req) => {
     if (JSON.stringify(prompt).length > MAX_PROMPT_CHARS) return json({ error: "Prompt too large" }, 413);
     const max = Math.min(Math.max(Number(maxTokens) || 1000, 1), 4000);
 
-    // 3. Per-user daily rate limit (atomic increment in the DB).
-    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-    const { data: count } = await admin.rpc("bump_ai_usage", { uid: user.id });
-    if (typeof count === "number" && count > DAILY_LIMIT) {
+    // 4. Per-user daily rate limit (atomic increment in the DB). Fail CLOSED:
+    //    if the limiter is missing/broken we refuse rather than allow
+    //    unmetered spending.
+    const { data: count, error: rlErr } = await admin.rpc("bump_ai_usage", { uid: user.id });
+    if (rlErr || typeof count !== "number") {
+      return json({ error: "Rate limiter unavailable — try again shortly." }, 503);
+    }
+    if (count > DAILY_LIMIT) {
       return json({ error: "Daily AI limit reached. Try again tomorrow." }, 429);
     }
 
-    // 4. Call Anthropic with the SERVER's key.
+    // 5. Call Anthropic with the SERVER's key.
     let res: Response;
     try {
       res = await fetch("https://api.anthropic.com/v1/messages", {
