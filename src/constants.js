@@ -19,7 +19,6 @@ export const STORAGE_KEYS = {
   HISTORY: 'sa_shift_history',
   API_KEY: 'sa_api_key',
   LEARNINGS: 'sa_learnings',
-  ASK_HISTORY: 'sa_ask_history',
   ASK_CHATS: 'sa_ask_chats',
   KNOWN_PEOPLE: 'sa_known_people',
   THEME: 'sa_theme',

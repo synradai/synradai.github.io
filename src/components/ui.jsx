@@ -3,7 +3,6 @@
 
 import { useState } from 'react'
 import { shareText } from '../utils/share'
-import { exportReportPdf } from '../utils/pdf'
 import { DocIcon } from './icons'
 import SafetyTextarea from './SafetyTextarea'
 
@@ -24,6 +23,12 @@ export const INPUT_FLEX = { ...INPUT, width: undefined, flex: 1, padding: '0.5re
 
 // Small "Add" button next to an INPUT_FLEX
 export const BTN_ADD = { padding: '0 1rem', backgroundColor: 'var(--accent)', border: 'none', borderRadius: '0.5rem', color: 'var(--on-accent)', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', whiteSpace: 'nowrap' }
+
+// Secondary action — outlined panel button (Manage Subscription, Test Key, Edit Entry)
+export const BTN_SECONDARY = { padding: '0.6rem 1.25rem', backgroundColor: 'var(--bg-panel)', border: '1.5px solid var(--border-accent)', borderRadius: '0.5rem', color: 'var(--accent-soft)', fontSize: '0.875rem', fontWeight: 700, cursor: 'pointer' }
+
+// Quiet tertiary action — grey (Sign Out, Cancel, Show/Hide, Clear)
+export const BTN_MUTED = { padding: '0.6rem 1.25rem', backgroundColor: 'var(--border)', border: 'none', borderRadius: '0.5rem', color: 'var(--text-muted)', fontSize: '0.875rem', fontWeight: 700, cursor: 'pointer' }
 
 export const CARD = { backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '1rem', padding: '1.5rem', marginBottom: '1rem' }
 
@@ -152,6 +157,9 @@ export function PdfButton({ getReport, label = 'PDF', style }) {
   const handle = async () => {
     setStatus('…')
     try {
+      // Loaded on demand — keeps the heavy jsPDF library out of the app's
+      // startup bundle (it's only needed the moment someone exports a PDF).
+      const { exportReportPdf } = await import('../utils/pdf')
       const r = await exportReportPdf(getReport())
       setStatus(r === 'failed' ? 'Failed' : (r === 'downloaded' ? '✓ Saved' : (r === 'shared' ? '✓ Sent' : '')))
     } catch (_) { setStatus('Failed') }

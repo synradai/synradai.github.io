@@ -114,7 +114,7 @@ export default function DebriefHandover({ shift, updateShift, apiKey }) {
             <div style={{ marginBottom: '0.75rem' }}>
               <div style={{ fontSize: '0.65rem', color: 'var(--text-faint)', marginBottom: '0.4rem', fontWeight: 700 }}>— From site rounds:</div>
               {roundsActions.map(r => (
-                <div key={r.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', padding: '0.5rem 0.75rem', marginBottom: '0.3rem', backgroundColor: 'var(--bg-highlight)', borderLeft: '3px solid var(--accent-strong)', borderRadius: '0.375rem' }}>
+                <div key={r.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', padding: '0.5rem 0.75rem', marginBottom: '0.3rem', backgroundColor: 'var(--bg-highlight)', borderLeft: '3px solid var(--accent-strong)', borderRadius: '0.5rem' }}>
                   <span style={{ fontSize: '0.7rem', color: 'var(--text-faint)', flexShrink: 0, marginTop: '0.1rem', fontWeight: 700 }}>{formatTime(r.time)}</span>
                   <span style={{ fontSize: '0.85rem', color: 'var(--accent-soft)' }}>{r.text}</span>
                 </div>

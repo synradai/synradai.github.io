@@ -4,7 +4,7 @@ import { TAG_STYLES } from '../../constants'
 import { formatTime, formatDateTime } from '../../utils/format'
 import SafetyTextarea from '../SafetyTextarea'
 import { CameraIcon, AlertCircleIcon, UploadIcon } from '../icons'
-import { FullScreenModal, PhaseHeader, SECTION_LABEL, TEXTAREA } from '../ui'
+import { FullScreenModal, PhaseHeader, SECTION_LABEL, TEXTAREA, BTN_SECONDARY, BTN_MUTED } from '../ui'
 
 const TAGS = ['Hazard', 'Action', 'Observation', 'Near Miss']
 
@@ -89,7 +89,7 @@ export default function SiteRounds({ shift, updateShift, apiKey }) {
                 key={t}
                 onClick={() => setTag(t)}
                 style={{
-                  padding: isHazard ? '0.4rem 0.9rem' : '0.3rem 0.75rem', borderRadius: '0.375rem',
+                  padding: isHazard ? '0.4rem 0.9rem' : '0.3rem 0.75rem', borderRadius: '0.5rem',
                   border: `${isHazard ? 2 : 1.5}px solid ${active || isHazard ? s.border : 'var(--border)'}`,
                   backgroundColor: active || isHazard ? s.bg : 'transparent',
                   color: active || isHazard ? s.text : 'var(--text-faint)',
@@ -134,7 +134,7 @@ export default function SiteRounds({ shift, updateShift, apiKey }) {
 
         {photo && (
           <div style={{ position: 'relative', display: 'inline-block', marginTop: '0.5rem' }}>
-            <img src={photo} alt="Entry" style={{ maxHeight: '6rem', borderRadius: '0.375rem', objectFit: 'contain' }} />
+            <img src={photo} alt="Entry" style={{ maxHeight: '6rem', borderRadius: '0.5rem', objectFit: 'contain' }} />
             <button
               onClick={() => setPhoto(null)}
               style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: '50%', backgroundColor: 'var(--danger)', border: 'none', color: 'var(--on-accent)', fontSize: '0.65rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -168,7 +168,7 @@ export default function SiteRounds({ shift, updateShift, apiKey }) {
             </div>
             {rectifiedPhoto && (
               <div style={{ position: 'relative', display: 'inline-block', marginTop: '0.5rem' }}>
-                <img src={rectifiedPhoto} alt="Rectified hazard" style={{ maxHeight: '6rem', borderRadius: '0.375rem', objectFit: 'contain' }} />
+                <img src={rectifiedPhoto} alt="Rectified hazard" style={{ maxHeight: '6rem', borderRadius: '0.5rem', objectFit: 'contain' }} />
                 <button
                   onClick={() => setRectifiedPhoto(null)}
                   style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: '50%', backgroundColor: 'var(--danger)', border: 'none', color: 'var(--on-accent)', fontSize: '0.65rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -278,7 +278,7 @@ function EntryCard({ entry, onRemove, onSelect }) {
         <button onClick={(e) => { e.stopPropagation(); onRemove() }} style={{ color: 'var(--text-faint)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', padding: '0 0.25rem' }}>✕</button>
       </div>
       <p style={{ fontSize: '0.875rem', color: 'var(--text-primary)', margin: 0, lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>{entry.text}</p>
-      {entry.photo && <img src={entry.photo} alt="Entry" style={{ marginTop: '0.5rem', maxHeight: '8rem', borderRadius: '0.375rem', objectFit: 'contain' }} />}
+      {entry.photo && <img src={entry.photo} alt="Entry" style={{ marginTop: '0.5rem', maxHeight: '8rem', borderRadius: '0.5rem', objectFit: 'contain' }} />}
       {entry.tag === 'Hazard' && (
         <div style={{ marginTop: '0.4rem', fontSize: '0.7rem', fontWeight: 800, color: (entry.rectification || entry.rectifiedPhoto) ? 'var(--success-text)' : 'var(--text-faint)' }}>
           {(entry.rectification || entry.rectifiedPhoto) ? '✓ Rectified' : '○ Open — not yet rectified'}
@@ -352,7 +352,7 @@ function EntryDetail({ entry, onClose, onRemove, onUpdate, apiKey }) {
       onClose={onClose}
       badgeEl={
         <>
-          <span style={{ padding: '0.2rem 0.6rem', borderRadius: '0.3rem', backgroundColor: s.bg, color: s.text, fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <span style={{ padding: '0.2rem 0.6rem', borderRadius: '0.25rem', backgroundColor: s.bg, color: s.text, fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             {entry.tag}
           </span>
           <span style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--text-muted)' }}>{formatDateTime(entry.time)}</span>
@@ -371,7 +371,7 @@ function EntryDetail({ entry, onClose, onRemove, onUpdate, apiKey }) {
                   key={t}
                   onClick={() => setDraftTag(t)}
                   style={{
-                    padding: '0.3rem 0.75rem', borderRadius: '0.375rem',
+                    padding: '0.3rem 0.75rem', borderRadius: '0.5rem',
                     border: `1.5px solid ${active ? ts.border : 'var(--border)'}`,
                     backgroundColor: active ? ts.bg : 'transparent',
                     color: active ? ts.text : 'var(--text-faint)',
@@ -415,7 +415,7 @@ function EntryDetail({ entry, onClose, onRemove, onUpdate, apiKey }) {
               </div>
               {draftRectifiedPhoto && (
                 <div style={{ position: 'relative', display: 'inline-block', marginTop: '0.5rem' }}>
-                  <img src={draftRectifiedPhoto} alt="Rectified hazard" style={{ maxHeight: '6rem', borderRadius: '0.375rem', objectFit: 'contain' }} />
+                  <img src={draftRectifiedPhoto} alt="Rectified hazard" style={{ maxHeight: '6rem', borderRadius: '0.5rem', objectFit: 'contain' }} />
                   <button
                     onClick={() => setDraftRectifiedPhoto(null)}
                     style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: '50%', backgroundColor: 'var(--danger)', border: 'none', color: 'var(--on-accent)', fontSize: '0.65rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -451,7 +451,7 @@ function EntryDetail({ entry, onClose, onRemove, onUpdate, apiKey }) {
             </button>
             <button
               onClick={cancelEdit}
-              style={{ padding: '0.75rem 1.25rem', backgroundColor: 'var(--border)', border: 'none', borderRadius: '0.5rem', color: 'var(--text-muted)', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}
+              style={{ ...BTN_MUTED, padding: '0.75rem 1.25rem' }}
             >
               Cancel
             </button>
@@ -500,7 +500,7 @@ function EntryDetail({ entry, onClose, onRemove, onUpdate, apiKey }) {
 
           <button
             onClick={startEdit}
-            style={{ width: '100%', padding: '0.75rem', backgroundColor: 'var(--bg-panel)', border: '1.5px solid var(--border-accent)', borderRadius: '0.5rem', color: 'var(--accent-soft)', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', marginBottom: '0.5rem' }}
+            style={{ ...BTN_SECONDARY, width: '100%', padding: '0.75rem', marginBottom: '0.5rem' }}
           >
             ✎ Edit Entry
           </button>

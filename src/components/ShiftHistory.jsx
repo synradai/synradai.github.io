@@ -73,7 +73,7 @@ function ShiftDetail({ shift }) {
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-faint)', flexShrink: 0, fontWeight: 600 }}>
                   {formatTime(r.time)}
                 </span>
-                <span style={{ padding: '0 0.4rem', borderRadius: '0.2rem', backgroundColor: s.bg, color: s.text, fontSize: '0.65rem', fontWeight: 700, flexShrink: 0, lineHeight: '1.4' }}>
+                <span style={{ padding: '0 0.4rem', borderRadius: '0.25rem', backgroundColor: s.bg, color: s.text, fontSize: '0.65rem', fontWeight: 700, flexShrink: 0, lineHeight: '1.4' }}>
                   {r.tag}
                 </span>
                 <span style={{ fontSize: '0.8rem', color: 'var(--accent-soft)', minWidth: 0 }}>
@@ -104,7 +104,7 @@ function ShiftDetail({ shift }) {
       {shift.incidents?.length > 0 && (
         <Section title={`Incidents (${shift.incidents.length})`}>
           {shift.incidents.map(inc => (
-            <div key={inc.id} style={{ marginBottom: '0.75rem', padding: '0.75rem', borderRadius: '0.375rem', backgroundColor: 'var(--bg-input)', borderLeft: '3px solid var(--error-border)' }}>
+            <div key={inc.id} style={{ marginBottom: '0.75rem', padding: '0.75rem', borderRadius: '0.5rem', backgroundColor: 'var(--bg-input)', borderLeft: '3px solid var(--error-border)' }}>
               <div style={{ fontSize: '0.7rem', color: 'var(--error-text)', marginBottom: '0.25rem', fontWeight: 700 }}>
                 {formatTime(inc.time)}{inc.incidentType ? ` · ${inc.incidentType}` : ''}{inc.companyName ? ` · ${inc.companyName}` : ''}
               </div>

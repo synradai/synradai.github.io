@@ -96,7 +96,7 @@ export default function FieldLeadershipReport({ apiKey, onClose, onSave }) {
   useEffect(() => () => { walkRef.current = false; try { recRef.current?.stop() } catch (_) {} }, [])
 
   const isActive = (k) => walk && STEPS[step].key === k
-  const sectionStyle = (k) => ({ marginBottom: '1rem', borderRadius: '0.6rem', padding: isActive(k) ? '0.6rem' : 0, border: isActive(k) ? '1.5px solid var(--accent)' : '1.5px solid transparent', boxShadow: isActive(k) ? '0 0 16px rgba(59,130,246,0.35)' : 'none', transition: 'border-color 0.2s, box-shadow 0.2s' })
+  const sectionStyle = (k) => ({ marginBottom: '1rem', borderRadius: '0.5rem', padding: isActive(k) ? '0.6rem' : 0, border: isActive(k) ? '1.5px solid var(--accent)' : '1.5px solid transparent', boxShadow: isActive(k) ? '0 0 16px rgba(59,130,246,0.35)' : 'none', transition: 'border-color 0.2s, box-shadow 0.2s' })
 
   const handlePhoto = async (e) => {
     const file = e.target.files[0]
@@ -134,18 +134,18 @@ export default function FieldLeadershipReport({ apiKey, onClose, onSave }) {
 
       {/* Voice walkthrough control */}
       {!walk ? (
-        <button onClick={startWalk} style={{ width: '100%', marginBottom: '1.25rem', padding: '0.85rem', border: 'none', borderRadius: '0.85rem', background: 'linear-gradient(135deg, var(--glow-a), var(--glow-c))', color: '#fff', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', boxShadow: '0 6px 20px rgba(59,130,246,0.35)' }}>
+        <button onClick={startWalk} style={{ width: '100%', marginBottom: '1.25rem', padding: '0.85rem', border: 'none', borderRadius: '0.75rem', background: 'linear-gradient(135deg, var(--glow-a), var(--glow-c))', color: '#fff', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', boxShadow: '0 6px 20px rgba(59,130,246,0.35)' }}>
           <MicIcon size={18} /> Voice walkthrough — fill by talking
         </button>
       ) : (
-        <div style={{ position: 'sticky', top: 0, zIndex: 5, backgroundColor: 'var(--bg-panel)', border: '1.5px solid var(--accent)', borderRadius: '0.85rem', padding: '0.8rem 0.9rem', marginBottom: '1.25rem', boxShadow: '0 6px 20px rgba(0,0,0,0.4)' }}>
+        <div style={{ position: 'sticky', top: 0, zIndex: 5, backgroundColor: 'var(--bg-panel)', border: '1.5px solid var(--accent)', borderRadius: '0.75rem', padding: '0.8rem 0.9rem', marginBottom: '1.25rem', boxShadow: '0 6px 20px rgba(0,0,0,0.4)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--accent-soft)' }}>{wListening ? '● Listening' : 'Paused'} · {step + 1}/{STEPS.length}</div>
               <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)' }}>{STEPS[step].label}</div>
             </div>
             <div style={{ display: 'flex', gap: '0.4rem', flexShrink: 0 }}>
-              <button onClick={() => goToStep(step + 1)} style={{ padding: '0.45rem 0.85rem', border: 'none', borderRadius: '0.6rem', backgroundColor: 'var(--accent)', color: 'var(--on-accent)', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer' }}>{step === STEPS.length - 1 ? 'Finish' : 'Next →'}</button>
+              <button onClick={() => goToStep(step + 1)} style={{ padding: '0.45rem 0.85rem', border: 'none', borderRadius: '0.5rem', backgroundColor: 'var(--accent)', color: 'var(--on-accent)', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer' }}>{step === STEPS.length - 1 ? 'Finish' : 'Next →'}</button>
               <button onClick={stopWalk} aria-label="Stop" style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', backgroundColor: 'var(--error-bg-strong)', color: 'var(--error-text)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><StopIcon size={13} /></button>
             </div>
           </div>

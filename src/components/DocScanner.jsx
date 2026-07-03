@@ -217,7 +217,7 @@ export default function DocScanner({ onClose, onSave }) {
 
       {step === 'capture' && (
         <div>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', padding: '0.7rem 0.8rem', marginBottom: '1rem', borderRadius: '0.6rem', backgroundColor: 'var(--bg-panel)', border: '1px solid var(--border-accent)' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', padding: '0.7rem 0.8rem', marginBottom: '1rem', borderRadius: '0.5rem', backgroundColor: 'var(--bg-panel)', border: '1px solid var(--border-accent)' }}>
             <span style={{ fontSize: '0.95rem', lineHeight: 1.2 }}>🔒</span>
             <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600, lineHeight: 1.5, margin: 0 }}>
               The document is read into de-identified safety notes — <strong style={{ color: 'var(--text-primary)' }}>the original image is not stored</strong>, and company names, logos, site details and reference numbers are stripped out. Only the hazards, controls and PPE are kept.

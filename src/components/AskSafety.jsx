@@ -150,7 +150,7 @@ export default function AskSafety({ initialChats = [], onPersist, apiKey, learni
         <div style={{ padding: '0.875rem 1rem', borderBottom: '1px solid var(--border)' }}>
           <button
             onClick={newChat}
-            style={{ width: '100%', padding: '0.7rem', backgroundColor: 'var(--accent)', border: 'none', borderRadius: '0.6rem', color: 'var(--on-accent)', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer' }}
+            style={{ width: '100%', padding: '0.7rem', backgroundColor: 'var(--accent)', border: 'none', borderRadius: '0.5rem', color: 'var(--on-accent)', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer' }}
           >
             ＋ New chat
           </button>

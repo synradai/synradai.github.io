@@ -154,7 +154,7 @@ export default function MorningMeeting({ shift, updateShift, apiKey }) {
                       {openPoints[topic.id] ? '▾ Hide talking points' : '▸ Show talking points'}
                     </button>
                     {openPoints[topic.id] && (
-                      <div style={{ backgroundColor: 'var(--bg-panel)', border: '1px solid var(--border-accent)', borderRadius: '0.375rem', padding: '0.5rem 0.625rem', marginTop: '0.3rem' }}>
+                      <div style={{ backgroundColor: 'var(--bg-panel)', border: '1px solid var(--border-accent)', borderRadius: '0.5rem', padding: '0.5rem 0.625rem', marginTop: '0.3rem' }}>
                         <pre style={{ whiteSpace: 'pre-wrap', margin: 0, fontFamily: 'inherit', fontSize: '0.78rem', color: 'var(--accent-soft)', lineHeight: 1.6 }}>{topic.talkingPoints}</pre>
                         <button
                           onClick={() => generateTalkingPoints(topic)}

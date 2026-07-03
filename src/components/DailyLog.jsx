@@ -3,7 +3,7 @@ import { generateId } from '../utils/storage'
 import { formatTime, formatDate } from '../utils/format'
 import { callAnthropicAPI, buildDaySummaryPrompt } from '../utils/api'
 import SafetyTextarea from './SafetyTextarea'
-import { PageShell, SECTION_LABEL, TEXTAREA, EMPTY_PAGE, ErrorBox, ShareButton, FullScreenButton } from './ui'
+import { PageShell, SECTION_LABEL, TEXTAREA, EMPTY_PAGE, ErrorBox, ShareButton, FullScreenButton, BTN_SECONDARY } from './ui'
 
 const dayKey = (iso) => new Date(iso).toDateString()
 const hourLabel = (h) => { const ampm = h < 12 ? 'am' : 'pm'; const hr = h % 12 === 0 ? 12 : h % 12; return `${hr} ${ampm}` }
@@ -56,7 +56,7 @@ export default function DailyLog({ entries, onAdd, onRemove, apiKey, onBack }) {
     for (const e of rows) (buckets[new Date(e.time).getHours()] ||= []).push(e)
     const hours = Object.keys(buckets).map(Number).sort((a, b) => a - b)
     return (
-      <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '0.85rem', padding: '0.85rem 1rem' }}>
+      <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '0.75rem', padding: '0.85rem 1rem' }}>
         {hours.map(h => (
           <div key={h} style={{ display: 'flex', gap: '0.85rem', marginBottom: '0.5rem' }}>
             <div style={{ width: '2.6rem', flexShrink: 0, fontSize: '0.7rem', fontWeight: 800, color: 'var(--accent-soft)', textAlign: 'right', paddingTop: '0.5rem' }}>{hourLabel(h)}</div>
@@ -99,7 +99,7 @@ export default function DailyLog({ entries, onAdd, onRemove, apiKey, onBack }) {
           <button
             onClick={sumUpDay}
             disabled={summarizing}
-            style={{ padding: '0.35rem 0.8rem', backgroundColor: 'var(--bg-panel)', border: '1.5px solid var(--border-accent)', borderRadius: '0.5rem', color: 'var(--accent-soft)', fontWeight: 800, fontSize: '0.72rem', cursor: summarizing ? 'wait' : 'pointer' }}
+            style={{ ...BTN_SECONDARY, padding: '0.35rem 0.8rem', fontWeight: 800, fontSize: '0.72rem', cursor: summarizing ? 'wait' : 'pointer' }}
           >
             {summarizing ? 'Summing up…' : '✨ Sum up my day'}
           </button>
@@ -109,7 +109,7 @@ export default function DailyLog({ entries, onAdd, onRemove, apiKey, onBack }) {
       {summary && (
         <div style={{ backgroundColor: 'var(--bg-panel)', border: '1px solid var(--border-accent)', borderRadius: '0.75rem', padding: '1rem', marginBottom: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--accent)' }}>Your day, summed up</span>
+            <span style={{ ...SECTION_LABEL, marginBottom: 0 }}>Your day, summed up</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <FullScreenButton label="Your day, summed up" value={summary} onChange={e => setSummary(e.target.value)} />
               <ShareButton title="My day" getText={() => summary} />

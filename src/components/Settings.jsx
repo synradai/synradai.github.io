@@ -5,7 +5,7 @@ import { isBillingEnabled, openPortal } from '../utils/billing'
 import { loadTerms, saveTerms, deidentifyText } from '../utils/deident'
 import TwoFactor from './TwoFactor'
 import Legal from './Legal'
-import { PageShell, SECTION_LABEL, CARD, INPUT } from './ui'
+import { PageShell, SECTION_LABEL, CARD, INPUT, BTN_SECONDARY, BTN_MUTED } from './ui'
 
 // Strip whitespace and invisible characters that sneak in when copying keys
 // from email/notes apps (zero-width spaces, line breaks, smart quotes, etc.)
@@ -100,11 +100,11 @@ export default function Settings({ apiKey, onSave, onBack, userEmail, onSignOut 
           )}
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             {isBillingEnabled && (
-              <button onClick={() => openPortal().catch(() => {})} style={{ padding: '0.6rem 1.25rem', backgroundColor: 'var(--bg-panel)', border: '1.5px solid var(--border-accent)', borderRadius: '0.5rem', color: 'var(--accent-soft)', fontSize: '0.875rem', fontWeight: 700, cursor: 'pointer' }}>
+              <button onClick={() => openPortal().catch(() => {})} style={BTN_SECONDARY}>
                 Manage Subscription
               </button>
             )}
-            <button onClick={onSignOut} style={{ padding: '0.6rem 1.25rem', backgroundColor: 'var(--border)', border: 'none', borderRadius: '0.5rem', color: 'var(--text-muted)', fontSize: '0.875rem', fontWeight: 700, cursor: 'pointer' }}>
+            <button onClick={onSignOut} style={BTN_MUTED}>
               Sign Out
             </button>
           </div>
@@ -116,7 +116,7 @@ export default function Settings({ apiKey, onSave, onBack, userEmail, onSignOut 
                 Delete my account
               </button>
             ) : (
-              <div style={{ backgroundColor: 'var(--error-bg)', border: '1px solid var(--error-border)', borderRadius: '0.6rem', padding: '0.875rem' }}>
+              <div style={{ backgroundColor: 'var(--error-bg)', border: '1px solid var(--error-border)', borderRadius: '0.5rem', padding: '0.875rem' }}>
                 <p style={{ fontSize: '0.8rem', color: 'var(--error-text)', fontWeight: 700, margin: '0 0 0.4rem' }}>This permanently deletes your account and all your data.</p>
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, margin: '0 0 0.6rem', lineHeight: 1.5 }}>Your shifts, incidents, reports, daily logs, learnings and Gaz chats will be erased and cannot be recovered. Type <b>DELETE</b> to confirm.</p>
                 <input value={delText} onChange={e => setDelText(e.target.value)} placeholder="DELETE" autoCapitalize="characters" style={{ ...INPUT, marginBottom: '0.6rem' }} />
@@ -156,7 +156,7 @@ export default function Settings({ apiKey, onSave, onBack, userEmail, onSignOut 
             spellCheck="false"
             style={{ ...INPUT, width: undefined, flex: 1, fontFamily: 'monospace' }}
           />
-          <button onClick={() => setVisible(v => !v)} style={{ padding: '0 1rem', backgroundColor: 'var(--border)', border: 'none', borderRadius: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}>
+          <button onClick={() => setVisible(v => !v)} style={{ ...BTN_MUTED, padding: '0 1rem' }}>
             {visible ? 'Hide' : 'Show'}
           </button>
         </div>
@@ -176,12 +176,12 @@ export default function Settings({ apiKey, onSave, onBack, userEmail, onSignOut 
           <button
             onClick={testKey}
             disabled={!cleaned || testing}
-            style={{ padding: '0.6rem 1.25rem', backgroundColor: 'var(--bg-panel)', border: '1.5px solid var(--border-accent)', borderRadius: '0.5rem', color: 'var(--accent-soft)', fontSize: '0.875rem', fontWeight: 700, cursor: (!cleaned || testing) ? 'not-allowed' : 'pointer', opacity: (!cleaned || testing) ? 0.5 : 1 }}
+            style={{ ...BTN_SECONDARY, cursor: (!cleaned || testing) ? 'not-allowed' : 'pointer', opacity: (!cleaned || testing) ? 0.5 : 1 }}
           >
             {testing ? 'Testing...' : 'Test Key'}
           </button>
           {key && (
-            <button onClick={() => { setKey(''); onSave(''); setTestResult(null) }} style={{ padding: '0.6rem 1rem', backgroundColor: 'var(--border)', border: 'none', borderRadius: '0.5rem', color: 'var(--text-muted)', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>
+            <button onClick={() => { setKey(''); onSave(''); setTestResult(null) }} style={BTN_MUTED}>
               Clear
             </button>
           )}
@@ -242,7 +242,7 @@ export default function Settings({ apiKey, onSave, onBack, userEmail, onSignOut 
         <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem', lineHeight: 1.6, fontWeight: 500 }}>
           How your data is handled, our terms, and the AI &amp; safety disclaimer.
         </p>
-        <button onClick={() => setShowLegal(true)} style={{ padding: '0.6rem 1.25rem', backgroundColor: 'var(--bg-panel)', border: '1.5px solid var(--border-accent)', borderRadius: '0.5rem', color: 'var(--accent-soft)', fontSize: '0.875rem', fontWeight: 700, cursor: 'pointer' }}>
+        <button onClick={() => setShowLegal(true)} style={BTN_SECONDARY}>
           View Legal &amp; Privacy
         </button>
       </div>

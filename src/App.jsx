@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { STORAGE_KEYS, PHASE_NAMES, createNewShift } from './constants'
 import { safeSetItem } from './utils/storage'
 import { isProxyMode } from './utils/api'
@@ -40,7 +40,6 @@ export default function App() {
   const [showAskSafety, setShowAskSafety] = useState(false)
   const [theme, setTheme] = useState('dark')
   const [learnings, setLearnings] = useState([])
-  const [askHistory, setAskHistory] = useState([])
   const [askChats, setAskChats] = useState([])
   const [fieldReports, setFieldReports] = useState([])
   const [showFieldReport, setShowFieldReport] = useState(false)
@@ -74,7 +73,6 @@ export default function App() {
       const h = localStorage.getItem(STORAGE_KEYS.HISTORY)
       const k = localStorage.getItem(STORAGE_KEYS.API_KEY)
       const l = localStorage.getItem(STORAGE_KEYS.LEARNINGS)
-      const a = localStorage.getItem(STORAGE_KEYS.ASK_HISTORY)
       const ac = localStorage.getItem(STORAGE_KEYS.ASK_CHATS)
       const t = localStorage.getItem(STORAGE_KEYS.THEME)
       const f = localStorage.getItem(STORAGE_KEYS.FIELD_REPORTS)
@@ -84,7 +82,6 @@ export default function App() {
       if (h) setShiftHistory(JSON.parse(h))
       if (k) setApiKey(k)
       if (l) setLearnings(JSON.parse(l))
-      if (a) setAskHistory(JSON.parse(a))
       if (ac) setAskChats(JSON.parse(ac))
       if (t) setTheme(t)
       if (f) setFieldReports(JSON.parse(f))
@@ -158,10 +155,6 @@ export default function App() {
   }, [learnings, persist])
 
   useEffect(() => {
-    persist(STORAGE_KEYS.ASK_HISTORY, JSON.stringify(askHistory))
-  }, [askHistory, persist])
-
-  useEffect(() => {
     persist(STORAGE_KEYS.ASK_CHATS, JSON.stringify(askChats))
   }, [askChats, persist])
 
@@ -232,12 +225,12 @@ export default function App() {
 
   useEffect(() => {
     if (!isBackendEnabled || !session) return
-    pushItems('daily_log', dailyLog, e => ({ }))
+    pushItems('daily_log', dailyLog)
   }, [dailyLog, session])
 
   useEffect(() => {
     if (!isBackendEnabled || !session) return
-    pushItems('ask_chats', askChats, c => ({ }))
+    pushItems('ask_chats', askChats)
   }, [askChats, session])
 
   const updateShift = useCallback((updates) => {
@@ -276,9 +269,6 @@ export default function App() {
   const addLearning = (entry) => setLearnings(prev => [...prev, entry])
   const removeLearning = (id) => setLearnings(prev => prev.filter(l => l.id !== id))
 
-  const addAskEntry = (entry) => setAskHistory(prev => [...prev.slice(-49), entry])
-  const removeAskEntry = (id) => setAskHistory(prev => prev.filter(a => a.id !== id))
-
   const addFieldReport = (entry) => setFieldReports(prev => [entry, ...prev])
 
   const addIncident = (entry) => setIncidents(prev => [entry, ...prev])
@@ -286,11 +276,11 @@ export default function App() {
   const addDailyEntry = (entry) => setDailyLog(prev => [...prev, entry])
   const removeDailyEntry = (id) => setDailyLog(prev => prev.filter(e => e.id !== id))
 
-  const allIncidents = [
+  const allIncidents = useMemo(() => [
     ...(currentShift?.incidents || []).map(i => ({ ...i, shiftDate: currentShift.date })),
     ...shiftHistory.filter(s => s.id !== currentShift?.id).flatMap(s => (s.incidents || []).map(i => ({ ...i, shiftDate: s.date }))),
     ...incidents,
-  ].sort((a, b) => new Date(b.time) - new Date(a.time))
+  ].sort((a, b) => new Date(b.time) - new Date(a.time)), [currentShift, shiftHistory, incidents])
 
   const renderPhase = () => {
     const props = { shift: currentShift, updateShift, apiKey: aiKey }
@@ -362,7 +352,7 @@ export default function App() {
           <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--accent-soft)' }}>
             {access.daysLeft} day{access.daysLeft === 1 ? '' : 's'} left in your free trial
           </span>
-          <button onClick={() => startCheckout().catch(() => {})} style={{ padding: '0.25rem 0.75rem', backgroundColor: 'var(--accent)', border: 'none', borderRadius: '0.4rem', color: 'var(--on-accent)', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer' }}>
+          <button onClick={() => startCheckout().catch(() => {})} style={{ padding: '0.25rem 0.75rem', backgroundColor: 'var(--accent)', border: 'none', borderRadius: '0.5rem', color: 'var(--on-accent)', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer' }}>
             Subscribe
           </button>
         </div>

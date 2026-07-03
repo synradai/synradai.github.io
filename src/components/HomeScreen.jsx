@@ -26,7 +26,7 @@ function ActionCard({ emoji, label, sub, onClick, danger }) {
       onClick={onClick}
       style={{
         textAlign: 'left', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)',
-        borderRadius: '1.1rem', padding: '1rem', cursor: 'pointer',
+        borderRadius: '1rem', padding: '1rem', cursor: 'pointer',
         display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '0.7rem', minHeight: '7.5rem',
       }}
     >
@@ -41,7 +41,7 @@ function ActionCard({ emoji, label, sub, onClick, danger }) {
 
 function Chip({ onClick, label, n }) {
   return (
-    <button onClick={onClick} style={{ padding: '0.7rem 0.5rem', backgroundColor: 'transparent', border: '1px solid var(--border)', borderRadius: '0.8rem', color: 'var(--text-muted)', fontSize: '0.74rem', cursor: 'pointer', fontWeight: 700 }}>
+    <button onClick={onClick} style={{ padding: '0.7rem 0.5rem', backgroundColor: 'transparent', border: '1px solid var(--border)', borderRadius: '0.75rem', color: 'var(--text-muted)', fontSize: '0.74rem', cursor: 'pointer', fontWeight: 700 }}>
       {label}{n > 0 && <span style={{ color: 'var(--accent-soft)' }}> {n}</span>}
     </button>
   )
@@ -87,7 +87,7 @@ export default function HomeScreen({ currentShift, shiftHistory, incidentCount, 
         <button
           onClick={currentShift ? onContinueShift : onStartShift}
           style={{
-            width: '100%', textAlign: 'left', border: 'none', borderRadius: '1.1rem', padding: '1.1rem 1.25rem',
+            width: '100%', textAlign: 'left', border: 'none', borderRadius: '1rem', padding: '1.1rem 1.25rem',
             cursor: 'pointer', marginBottom: '0.75rem', color: '#fff',
             background: 'linear-gradient(135deg, var(--glow-a) 0%, #2563eb 55%, var(--glow-c) 100%)',
             boxShadow: '0 8px 26px rgba(59,130,246,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -111,7 +111,7 @@ export default function HomeScreen({ currentShift, shiftHistory, incidentCount, 
         {/* Report Incident — full width, prominent */}
         <button
           onClick={onReportIncident}
-          style={{ width: '100%', textAlign: 'left', backgroundColor: 'var(--bg-card)', border: '1px solid var(--error-border)', borderRadius: '1.1rem', padding: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '1rem' }}
+          style={{ width: '100%', textAlign: 'left', backgroundColor: 'var(--bg-card)', border: '1px solid var(--error-border)', borderRadius: '1rem', padding: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '1rem' }}
         >
           <IconOrb danger>⚠️</IconOrb>
           <div>
@@ -128,14 +128,14 @@ export default function HomeScreen({ currentShift, shiftHistory, incidentCount, 
         </div>
 
         {shiftHistory.length > 0 && (
-          <button onClick={onViewHistory} style={{ width: '100%', padding: '0.75rem', backgroundColor: 'transparent', border: '1px solid var(--border)', borderRadius: '0.8rem', color: 'var(--text-muted)', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 700, marginBottom: '1rem' }}>
+          <button onClick={onViewHistory} style={{ width: '100%', padding: '0.75rem', backgroundColor: 'transparent', border: '1px solid var(--border)', borderRadius: '0.75rem', color: 'var(--text-muted)', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 700, marginBottom: '1rem' }}>
             View Past Shifts ({shiftHistory.length})
           </button>
         )}
 
         {/* Active / last shift summary */}
         {(currentShift || lastShift) && (
-          <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '1.1rem', padding: '1rem', marginBottom: '1rem' }}>
+          <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '1rem', padding: '1rem', marginBottom: '1rem' }}>
             <div style={{ ...SECTION_LABEL, color: currentShift ? 'var(--accent)' : 'var(--text-muted)' }}>{currentShift ? 'Active Shift' : 'Last Shift'}</div>
             <ShiftCard shift={currentShift || lastShift} />
           </div>
