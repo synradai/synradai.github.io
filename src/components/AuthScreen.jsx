@@ -1,7 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../utils/supabase'
 import { FIELD_LABEL, INPUT, PrimaryButton, ErrorBox } from './ui'
 import Legal from './Legal'
+
+// Cloudflare Turnstile bot check. The site key is public by design — the
+// matching secret lives in Supabase's auth config, which verifies every
+// sign-in/sign-up token server-side. Managed mode: most humans never see it.
+const TURNSTILE_SITE_KEY = '0x4AAAAAADu-kltW6tipPPmD'
+const TURNSTILE_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=__siTurnstileReady'
 
 // Email + password sign in / sign up. On success the auth state change in
 // App.jsx swaps this screen out for the app. New signups auto-get an
@@ -15,6 +21,39 @@ export default function AuthScreen() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [showLegal, setShowLegal] = useState(false)
+  const [captchaToken, setCaptchaToken] = useState('')
+  const captchaRef = useRef(null)
+  const widgetIdRef = useRef(null)
+
+  // Load the Turnstile script once and render the widget into its slot.
+  useEffect(() => {
+    let cancelled = false
+    const render = () => {
+      if (cancelled || !window.turnstile || !captchaRef.current || widgetIdRef.current !== null) return
+      widgetIdRef.current = window.turnstile.render(captchaRef.current, {
+        sitekey: TURNSTILE_SITE_KEY,
+        theme: document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark',
+        callback: (t) => setCaptchaToken(t),
+        'expired-callback': () => setCaptchaToken(''),
+        'error-callback': () => setCaptchaToken(''),
+      })
+    }
+    if (window.turnstile) { render(); return }
+    window.__siTurnstileReady = render
+    if (!document.querySelector(`script[src="${TURNSTILE_SRC}"]`)) {
+      const s = document.createElement('script')
+      s.src = TURNSTILE_SRC
+      s.async = true
+      document.head.appendChild(s)
+    }
+    return () => { cancelled = true }
+  }, [])
+
+  // Tokens are single-use: after any attempt, get a fresh one for the next try.
+  const resetCaptcha = () => {
+    setCaptchaToken('')
+    try { window.turnstile?.reset(widgetIdRef.current) } catch (_) {}
+  }
 
   const submit = async () => {
     setError(''); setNotice('')
@@ -27,18 +66,24 @@ export default function AuthScreen() {
         const { error } = await supabase.auth.signUp({
           email: email.trim(),
           password,
-          options: { data: { full_name: fullName.trim() || null } },
+          options: { data: { full_name: fullName.trim() || null }, captchaToken: captchaToken || undefined },
         })
         if (error) throw error
         // If email confirmation is on, there's no session yet — tell the user.
         const { data } = await supabase.auth.getSession()
         if (!data.session) setNotice('Account created. Check your email to confirm, then sign in.')
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
+        const { error } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+          options: { captchaToken: captchaToken || undefined },
+        })
         if (error) throw error
       }
     } catch (e) {
-      setError(e?.message || 'Something went wrong. Try again.')
+      const msg = e?.message || 'Something went wrong. Try again.'
+      setError(/captcha/i.test(msg) ? 'Verification expired — give it a second to refresh, then try again.' : msg)
+      resetCaptcha()
     } finally {
       setLoading(false)
     }
@@ -94,6 +139,9 @@ export default function AuthScreen() {
             style={INPUT}
           />
         </div>
+
+        {/* Turnstile bot check — invisible for most humans, boxed when challenged */}
+        <div ref={captchaRef} style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem' }} />
 
         <ErrorBox style={{ marginBottom: '0.75rem' }}>{error}</ErrorBox>
         {notice && (
