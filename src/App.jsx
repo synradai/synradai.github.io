@@ -20,6 +20,7 @@ import Learnings from './components/Learnings'
 import AskSafety from './components/AskSafety'
 import FieldLeadershipReport from './components/FieldLeadershipReport'
 import FieldLeadershipView from './components/FieldLeadershipView'
+import SwipeContainer from './components/SwipeContainer'
 import IncomingHandover from './components/phases/IncomingHandover'
 import MorningMeeting from './components/phases/MorningMeeting'
 import SiteRounds from './components/phases/SiteRounds'
@@ -29,6 +30,7 @@ import DebriefHandover from './components/phases/DebriefHandover'
 export default function App() {
   const [view, setView] = useState('home')
   const [currentPhase, setCurrentPhase] = useState(0)
+  const [slideDir, setSlideDir] = useState('') // phase-change slide direction
   const [currentShift, setCurrentShift] = useState(null)
   const [shiftHistory, setShiftHistory] = useState([])
   const [apiKey, setApiKey] = useState('')
@@ -255,6 +257,7 @@ export default function App() {
   }, [currentShift, archiveShift])
 
   const navigateToPhase = (phase) => {
+    setSlideDir(phase > currentPhase ? 'in-right' : phase < currentPhase ? 'in-left' : '')
     setCurrentPhase(phase)
     updateShift({ phase })
   }
@@ -401,7 +404,16 @@ export default function App() {
           />
           <main className="flex-1 overflow-y-auto scrollbar-thin" style={{ paddingBottom: 'calc(5.5rem + env(safe-area-inset-bottom))' }}>
             <div style={{ maxWidth: '720px', margin: '0 auto' }}>
-              {renderPhase()}
+              <SwipeContainer
+                canPrev={currentPhase > 0}
+                canNext={currentPhase < 4}
+                onPrev={() => navigateToPhase(currentPhase - 1)}
+                onNext={() => navigateToPhase(currentPhase + 1)}
+                slideDir={slideDir}
+                panelKey={currentPhase}
+              >
+                {renderPhase()}
+              </SwipeContainer>
             </div>
           </main>
         </div>

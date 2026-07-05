@@ -140,6 +140,15 @@
   }
 }
 
+/* Swipe navigation: incoming panel slides in from the direction of travel. */
+@keyframes swipe-in-right { from { transform: translateX(56px); opacity: 0.35 } to { transform: translateX(0); opacity: 1 } }
+@keyframes swipe-in-left  { from { transform: translateX(-56px); opacity: 0.35 } to { transform: translateX(0); opacity: 1 } }
+.swipe-in-right { animation: swipe-in-right 0.22s ease-out }
+.swipe-in-left  { animation: swipe-in-left 0.22s ease-out }
+@media (prefers-reduced-motion: reduce) {
+  .swipe-in-right, .swipe-in-left { animation: none }
+}
+
 @layer utilities {
   .scrollbar-thin {
     scrollbar-width: thin;
