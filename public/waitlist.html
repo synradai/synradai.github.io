@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'unsafe-inline'; connect-src https://rgkiagqexoafmtxhrlqo.supabase.co; frame-src https://challenges.cloudflare.com; img-src 'self' data:; base-uri 'self'; object-src 'none'" />
+<title>Safe Intelligence — Early Access</title>
+<meta name="description" content="AI field tool for FIFO safety advisors — site rounds, incident reports and handovers written from your voice notes. Join the early access list." />
+<meta name="theme-color" content="#080a10" />
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    min-height: 100vh; background: #080a10; color: #f0f3f9;
+    font-family: 'Nunito', system-ui, -apple-system, sans-serif;
+    display: flex; align-items: center; justify-content: center; padding: 1.5rem;
+    overflow-x: hidden;
+  }
+  .glow {
+    position: fixed; top: -12%; left: 50%; transform: translateX(-50%);
+    width: 480px; height: 480px; pointer-events: none; filter: blur(20px);
+    background: radial-gradient(circle, rgba(59,130,246,0.30), rgba(34,211,238,0.12) 45%, transparent 70%);
+  }
+  .wrap { width: 100%; max-width: 430px; position: relative; text-align: center; }
+  .orb {
+    width: 88px; height: 88px; border-radius: 50%; margin: 0 auto 1.4rem;
+    background: radial-gradient(circle at 50% 36%, #dbeafe 0%, #22d3ee 34%, #3b82f6 62%, #1e3a8a 88%);
+    box-shadow: 0 0 48px 6px rgba(59,130,246,0.55), 0 0 110px 26px rgba(34,211,238,0.30),
+                inset 0 -10px 22px rgba(99,102,241,0.55), inset 0 8px 16px rgba(255,255,255,0.30);
+  }
+  .brand { font-size: 0.68rem; font-weight: 800; letter-spacing: 0.3em; text-transform: uppercase; color: #60a5fa; margin-bottom: 0.9rem; }
+  h1 {
+    font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 0.6rem;
+    background: linear-gradient(180deg, #ffffff 0%, #bcd2ef 100%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .sub { font-size: 0.92rem; color: #8893a8; font-weight: 600; line-height: 1.55; margin-bottom: 1.6rem; }
+  .points { text-align: left; background: #131722; border: 1px solid #1c2230; border-radius: 1rem; padding: 1.1rem 1.25rem; margin-bottom: 1.6rem; }
+  .points div { font-size: 0.85rem; color: #8893a8; font-weight: 600; padding: 0.3rem 0; }
+  .points b { color: #f0f3f9; }
+  input {
+    width: 100%; padding: 0.8rem 0.9rem; background: #0c0f18; border: 1.5px solid #2e3a52;
+    border-radius: 0.5rem; color: #f0f3f9; font-size: 0.95rem; font-family: inherit;
+    outline: none; margin-bottom: 0.75rem;
+  }
+  input:focus { border-color: #3b82f6; }
+  input::placeholder { color: #56607a; }
+  #captcha { display: flex; justify-content: center; margin-bottom: 0.75rem; }
+  button {
+    width: 100%; padding: 0.95rem; border: none; border-radius: 999px; cursor: pointer;
+    background: linear-gradient(135deg, #3b82f6 0%, #22d3ee 55%, #6366f1 100%);
+    color: #fff; font-weight: 800; font-size: 0.95rem; font-family: inherit;
+    box-shadow: 0 8px 26px rgba(59,130,246,0.45);
+  }
+  button:disabled { opacity: 0.6; cursor: wait; }
+  .msg { margin-top: 0.9rem; font-size: 0.85rem; font-weight: 700; min-height: 1.3rem; }
+  .msg.ok { color: #86efac; }
+  .msg.err { color: #fca5a5; }
+  .foot { margin-top: 1.6rem; font-size: 0.68rem; color: #56607a; font-weight: 600; line-height: 1.6; }
+  .foot a { color: #60a5fa; text-decoration: none; }
+</style>
+</head>
+<body>
+  <div class="glow"></div>
+  <div class="wrap">
+    <div class="orb"></div>
+    <div class="brand">Safe Intelligence</div>
+    <h1>Your paperwork,<br/>written on the walk back</h1>
+    <p class="sub">The AI field tool for FIFO safety advisors. Talk it in — site rounds, incident reports, handovers — and it's written to Australian standards before you're back at the crib room.</p>
+
+    <div class="points">
+      <div><b>Built by a working WA safety advisor</b> — not a software company</div>
+      <div><b>Works offline</b> — made for site, not the office</div>
+      <div><b>De-identified by design</b> — no company names or branding stored</div>
+      <div><b>Early supporters:</b> $29/month for 6 months, then $49</div>
+    </div>
+
+    <form id="f">
+      <input id="name" type="text" placeholder="Your name" autocomplete="name" />
+      <input id="email" type="email" placeholder="you@example.com" autocomplete="email" required />
+      <div id="captcha"></div>
+      <button id="go" type="submit">Get early access</button>
+      <div id="msg" class="msg"></div>
+    </form>
+
+    <p class="foot">
+      No spam — one email when the doors open, maybe one before. <br/>
+      © 2026 Synrad AI · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a>
+    </p>
+  </div>
+
+<script>
+  var token = ''
+  window.__cfReady = function () {
+    turnstile.render('#captcha', {
+      sitekey: '0x4AAAAAADu-kltW6tipPPmD',
+      theme: 'dark',
+      callback: function (t) { token = t },
+      'expired-callback': function () { token = '' },
+      'error-callback': function () { token = '' },
+    })
+  }
+  var s = document.createElement('script')
+  s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=__cfReady'
+  s.async = true
+  document.head.appendChild(s)
+
+  document.getElementById('f').addEventListener('submit', async function (e) {
+    e.preventDefault()
+    var msg = document.getElementById('msg')
+    var btn = document.getElementById('go')
+    var email = document.getElementById('email').value.trim()
+    var name = document.getElementById('name').value.trim()
+    if (!email) { msg.className = 'msg err'; msg.textContent = 'Enter your email.'; return }
+    btn.disabled = true
+    msg.className = 'msg'; msg.textContent = 'Adding you…'
+    try {
+      var res = await fetch('https://rgkiagqexoafmtxhrlqo.supabase.co/functions/v1/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, name: name, token: token }),
+      })
+      var data = await res.json()
+      if (res.ok && data.ok) {
+        msg.className = 'msg ok'
+        msg.textContent = "You're on the list. We'll email you when the doors open."
+        document.getElementById('f').reset()
+      } else {
+        msg.className = 'msg err'
+        msg.textContent = data.error || 'Something went wrong — try again.'
+        try { turnstile.reset() } catch (_) {}
+        token = ''
+      }
+    } catch (err) {
+      msg.className = 'msg err'
+      msg.textContent = 'No connection — try again when you have signal.'
+    }
+    btn.disabled = false
+  })
+</script>
+</body>
+</html>
