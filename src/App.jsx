@@ -6,7 +6,9 @@ import { supabase, isBackendEnabled } from './utils/supabase'
 import { pushItems, pullItems, mergeById, clearOwner } from './utils/sync'
 import { getSubscription, computeAccess, isBillingEnabled, startCheckout } from './utils/billing'
 import { needsMfaChallenge } from './utils/mfa'
+import { needsAiAck } from './utils/disclaimer'
 import AuthScreen from './components/AuthScreen'
+import AiDisclaimer from './components/AiDisclaimer'
 import Paywall from './components/Paywall'
 import TwoFactorChallenge from './components/TwoFactorChallenge'
 import DailyLog from './components/DailyLog'
@@ -57,6 +59,8 @@ export default function App() {
   const [access, setAccess] = useState({ allowed: true, trial: false, daysLeft: 0, status: 'unknown' })
   const [mfaNeeded, setMfaNeeded] = useState(false)
   const [mfaChecked, setMfaChecked] = useState(false)
+  const [ackNeeded, setAckNeeded] = useState(false)
+  const [ackChecked, setAckChecked] = useState(false)
 
   // Persist to localStorage and surface a warning if it fails (usually the
   // device is out of space). Never silently drop a save.
@@ -110,6 +114,8 @@ export default function App() {
     setAccess({ allowed: true, trial: false, daysLeft: 0, status: 'unknown' })
     setMfaNeeded(false)
     setMfaChecked(false)
+    setAckNeeded(false)
+    setAckChecked(false)
     setView('home')
   }, [])
 
@@ -119,6 +125,16 @@ export default function App() {
     setMfaChecked(false)
     let cancelled = false
     needsMfaChallenge().then(n => { if (!cancelled) { setMfaNeeded(n); setMfaChecked(true) } })
+    return () => { cancelled = true }
+  }, [session])
+
+  // On login, check whether the AI disclaimer still needs acknowledging
+  // (named + logged — required before anyone uses the AI features).
+  useEffect(() => {
+    if (!isBackendEnabled || !session) { setAckNeeded(false); setAckChecked(true); return }
+    setAckChecked(false)
+    let cancelled = false
+    needsAiAck().then(n => { if (!cancelled) { setAckNeeded(n); setAckChecked(true) } })
     return () => { cancelled = true }
   }, [session])
 
@@ -332,6 +348,19 @@ export default function App() {
   }
   if (isBackendEnabled && session && mfaNeeded) {
     return <TwoFactorChallenge onVerified={() => setMfaNeeded(false)} onSignOut={signOut} />
+  }
+
+  // AI disclaimer: named + logged acknowledgment before first use.
+  if (isBackendEnabled && session && !ackChecked) {
+    return <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-page)' }} />
+  }
+  if (isBackendEnabled && session && ackNeeded) {
+    return (
+      <AiDisclaimer
+        defaultName={session?.user?.user_metadata?.full_name || ''}
+        onDone={() => setAckNeeded(false)}
+      />
+    )
   }
 
   // Trial ended + no active subscription → paywall.

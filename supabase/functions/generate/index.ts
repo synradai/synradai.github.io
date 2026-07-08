@@ -14,7 +14,9 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const MODEL = "claude-sonnet-4-6";
-const DAILY_LIMIT = 150;            // AI calls per user per day
+// AI calls per user per day. Tunable via the AI_DAILY_LIMIT secret so the cap
+// can be raised as revenue scales — no redeploy needed.
+const DAILY_LIMIT = Number(Deno.env.get("AI_DAILY_LIMIT")) || 150;
 const MAX_PROMPT_CHARS = 200_000;   // reject absurdly large prompts
 
 // Only the app itself may call this from a browser (plus local dev).
@@ -103,6 +105,17 @@ Deno.serve(async (req) => {
 
     const data = await res.json().catch(() => null);
     if (!data) return json({ error: `Bad response from Anthropic (HTTP ${res.status})` }, 502);
+
+    // Record per-user token usage — makes heavy users visible long before the
+    // monthly spend cap is threatened. Best-effort: never fails the request.
+    if (res.ok) {
+      const tin = Number(data?.usage?.input_tokens) || 0;
+      const tout = Number(data?.usage?.output_tokens) || 0;
+      if (tin || tout) {
+        try { await admin.rpc("add_ai_tokens", { uid: user.id, tin, tout }); } catch (_) { /* best effort */ }
+      }
+    }
+
     return json(data, res.status);
   } catch (e) {
     return json({ error: (e as Error).message }, 500);
