@@ -288,8 +288,8 @@ export default function DocScanner({ onClose, onSave }) {
             >
               <polygon
                 points={corners.map(c => `${c.x},${c.y}`).join(' ')}
-                fill="rgba(59,130,246,0.22)"
-                stroke="#3b82f6"
+                fill="rgba(249,115,22,0.22)"
+                stroke="#f97316"
                 strokeWidth={imgEl.width * 0.005}
               />
               {corners.map((c, i) => (
@@ -298,7 +298,7 @@ export default function DocScanner({ onClose, onSave }) {
                   cx={c.x}
                   cy={c.y}
                   r={imgEl.width * 0.022}
-                  fill="#3b82f6"
+                  fill="#f97316"
                   stroke="#fff"
                   strokeWidth={imgEl.width * 0.006}
                   onPointerDown={onCornerDown(i)}

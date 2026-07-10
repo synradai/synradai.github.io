@@ -6,12 +6,12 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'unsafe-inline'; connect-src https://rgkiagqexoafmtxhrlqo.supabase.co; frame-src https://challenges.cloudflare.com; img-src 'self' data:; base-uri 'self'; object-src 'none'" />
 <title>Safe Intelligence — Early Access</title>
 <meta name="description" content="AI field tool for FIFO safety advisors — site rounds, incident reports and handovers written from your voice notes. Join the early access list." />
-<meta name="theme-color" content="#080a10" />
+<meta name="theme-color" content="#0b0908" />
 <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
-    min-height: 100vh; background: #080a10; color: #f0f3f9;
+    min-height: 100vh; background: #0b0908; color: #f7f2ea;
     font-family: 'Nunito', system-ui, -apple-system, sans-serif;
     display: flex; align-items: center; justify-content: center; padding: 1.5rem;
     overflow-x: hidden;
@@ -19,45 +19,45 @@
   .glow {
     position: fixed; top: -12%; left: 50%; transform: translateX(-50%);
     width: 480px; height: 480px; pointer-events: none; filter: blur(20px);
-    background: radial-gradient(circle, rgba(59,130,246,0.30), rgba(34,211,238,0.12) 45%, transparent 70%);
+    background: radial-gradient(circle, rgba(249,115,22,0.30), rgba(251,191,36,0.12) 45%, transparent 70%);
   }
   .wrap { width: 100%; max-width: 430px; position: relative; text-align: center; }
   .orb {
     width: 88px; height: 88px; border-radius: 50%; margin: 0 auto 1.4rem;
-    background: radial-gradient(circle at 50% 36%, #dbeafe 0%, #22d3ee 34%, #3b82f6 62%, #1e3a8a 88%);
-    box-shadow: 0 0 48px 6px rgba(59,130,246,0.55), 0 0 110px 26px rgba(34,211,238,0.30),
-                inset 0 -10px 22px rgba(99,102,241,0.55), inset 0 8px 16px rgba(255,255,255,0.30);
+    background: radial-gradient(circle at 50% 36%, #fef3c7 0%, #fbbf24 34%, #f97316 62%, #7c2d12 88%);
+    box-shadow: 0 0 48px 6px rgba(249,115,22,0.55), 0 0 110px 26px rgba(251,191,36,0.30),
+                inset 0 -10px 22px rgba(239,68,68,0.55), inset 0 8px 16px rgba(255,255,255,0.30);
   }
-  .brand { font-size: 0.68rem; font-weight: 800; letter-spacing: 0.3em; text-transform: uppercase; color: #60a5fa; margin-bottom: 0.9rem; }
+  .brand { font-size: 0.68rem; font-weight: 800; letter-spacing: 0.3em; text-transform: uppercase; color: #fb923c; margin-bottom: 0.9rem; }
   h1 {
     font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 0.6rem;
-    background: linear-gradient(180deg, #ffffff 0%, #bcd2ef 100%);
+    background: linear-gradient(180deg, #ffffff 0%, #f3e5cf 100%);
     -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
   }
-  .sub { font-size: 0.92rem; color: #8893a8; font-weight: 600; line-height: 1.55; margin-bottom: 1.6rem; }
-  .points { text-align: left; background: #131722; border: 1px solid #1c2230; border-radius: 1rem; padding: 1.1rem 1.25rem; margin-bottom: 1.6rem; }
-  .points div { font-size: 0.85rem; color: #8893a8; font-weight: 600; padding: 0.3rem 0; }
-  .points b { color: #f0f3f9; }
+  .sub { font-size: 0.92rem; color: #a89a88; font-weight: 600; line-height: 1.55; margin-bottom: 1.6rem; }
+  .points { text-align: left; background: #171208; border: 1px solid #251c11; border-radius: 1rem; padding: 1.1rem 1.25rem; margin-bottom: 1.6rem; }
+  .points div { font-size: 0.85rem; color: #a89a88; font-weight: 600; padding: 0.3rem 0; }
+  .points b { color: #f7f2ea; }
   input {
-    width: 100%; padding: 0.8rem 0.9rem; background: #0c0f18; border: 1.5px solid #2e3a52;
-    border-radius: 0.5rem; color: #f0f3f9; font-size: 0.95rem; font-family: inherit;
+    width: 100%; padding: 0.8rem 0.9rem; background: #100b06; border: 1.5px solid #45301a;
+    border-radius: 0.5rem; color: #f7f2ea; font-size: 0.95rem; font-family: inherit;
     outline: none; margin-bottom: 0.75rem;
   }
-  input:focus { border-color: #3b82f6; }
-  input::placeholder { color: #56607a; }
+  input:focus { border-color: #f97316; }
+  input::placeholder { color: #6e6053; }
   #captcha { display: flex; justify-content: center; margin-bottom: 0.75rem; }
   button {
     width: 100%; padding: 0.95rem; border: none; border-radius: 999px; cursor: pointer;
-    background: linear-gradient(135deg, #3b82f6 0%, #22d3ee 55%, #6366f1 100%);
+    background: linear-gradient(135deg, #f97316 0%, #fbbf24 55%, #ef4444 100%);
     color: #fff; font-weight: 800; font-size: 0.95rem; font-family: inherit;
-    box-shadow: 0 8px 26px rgba(59,130,246,0.45);
+    box-shadow: 0 8px 26px rgba(249,115,22,0.45);
   }
   button:disabled { opacity: 0.6; cursor: wait; }
   .msg { margin-top: 0.9rem; font-size: 0.85rem; font-weight: 700; min-height: 1.3rem; }
   .msg.ok { color: #86efac; }
   .msg.err { color: #fca5a5; }
-  .foot { margin-top: 1.6rem; font-size: 0.68rem; color: #56607a; font-weight: 600; line-height: 1.6; }
-  .foot a { color: #60a5fa; text-decoration: none; }
+  .foot { margin-top: 1.6rem; font-size: 0.68rem; color: #6e6053; font-weight: 600; line-height: 1.6; }
+  .foot a { color: #fb923c; text-decoration: none; }
 </style>
 </head>
 <body>

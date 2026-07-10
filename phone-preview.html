@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Phone Preview — Safe Intelligence</title>
+<!-- Dev-only helper: shows the running app inside a phone frame.
+     Served by the Vite dev server (project root files are dev-only —
+     never included in the production build). -->
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 14px; background: #0f0c09;
+    font-family: system-ui, sans-serif; padding: 16px;
+  }
+  .bar { display: flex; gap: 8px; align-items: center; }
+  .bar button {
+    padding: 6px 14px; border-radius: 8px; border: 1px solid #45301a;
+    background: #1c150a; color: #a89a88; font-size: 12px; font-weight: 700; cursor: pointer;
+  }
+  .bar button.active { color: #fb923c; border-color: #f97316; }
+  .phone {
+    position: relative; background: #000; border-radius: 54px; padding: 40px 14px 22px;
+    box-shadow: 0 0 0 2px #251c11, 0 24px 60px rgba(0,0,0,0.6);
+    transform-origin: top center;
+  }
+  .notch {
+    position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+    width: 110px; height: 18px; background: #14181f; border-radius: 10px; z-index: 2;
+  }
+  iframe {
+    display: block; border: 0; border-radius: 28px; background: #080a10;
+    width: 390px; height: 780px;
+  }
+</style>
+</head>
+<body>
+  <div class="bar">
+    <button data-w="330" data-h="660">Small</button>
+    <button data-w="390" data-h="780" class="active">iPhone</button>
+    <button data-w="412" data-h="820">Android</button>
+    <button id="reload">↻ Reload</button>
+  </div>
+  <div class="phone">
+    <div class="notch"></div>
+    <!-- Absolute URL on purpose: lets this file work from ANY server —
+         VS Code Live Preview / Live Server extensions included — as long as
+         the Vite dev server (npm run dev) is running. -->
+    <iframe id="app" src="http://localhost:5173/?demo" title="Safe Intelligence"></iframe>
+  </div>
+  <script>
+    const app = document.getElementById('app')
+    const phone = document.querySelector('.phone')
+    document.querySelectorAll('.bar button[data-w]').forEach(b => {
+      b.addEventListener('click', () => {
+        document.querySelectorAll('.bar button').forEach(x => x.classList.remove('active'))
+        b.classList.add('active')
+        app.style.width = b.dataset.w + 'px'
+        app.style.height = b.dataset.h + 'px'
+        fit()
+      })
+    })
+    document.getElementById('reload').addEventListener('click', () => { app.src = app.src })
+    // Scale the frame down if the window is shorter than the phone.
+    function fit() {
+      const avail = window.innerHeight - 80
+      const h = phone.offsetHeight / (phone.style.transform ? parseFloat(phone.style.transform.replace(/[^0-9.]/g, '')) || 1 : 1)
+      phone.style.transform = ''
+      const full = phone.offsetHeight
+      if (full > avail) phone.style.transform = `scale(${(avail / full).toFixed(3)})`
+    }
+    fit()
+    window.addEventListener('resize', fit)
+  </script>
+</body>
+</html>

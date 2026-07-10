@@ -9,7 +9,12 @@ const anonKey = import.meta.env?.VITE_SUPABASE_ANON_KEY || ''
 // When the env vars aren't set, the app runs in its original "no backend"
 // mode (local-only, bring-your-own-key). This keeps `npm run dev` working
 // for anyone who hasn't configured Supabase.
-export const isBackendEnabled = Boolean(url && anonKey)
+// Dev-only preview mode: open http://localhost:5173/?demo to skip login and
+// browse the UI directly (local-only data). DEV flag means this can never
+// activate in a production build.
+const demoMode = import.meta.env?.DEV && typeof window !== 'undefined' &&
+  new URLSearchParams(window.location.search).has('demo')
+export const isBackendEnabled = Boolean(url && anonKey) && !demoMode
 
 export const supabase = isBackendEnabled ? createClient(url, anonKey) : null
 

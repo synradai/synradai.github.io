@@ -12,10 +12,10 @@ function IconOrb({ children, danger }) {
       display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem',
       background: danger
         ? 'radial-gradient(circle at 50% 32%, #fda4af 0%, #f43f5e 60%, #7f1d1d 100%)'
-        : 'radial-gradient(circle at 50% 32%, #bfdbfe 0%, var(--glow-a) 58%, #1e3a8a 100%)',
+        : 'radial-gradient(circle at 50% 32%, #fde68a 0%, var(--glow-a) 58%, #7c2d12 100%)',
       boxShadow: danger
         ? '0 0 18px rgba(244,63,94,0.45), inset 0 4px 7px rgba(255,255,255,0.3)'
-        : '0 0 18px rgba(59,130,246,0.5), inset 0 4px 7px rgba(255,255,255,0.3)',
+        : '0 0 18px rgba(249,115,22,0.5), inset 0 4px 7px rgba(255,255,255,0.3)',
     }}>{children}</div>
   )
 }
@@ -61,7 +61,7 @@ export default function HomeScreen({ currentShift, shiftHistory, incidentCount, 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-page)', position: 'relative', overflow: 'hidden', paddingBottom: '5.5rem' }}>
       {/* ambient glow */}
-      <div style={{ position: 'absolute', top: '-15%', right: '-20%', width: 360, height: 360, background: 'radial-gradient(circle, rgba(59,130,246,0.22), rgba(34,211,238,0.08) 45%, transparent 70%)', filter: 'blur(20px)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', top: '-15%', right: '-20%', width: 360, height: 360, background: 'radial-gradient(circle, rgba(249,115,22,0.22), rgba(251,191,36,0.08) 45%, transparent 70%)', filter: 'blur(20px)', pointerEvents: 'none' }} />
 
       <div style={{ maxWidth: 720, margin: '0 auto', padding: '0 1rem', position: 'relative' }}>
         {/* Header */}
@@ -75,7 +75,7 @@ export default function HomeScreen({ currentShift, shiftHistory, incidentCount, 
 
         {/* Greeting */}
         <div style={{ marginTop: '1.25rem', marginBottom: '1.5rem' }}>
-          <h1 style={{ fontSize: '2rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em', lineHeight: 1.1, background: theme === 'light' ? 'linear-gradient(180deg, #1e293b 0%, #2563eb 130%)' : 'linear-gradient(180deg, #ffffff 0%, #bcd2ef 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <h1 style={{ fontSize: '2rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em', lineHeight: 1.1, background: theme === 'light' ? 'linear-gradient(180deg, #3d2b1a 0%, #ea580c 130%)' : 'linear-gradient(180deg, #ffffff 0%, #f3e5cf 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             {greeting}
           </h1>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0.35rem 0 0', fontWeight: 600 }}>
@@ -89,8 +89,8 @@ export default function HomeScreen({ currentShift, shiftHistory, incidentCount, 
           style={{
             width: '100%', textAlign: 'left', border: 'none', borderRadius: '1rem', padding: '1.1rem 1.25rem',
             cursor: 'pointer', marginBottom: '0.75rem', color: '#fff',
-            background: 'linear-gradient(135deg, var(--glow-a) 0%, #2563eb 55%, var(--glow-c) 100%)',
-            boxShadow: '0 8px 26px rgba(59,130,246,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            background: 'linear-gradient(135deg, var(--glow-a) 0%, #ea580c 55%, var(--glow-c) 100%)',
+            boxShadow: '0 8px 26px rgba(249,115,22,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}
         >
           <div>
@@ -146,7 +146,7 @@ export default function HomeScreen({ currentShift, shiftHistory, incidentCount, 
       <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, padding: '0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom))', background: 'linear-gradient(180deg, transparent, var(--bg-page) 45%)', pointerEvents: 'none' }}>
         <button onClick={onAskAI} style={{ pointerEvents: 'auto', display: 'flex', width: '100%', maxWidth: 700, margin: '0 auto', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', padding: '0.7rem 0.75rem 0.7rem 1.1rem', borderRadius: '999px', border: '1px solid var(--border-accent)', backgroundColor: 'var(--bg-panel)', color: 'var(--text-muted)', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,0,0,0.45)' }}>
           <span>Ask Gaz anything…</span>
-          <span style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', background: 'linear-gradient(135deg, var(--glow-a), var(--glow-c))', boxShadow: '0 0 16px rgba(59,130,246,0.6)' }}><MicIcon size={17} /></span>
+          <span style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', background: 'linear-gradient(135deg, var(--glow-a), var(--glow-c))', boxShadow: '0 0 16px rgba(249,115,22,0.6)' }}><MicIcon size={17} /></span>
         </button>
       </div>
     </div>
