@@ -4,13 +4,15 @@ import { generateId } from '../../utils/storage'
 import { formatTime } from '../../utils/format'
 import SectionBlock from '../SectionBlock'
 import SafetyTextarea from '../SafetyTextarea'
+import ShiftWrapped from '../ShiftWrapped'
 import { PhaseHeader, TEXTAREA, INPUT_FLEX, BTN_ADD, ErrorBox, ShareButton, FullScreenButton } from '../ui'
 
-export default function DebriefHandover({ shift, updateShift, apiKey }) {
+export default function DebriefHandover({ shift, updateShift, apiKey, onFinish }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [newAction, setNewAction] = useState('')
   const [copied, setCopied] = useState(false)
+  const [wrapped, setWrapped] = useState(false)
   const [confirmed, setConfirmed] = useState([false, false, false])
   const confirm = (i) => setConfirmed(prev => { const n = [...prev]; n[i] = !n[i]; return n })
 
@@ -38,6 +40,7 @@ export default function DebriefHandover({ shift, updateShift, apiKey }) {
     if (!deb.signoffName.trim()) return
     update({ signoffTime: new Date().toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: false }) })
     confirm(2)
+    setWrapped(true)
   }
 
   const copy = () => {
@@ -175,12 +178,21 @@ export default function DebriefHandover({ shift, updateShift, apiKey }) {
             </button>
           </div>
           {deb.signoffTime && (
-            <div style={{ fontSize: '0.85rem', color: 'var(--success)', fontWeight: 800 }}>
-              ✓ Signed off at {deb.signoffTime}{deb.signoffName && ` — ${deb.signoffName}`}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <div style={{ fontSize: '0.85rem', color: 'var(--success)', fontWeight: 800 }}>
+                ✓ Signed off at {deb.signoffTime}{deb.signoffName && ` — ${deb.signoffName}`}
+              </div>
+              <button onClick={() => setWrapped(true)} style={{ background: 'none', border: 'none', color: 'var(--accent-soft)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}>
+                View shift recap →
+              </button>
             </div>
           )}
         </SectionBlock>
       </div>
+
+      {wrapped && (
+        <ShiftWrapped shift={shift} onFinish={onFinish} onKeepWorking={() => setWrapped(false)} />
+      )}
     </div>
   )
 }

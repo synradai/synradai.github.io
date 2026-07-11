@@ -34,9 +34,24 @@ export const CARD = { backgroundColor: 'var(--bg-card)', border: '1px solid var(
 
 export const EMPTY_TEXT = { fontSize: '0.75rem', color: 'var(--text-faint)', margin: 0, fontWeight: 600 }
 
+// Borderless full-page caption box used inside the entry composers — the page
+// itself is the writing surface, no boxed textarea.
+export const CAPTION_TEXTAREA = { width: '100%', border: 'none', outline: 'none', backgroundColor: 'transparent', color: 'var(--text-primary)', fontSize: '1.05rem', lineHeight: 1.7, resize: 'none', fontFamily: 'inherit', padding: 0 }
+
 export const EMPTY_PAGE = { textAlign: 'center', color: 'var(--text-faint)', fontWeight: 600, marginTop: '3rem' }
 
 /* ---------- components ---------- */
+
+// Tappable pill that opens a full-page composer — same shape as the home
+// screen's "Ask Gaz" bar so every capture point in the app feels the same.
+export function CaptureBar({ onClick, prompt, icon = '＋', style }) {
+  return (
+    <button onClick={onClick} style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', padding: '0.55rem 0.55rem 0.55rem 1.1rem', borderRadius: '999px', border: '1px solid var(--border-accent)', backgroundColor: 'var(--bg-input)', color: 'var(--text-faint)', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', textAlign: 'left', boxShadow: '0 8px 28px rgba(0,0,0,0.25)', ...style }}>
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{prompt}</span>
+      <span style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '1.2rem', fontWeight: 700, background: 'linear-gradient(135deg, var(--glow-b), var(--glow-c))', boxShadow: '0 0 16px rgba(79,141,247,0.45)' }}>{icon}</span>
+    </button>
+  )
+}
 
 // Full page with a safe-area header that closes top-right (✕) — same pattern as
 // FullScreenModal so every screen is consistent — and a centred 720px column.

@@ -2,8 +2,10 @@ import { useState } from 'react'
 import { generateId } from '../utils/storage'
 import { formatTime, formatDate } from '../utils/format'
 import { callAnthropicAPI, buildDaySummaryPrompt } from '../utils/api'
+import { buzz } from '../utils/haptics'
 import SafetyTextarea from './SafetyTextarea'
-import { PageShell, SECTION_LABEL, TEXTAREA, EMPTY_PAGE, ErrorBox, ShareButton, FullScreenButton, BTN_SECONDARY } from './ui'
+import { MicIcon } from './icons'
+import { PageShell, FullScreenModal, SECTION_LABEL, TEXTAREA, EMPTY_PAGE, ErrorBox, ShareButton, FullScreenButton, BTN_SECONDARY, CaptureBar, CAPTION_TEXTAREA } from './ui'
 
 const dayKey = (iso) => new Date(iso).toDateString()
 const hourLabel = (h) => { const ampm = h < 12 ? 'am' : 'pm'; const hr = h % 12 === 0 ? 12 : h % 12; return `${hr} ${ampm}` }
@@ -15,6 +17,7 @@ export default function DailyLog({ entries, onAdd, onRemove, apiKey, onBack }) {
   const [error, setError] = useState('')
   const [summary, setSummary] = useState('')
   const [summarizing, setSummarizing] = useState(false)
+  const [composing, setComposing] = useState(false)
 
   const todayKey = new Date().toDateString()
   const sorted = [...entries].sort((a, b) => new Date(a.time) - new Date(b.time))
@@ -28,7 +31,9 @@ export default function DailyLog({ entries, onAdd, onRemove, apiKey, onBack }) {
   const log = () => {
     if (!text.trim()) return
     onAdd({ id: generateId(), time: new Date().toISOString(), text: text.trim() })
+    buzz(20)
     setText(''); setError('')
+    setComposing(false)
   }
 
   const sumUpDay = async () => {
@@ -42,7 +47,7 @@ export default function DailyLog({ entries, onAdd, onRemove, apiKey, onBack }) {
   }
 
   const entryRow = (e) => (
-    <div key={e.id} style={{ display: 'flex', gap: '0.6rem', padding: '0.4rem 0', alignItems: 'flex-start' }}>
+    <div key={e.id} className="entry-in" style={{ display: 'flex', gap: '0.6rem', padding: '0.4rem 0', alignItems: 'flex-start' }}>
       <span style={{ fontSize: '0.68rem', color: 'var(--text-faint)', fontWeight: 700, fontFamily: 'monospace', flexShrink: 0, paddingTop: '0.15rem', minWidth: '2.7rem' }}>{formatTime(e.time)}</span>
       <p style={{ flex: 1, fontSize: '0.875rem', color: 'var(--text-primary)', margin: 0, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{e.text}</p>
       <button onClick={() => onRemove(e.id)} aria-label="Delete" style={{ color: 'var(--text-faint)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75rem', flexShrink: 0 }}>✕</button>
@@ -71,26 +76,45 @@ export default function DailyLog({ entries, onAdd, onRemove, apiKey, onBack }) {
 
   return (
     <PageShell title="Daily Log" onBack={onBack}>
-      {/* Quick add */}
-      <div style={{ backgroundColor: 'var(--bg-card)', border: '1.5px solid var(--border-accent)', borderRadius: '0.75rem', padding: '1rem', marginBottom: '1.25rem' }}>
-        <div style={SECTION_LABEL}>What are you up to?</div>
-        <SafetyTextarea
-          value={text}
-          onChange={e => setText(e.target.value)}
-          placeholder="Tap the mic and talk — e.g. 'had the 10 o'clock pre-start, then did rounds and checked on the crew at the workshop...'"
-          rows={8}
-          style={{ ...TEXTAREA, minHeight: '13rem' }}
-          apiKey={apiKey}
-        />
-        <ErrorBox style={{ marginTop: '0.5rem' }}>{error}</ErrorBox>
-        <button
-          onClick={log}
-          disabled={!text.trim()}
-          style={{ width: '100%', marginTop: '0.75rem', padding: '0.75rem', backgroundColor: 'var(--accent)', border: 'none', borderRadius: '0.5rem', color: 'var(--on-accent)', fontWeight: 800, fontSize: '0.9rem', cursor: text.trim() ? 'pointer' : 'not-allowed', opacity: text.trim() ? 1 : 0.4 }}
+      {/* Capture bar — opens the full-page composer */}
+      <CaptureBar
+        onClick={() => setComposing(true)}
+        prompt="What are you up to? Tap and talk…"
+        icon={<MicIcon size={18} />}
+        style={{ marginBottom: '1.25rem' }}
+      />
+
+      {/* Full-page composer */}
+      {composing && (
+        <FullScreenModal
+          badgeEl={
+            <div style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: 'var(--bg-highlight)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-soft)' }}>
+              <MicIcon size={15} />
+            </div>
+          }
+          title="Daily Log"
+          onClose={() => setComposing(false)}
+          footer={
+            <button
+              onClick={log}
+              disabled={!text.trim()}
+              style={{ width: '100%', padding: '0.8rem', border: 'none', borderRadius: '999px', background: text.trim() ? 'linear-gradient(135deg, var(--glow-b), var(--glow-c))' : 'var(--border)', color: text.trim() ? '#fff' : 'var(--text-faint)', fontWeight: 800, fontSize: '0.9rem', cursor: text.trim() ? 'pointer' : 'not-allowed', boxShadow: text.trim() ? '0 6px 20px rgba(79,141,247,0.35)' : 'none' }}
+            >
+              Log it
+            </button>
+          }
         >
-          Log it
-        </button>
-      </div>
+          <SafetyTextarea
+            value={text}
+            onChange={e => setText(e.target.value)}
+            placeholder="Tap the mic and talk — e.g. 'had the 10 o'clock pre-start, then did rounds and checked on the crew at the workshop...'"
+            rows={10}
+            style={{ ...CAPTION_TEXTAREA, minHeight: '45vh' }}
+            apiKey={apiKey}
+          />
+          <ErrorBox style={{ marginTop: '0.5rem' }}>{error}</ErrorBox>
+        </FullScreenModal>
+      )}
 
       {/* Today header + sum-up */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>

@@ -1,12 +1,22 @@
 import { useState, useRef } from 'react'
 import { generateId, compressPhoto } from '../../utils/storage'
+import { buzz } from '../../utils/haptics'
 import { TAG_STYLES } from '../../constants'
 import { formatTime, formatDateTime } from '../../utils/format'
 import SafetyTextarea from '../SafetyTextarea'
-import { CameraIcon, AlertCircleIcon, UploadIcon } from '../icons'
-import { FullScreenModal, PhaseHeader, SECTION_LABEL, TEXTAREA, BTN_SECONDARY, BTN_MUTED } from '../ui'
+import { CameraIcon, UploadIcon } from '../icons'
+import { FullScreenModal, PhaseHeader, SECTION_LABEL, TEXTAREA, BTN_SECONDARY, BTN_MUTED, CaptureBar, CAPTION_TEXTAREA } from '../ui'
 
 const TAGS = ['Hazard', 'Action', 'Observation', 'Near Miss']
+
+const TAG_EMOJI = { Hazard: '⚠️', Action: '🔧', Observation: '👀', 'Near Miss': '⚡' }
+
+const TAG_PROMPTS = {
+  Hazard: "What's the hazard? Where is it, and what did you do about it right away?",
+  Action: 'What action was taken or needs doing — and who owns it?',
+  Observation: 'What did you see? Location, who was involved, the details…',
+  'Near Miss': 'What nearly happened? Where, and how close was it?',
+}
 
 export default function SiteRounds({ shift, updateShift, apiKey }) {
   const [text, setText] = useState('')
@@ -17,6 +27,7 @@ export default function SiteRounds({ shift, updateShift, apiKey }) {
   const [prevention, setPrevention] = useState('')
   const [selectedId, setSelectedId] = useState(null)
   const [filter, setFilter] = useState('All')
+  const [composing, setComposing] = useState(false)
   const photoRef = useRef()
   const photoUploadRef = useRef()
   const rectifiedPhotoRef = useRef()
@@ -50,11 +61,13 @@ export default function SiteRounds({ shift, updateShift, apiKey }) {
       if (prevention.trim()) entry.prevention = prevention.trim()
     }
     updateShift({ rounds: [...rounds, entry] })
+    buzz(20)
     setText('')
     setPhoto(null)
     setRectification('')
     setRectifiedPhoto(null)
     setPrevention('')
+    setComposing(false)
   }
 
   const removeEntry = (id) => updateShift({ rounds: rounds.filter(r => r.id !== id) })
@@ -72,138 +85,148 @@ export default function SiteRounds({ shift, updateShift, apiKey }) {
         meta={rounds.length > 0 ? `${rounds.length} ${rounds.length === 1 ? 'entry' : 'entries'} recorded this shift` : null}
       />
 
-      {/* Entry form */}
-      <div style={{ backgroundColor: 'var(--bg-card)', border: '1.5px solid var(--border-accent)', borderRadius: '0.75rem', padding: '1rem', marginBottom: '1.5rem' }}>
-        <div style={SECTION_LABEL}>New Entry</div>
+      {/* Capture bar — opens the full-page composer */}
+      <CaptureBar
+        onClick={() => setComposing(true)}
+        prompt="Log what you see — hazard, action, near miss…"
+        style={{ marginBottom: '1.5rem' }}
+      />
+      <input ref={photoRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
+      <input ref={photoUploadRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: 'none' }} />
+      <input ref={rectifiedPhotoRef} type="file" accept="image/*" onChange={handleRectifiedPhoto} style={{ display: 'none' }} />
 
-        {/* Tag selector */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.75rem' }}>
-          {TAGS.map(t => {
-            const s = TAG_STYLES[t]
-            const active = tag === t
-            const isHazard = t === 'Hazard'
-            // Hazard always shows its colour + an alert icon so it stands out and
-            // is quick to tap; the others stay quiet until selected.
-            return (
+      {/* Full-page composer */}
+      {composing && (
+        <FullScreenModal
+          badge={TAG_EMOJI[tag]}
+          badgeColor="var(--bg-highlight)"
+          title="New Entry"
+          onClose={() => setComposing(false)}
+          footer={
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
               <button
-                key={t}
-                onClick={() => setTag(t)}
-                style={{
-                  padding: isHazard ? '0.4rem 0.9rem' : '0.3rem 0.75rem', borderRadius: '0.5rem',
-                  border: `${isHazard ? 2 : 1.5}px solid ${active || isHazard ? s.border : 'var(--border)'}`,
-                  backgroundColor: active || isHazard ? s.bg : 'transparent',
-                  color: active || isHazard ? s.text : 'var(--text-faint)',
-                  fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase',
-                  letterSpacing: '0.05em', cursor: 'pointer',
-                  display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-                  boxShadow: isHazard && active ? `0 0 12px ${s.border}` : 'none',
-                }}
+                onClick={() => photoRef.current?.click()}
+                title={tag === 'Hazard' ? 'Hazard photo' : 'Photo'}
+                style={{ width: 44, height: 44, borderRadius: '50%', flexShrink: 0, border: '1px solid var(--border-accent)', backgroundColor: 'var(--bg-input)', color: 'var(--accent-soft)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
-                {isHazard && <AlertCircleIcon size={13} />}{t}
+                <CameraIcon size={18} />
               </button>
-            )
-          })}
-        </div>
-
-        {/* Photo control */}
-        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-          <button
-            onClick={() => photoRef.current?.click()}
-            style={{ padding: '0.45rem 0.75rem', border: 'none', borderRadius: '0.5rem', backgroundColor: 'var(--border)', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
-          >
-            <CameraIcon size={14} /> {tag === 'Hazard' ? 'HAZARD PHOTO' : 'PHOTO'}
-          </button>
-          <button
-            onClick={() => photoUploadRef.current?.click()}
-            style={{ padding: '0.45rem 0.75rem', border: 'none', borderRadius: '0.5rem', backgroundColor: 'var(--border)', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
-          >
-            <UploadIcon size={14} /> UPLOAD
-          </button>
-          <input ref={photoRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
-          <input ref={photoUploadRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: 'none' }} />
-        </div>
-
-        <SafetyTextarea
-          value={text}
-          onChange={e => setText(e.target.value)}
-          placeholder="Describe what you observed — be specific about location, what you saw, and any immediate action taken."
-          rows={3}
-          style={TEXTAREA}
-          apiKey={apiKey}
-        />
-
-        {photo && (
-          <div style={{ position: 'relative', display: 'inline-block', marginTop: '0.5rem' }}>
-            <img src={photo} alt="Entry" style={{ maxHeight: '6rem', borderRadius: '0.5rem', objectFit: 'contain' }} />
-            <button
-              onClick={() => setPhoto(null)}
-              style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: '50%', backgroundColor: 'var(--danger)', border: 'none', color: 'var(--on-accent)', fontSize: '0.65rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            >
-              ✕
-            </button>
-          </div>
-        )}
-
-        {tag === 'Hazard' && (
-          <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px dashed var(--border)' }}>
-            <div style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-faint)', marginBottom: '0.5rem' }}>
-              Rectification (optional)
+              <button
+                onClick={() => photoUploadRef.current?.click()}
+                title="Upload photo"
+                style={{ width: 44, height: 44, borderRadius: '50%', flexShrink: 0, border: '1px solid var(--border-accent)', backgroundColor: 'var(--bg-input)', color: 'var(--accent-soft)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <UploadIcon size={17} />
+              </button>
+              <button
+                onClick={addEntry}
+                disabled={!text.trim()}
+                style={{ flex: 1, padding: '0.8rem', border: 'none', borderRadius: '999px', background: text.trim() ? 'linear-gradient(135deg, var(--glow-b), var(--glow-c))' : 'var(--border)', color: text.trim() ? '#fff' : 'var(--text-faint)', fontWeight: 800, fontSize: '0.9rem', cursor: text.trim() ? 'pointer' : 'not-allowed', boxShadow: text.trim() ? '0 6px 20px rgba(79,141,247,0.35)' : 'none' }}
+              >
+                Log {tag}
+              </button>
             </div>
-            <SafetyTextarea
-              value={rectification}
-              onChange={e => setRectification(e.target.value)}
-              placeholder="How was the hazard fixed or controlled? Leave blank if still open."
-              rows={2}
-              style={TEXTAREA}
-              apiKey={apiKey}
-            />
-            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+          }
+        >
+          {/* Tag pills — flowing, colour on when active */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1.25rem' }}>
+            {TAGS.map(t => {
+              const s = TAG_STYLES[t]
+              const active = tag === t
+              const isHazard = t === 'Hazard'
+              return (
+                <button
+                  key={t}
+                  onClick={() => setTag(t)}
+                  style={{
+                    padding: '0.5rem 0.95rem', borderRadius: '999px',
+                    border: `1.5px solid ${active ? s.border : 'var(--border)'}`,
+                    backgroundColor: active ? s.bg : 'transparent',
+                    color: active ? s.text : 'var(--text-faint)',
+                    fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer',
+                    display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                    boxShadow: active && isHazard ? `0 0 14px ${s.border}` : 'none',
+                    transition: 'background-color 0.15s, border-color 0.15s, color 0.15s',
+                  }}
+                >
+                  <span style={{ fontSize: '0.85rem' }}>{TAG_EMOJI[t]}</span>{t}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* The caption box — the whole page is the writing surface */}
+          <SafetyTextarea
+            value={text}
+            onChange={e => setText(e.target.value)}
+            placeholder={TAG_PROMPTS[tag]}
+            rows={8}
+            style={{ ...CAPTION_TEXTAREA, minHeight: '32vh' }}
+            apiKey={apiKey}
+          />
+
+          {photo && (
+            <div style={{ position: 'relative', display: 'inline-block', marginTop: '0.75rem' }}>
+              <img src={photo} alt="Entry" style={{ maxHeight: '8rem', borderRadius: '0.75rem', objectFit: 'contain' }} />
+              <button
+                onClick={() => setPhoto(null)}
+                style={{ position: 'absolute', top: 6, right: 6, width: 22, height: 22, borderRadius: '50%', backgroundColor: 'var(--danger)', border: 'none', color: 'var(--on-accent)', fontSize: '0.65rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
+          {tag === 'Hazard' && (
+            <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+              <div style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--success-text)', marginBottom: '0.5rem' }}>
+                ✓ Rectification — optional
+              </div>
+              <SafetyTextarea
+                value={rectification}
+                onChange={e => setRectification(e.target.value)}
+                placeholder="How was it fixed or controlled? Leave blank if still open."
+                rows={3}
+                style={{ ...CAPTION_TEXTAREA, fontSize: '0.95rem', minHeight: '4rem' }}
+                apiKey={apiKey}
+              />
               <button
                 onClick={() => rectifiedPhotoRef.current?.click()}
-                style={{ padding: '0.45rem 0.75rem', border: 'none', borderRadius: '0.5rem', backgroundColor: 'var(--border)', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                style={{ marginTop: '0.4rem', padding: '0.45rem 0.85rem', border: '1px solid var(--border-accent)', borderRadius: '999px', backgroundColor: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
               >
-                <CameraIcon size={14} /> RECTIFIED PHOTO
+                <CameraIcon size={14} /> Rectified photo
               </button>
-              <input ref={rectifiedPhotoRef} type="file" accept="image/*" onChange={handleRectifiedPhoto} style={{ display: 'none' }} />
+              {rectifiedPhoto && (
+                <div style={{ position: 'relative', display: 'inline-block', marginTop: '0.5rem', marginLeft: '0.5rem' }}>
+                  <img src={rectifiedPhoto} alt="Rectified hazard" style={{ maxHeight: '6rem', borderRadius: '0.75rem', objectFit: 'contain', verticalAlign: 'middle' }} />
+                  <button
+                    onClick={() => setRectifiedPhoto(null)}
+                    style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: '50%', backgroundColor: 'var(--danger)', border: 'none', color: 'var(--on-accent)', fontSize: '0.65rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
             </div>
-            {rectifiedPhoto && (
-              <div style={{ position: 'relative', display: 'inline-block', marginTop: '0.5rem' }}>
-                <img src={rectifiedPhoto} alt="Rectified hazard" style={{ maxHeight: '6rem', borderRadius: '0.5rem', objectFit: 'contain' }} />
-                <button
-                  onClick={() => setRectifiedPhoto(null)}
-                  style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: '50%', backgroundColor: 'var(--danger)', border: 'none', color: 'var(--on-accent)', fontSize: '0.65rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  ✕
-                </button>
+          )}
+
+          {tag === 'Near Miss' && (
+            <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+              <div style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--warning-text)', marginBottom: '0.5rem' }}>
+                ⚡ Prevention — optional
               </div>
-            )}
-          </div>
-        )}
-
-        {tag === 'Near Miss' && (
-          <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px dashed var(--border)' }}>
-            <div style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-faint)', marginBottom: '0.5rem' }}>
-              Prevention (optional)
+              <SafetyTextarea
+                value={prevention}
+                onChange={e => setPrevention(e.target.value)}
+                placeholder="What will stop this happening again?"
+                rows={3}
+                style={{ ...CAPTION_TEXTAREA, fontSize: '0.95rem', minHeight: '4rem' }}
+                apiKey={apiKey}
+              />
             </div>
-            <SafetyTextarea
-              value={prevention}
-              onChange={e => setPrevention(e.target.value)}
-              placeholder="What will be done to stop this happening again?"
-              rows={2}
-              style={TEXTAREA}
-              apiKey={apiKey}
-            />
-          </div>
-        )}
-
-        <button
-          onClick={addEntry}
-          disabled={!text.trim()}
-          style={{ marginTop: '0.75rem', width: '100%', padding: '0.625rem', backgroundColor: 'var(--accent)', border: 'none', borderRadius: '0.5rem', color: 'var(--on-accent)', fontWeight: 800, fontSize: '0.875rem', cursor: text.trim() ? 'pointer' : 'not-allowed', opacity: text.trim() ? 1 : 0.4 }}
-        >
-          Log Entry
-        </button>
-      </div>
+          )}
+        </FullScreenModal>
+      )}
 
       {/* Running log */}
       {rounds.length > 0 && (
@@ -267,7 +290,7 @@ function FilterChip({ label, active, onClick, tagStyle }) {
 function EntryCard({ entry, onRemove, onSelect }) {
   const s = TAG_STYLES[entry.tag] || TAG_STYLES.Observation
   return (
-    <div onClick={onSelect} style={{ backgroundColor: 'var(--bg-card)', border: `1px solid ${s.border}50`, borderLeft: `3px solid ${s.border}`, borderRadius: '0.5rem', padding: '0.75rem', marginBottom: '0.5rem', cursor: 'pointer' }}>
+    <div onClick={onSelect} className="entry-in" style={{ backgroundColor: 'var(--bg-card)', border: `1px solid ${s.border}50`, borderLeft: `3px solid ${s.border}`, borderRadius: '0.5rem', padding: '0.75rem', marginBottom: '0.5rem', cursor: 'pointer' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <span style={{ fontSize: '0.7rem', color: 'var(--text-faint)', fontWeight: 700 }}>{formatTime(entry.time)}</span>

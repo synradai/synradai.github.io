@@ -4,7 +4,7 @@
 // at the end, so it reads like a proper report you'd hand a client.
 import { jsPDF } from 'jspdf'
 
-const ACCENT = [234, 88, 12]    // brand orange (#ea580c) — reads well on white
+const ACCENT = [47, 111, 228]   // brand blue (#2f6fe4) — reads well on white
 const DARK = [22, 24, 28]
 const GREY = [101, 105, 111]
 const LINE = [221, 217, 211]

@@ -212,7 +212,7 @@ export default function AskSafety({ initialChats = [], onPersist, apiKey, learni
                 background: (loading || !question.trim() || !apiKey) ? 'var(--border)' : 'linear-gradient(135deg, var(--glow-a), var(--glow-c))',
                 color: '#fff', fontWeight: 800, fontSize: '1.15rem', lineHeight: 1,
                 cursor: (loading || !question.trim() || !apiKey) ? 'not-allowed' : 'pointer',
-                boxShadow: (loading || !question.trim() || !apiKey) ? 'none' : '0 0 16px rgba(249,115,22,0.5)',
+                boxShadow: (loading || !question.trim() || !apiKey) ? 'none' : '0 0 16px rgba(79,141,247,0.5)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >
@@ -227,8 +227,8 @@ export default function AskSafety({ initialChats = [], onPersist, apiKey, learni
           <div style={{
             width: 88, height: 88, borderRadius: '50%', margin: '0 auto 1.1rem',
             display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.4rem',
-            background: 'radial-gradient(circle at 50% 34%, #fde68a 0%, var(--glow-a) 60%, #7c2d12 100%)',
-            boxShadow: '0 0 42px 6px rgba(249,115,22,0.45), inset 0 6px 12px rgba(255,255,255,0.3)',
+            background: 'radial-gradient(circle at 50% 34%, #d6fff4 0%, var(--glow-a) 60%, #16345f 100%)',
+            boxShadow: '0 0 42px 6px rgba(55,227,194,0.4), inset 0 6px 12px rgba(255,255,255,0.3)',
           }}>👷</div>
           <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 0.4rem' }}>G'day, I'm Gaz.</h2>
           <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.5, fontWeight: 600, maxWidth: '20rem' }}>

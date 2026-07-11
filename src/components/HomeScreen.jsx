@@ -1,67 +1,129 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { PHASE_NAMES } from '../constants'
 import { formatDate, formatTime } from '../utils/format'
-import { SettingsIcon, ThemeIcon, MicIcon } from './icons'
+import { SettingsIcon, ThemeIcon, MicIcon, ClipboardIcon, LearningsIcon, HistoryIcon, IncidentsIcon } from './icons'
 import { SECTION_LABEL } from './ui'
 
 // Small glowing icon "orb" — the signature element across the app.
-function IconOrb({ children, danger }) {
+function IconOrb({ children, danger, size = 42 }) {
   return (
     <div style={{
-      width: 42, height: 42, borderRadius: '50%', flexShrink: 0,
-      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem',
+      width: size, height: size, borderRadius: '50%', flexShrink: 0,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size > 38 ? '1.2rem' : '1rem',
       background: danger
         ? 'radial-gradient(circle at 50% 32%, #fda4af 0%, #f43f5e 60%, #7f1d1d 100%)'
-        : 'radial-gradient(circle at 50% 32%, #fde68a 0%, var(--glow-a) 58%, #7c2d12 100%)',
+        : 'radial-gradient(circle at 50% 32%, #d6fff4 0%, var(--glow-a) 55%, #1b3a6b 100%)',
       boxShadow: danger
         ? '0 0 18px rgba(244,63,94,0.45), inset 0 4px 7px rgba(255,255,255,0.3)'
-        : '0 0 18px rgba(249,115,22,0.5), inset 0 4px 7px rgba(255,255,255,0.3)',
+        : '0 0 18px rgba(55,227,194,0.4), inset 0 4px 7px rgba(255,255,255,0.3)',
     }}>{children}</div>
   )
 }
 
-function ActionCard({ emoji, label, sub, onClick, danger }) {
+// Quick-action card inside the turnstile (Daily Log, Field Report, …)
+function QuickCard({ onClick, icon, label, n }) {
   return (
-    <button
-      onClick={onClick}
-      style={{
-        textAlign: 'left', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)',
-        borderRadius: '1rem', padding: '1rem', cursor: 'pointer',
-        display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '0.7rem', minHeight: '7.5rem',
-      }}
+    <button onClick={onClick} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.55rem', padding: '0.9rem 0.5rem 0.75rem', width: '6.75rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '1.1rem', cursor: 'pointer', flexShrink: 0, scrollSnapAlign: 'center', position: 'relative', willChange: 'transform' }}>
+      <span style={{ width: 44, height: 44, borderRadius: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-soft)', backgroundColor: 'var(--bg-highlight)', border: '1px solid var(--border)' }}>{icon}</span>
+      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{label}</span>
+      {n > 0 && (
+        <span style={{ position: 'absolute', top: 7, right: 7, minWidth: 18, height: 18, padding: '0 5px', borderRadius: '999px', backgroundColor: 'var(--accent)', color: 'var(--on-accent)', fontSize: '0.62rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{n}</span>
+      )}
+    </button>
+  )
+}
+
+// Turnstile carousel: the centred card faces you, the rest rotate away like a
+// drum. Driven by native scroll (snap + momentum) with transforms applied per
+// frame, so it works on every phone. Respects reduced-motion.
+function Turnstile({ children }) {
+  const ref = useRef(null)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    let raf = 0
+    const update = () => {
+      raf = 0
+      const mid = el.scrollLeft + el.clientWidth / 2
+      for (const card of el.children) {
+        const c = card.offsetLeft + card.offsetWidth / 2
+        const k = Math.max(-2, Math.min(2, (c - mid) / card.offsetWidth))
+        const a = Math.abs(k)
+        card.style.transform = `perspective(900px) rotateY(${k * -24}deg) scale(${1 - Math.min(a, 1.6) * 0.12})`
+        card.style.opacity = `${1 - Math.min(a, 2) * 0.3}`
+        card.style.zIndex = `${20 - Math.round(a * 5)}`
+      }
+    }
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(update) }
+    update()
+    el.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll)
+    return () => { el.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); cancelAnimationFrame(raf) }
+  }, [])
+
+  return (
+    <div
+      ref={ref}
+      className="scrollbar-none"
+      style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', scrollSnapType: 'x mandatory', margin: '0 -1rem 1.25rem', padding: '0.25rem calc(50% - 3.375rem)', alignItems: 'stretch', isolation: 'isolate', position: 'relative', zIndex: 0 }}
     >
-      <IconOrb danger={danger}>{emoji}</IconOrb>
-      <div>
-        <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>{label}</div>
-        <div style={{ fontSize: '0.72rem', color: 'var(--text-faint)', fontWeight: 600, marginTop: '0.15rem' }}>{sub}</div>
-      </div>
-    </button>
+      {children}
+    </div>
   )
 }
 
-function Chip({ onClick, label, n }) {
+// "2h ago" / "Yesterday" / date — recent-activity timestamps.
+function ago(time) {
+  const d = new Date(time)
+  const mins = Math.floor((Date.now() - d) / 60000)
+  if (mins < 1) return 'Just now'
+  if (mins < 60) return `${mins} min ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs} hr${hrs === 1 ? '' : 's'} ago`
+  if (hrs < 48) return 'Yesterday'
+  return formatDate(time)
+}
+
+// One row in the Recent Activity list: tinted icon tile + title + kind · time.
+function RecentRow({ icon, tint, title, kind, time, onClick }) {
   return (
-    <button onClick={onClick} style={{ padding: '0.7rem 0.5rem', backgroundColor: 'transparent', border: '1px solid var(--border)', borderRadius: '0.75rem', color: 'var(--text-muted)', fontSize: '0.74rem', cursor: 'pointer', fontWeight: 700 }}>
-      {label}{n > 0 && <span style={{ color: 'var(--accent-soft)' }}> {n}</span>}
+    <button onClick={onClick} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem', textAlign: 'left', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '0.875rem', padding: '0.75rem 0.875rem', cursor: 'pointer', marginBottom: '0.5rem' }}>
+      <div style={{ width: 38, height: 38, borderRadius: '0.625rem', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', backgroundColor: tint, border: '1px solid var(--border)' }}>
+        {icon}
+      </div>
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</div>
+        <div style={{ fontSize: '0.68rem', color: 'var(--text-faint)', fontWeight: 600, marginTop: '0.1rem' }}>{kind} · {ago(time)}</div>
+      </div>
+      <span style={{ color: 'var(--text-faint)', fontSize: '0.9rem', flexShrink: 0 }}>›</span>
     </button>
   )
 }
 
-export default function HomeScreen({ currentShift, shiftHistory, incidentCount, learningCount, onStartShift, onContinueShift, onViewHistory, onIncidents, onLearnings, onSettings, onAskAI, onFieldReport, onViewFieldReports, fieldReportCount, onReportIncident, onDailyLog, advisorName, theme, onToggleTheme }) {
+export default function HomeScreen({ currentShift, shiftHistory, incidents, learningCount, fieldReports, dailyLog, onStartShift, onContinueShift, onViewHistory, onIncidents, onLearnings, onSettings, onAskAI, onFieldReport, onViewFieldReports, onReportIncident, onDailyLog, advisorName, theme, onToggleTheme }) {
   const [now, setNow] = useState(new Date())
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t) }, [])
 
-  const lastShift = shiftHistory[0] || null
   const headerBtn = { color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.5rem' }
 
   const raw = (advisorName || '').split('@')[0].split(/[ .]/)[0]
   const first = raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : ''
-  const greeting = first ? `Hi ${first},` : "G'day,"
+
+  // Everything recent, newest first — shifts, incidents, reports, log entries.
+  const recentItems = [
+    ...(incidents || []).map(i => ({ icon: '⚠️', tint: 'var(--error-bg-strong)', title: i.incidentType || 'Incident', kind: 'Incident', time: i.time, onClick: onIncidents })),
+    ...(fieldReports || []).map(r => ({ icon: '📋', tint: 'var(--bg-highlight)', title: r.location || r.activity || 'VFL observation', kind: 'Field Report', time: r.time, onClick: onViewFieldReports })),
+    ...(dailyLog || []).map(e => ({ icon: '🎤', tint: 'var(--bg-highlight)', title: e.text || 'Log entry', kind: 'Daily Log', time: e.time, onClick: onDailyLog })),
+    ...(shiftHistory || []).filter(s => s.id !== currentShift?.id).map(s => ({ icon: '⛑️', tint: 'var(--success-bg)', title: `Shift — ${formatDate(s.date)}`, kind: `Phase ${(s.phase || 0) + 1} of 5`, time: s.date, onClick: onViewHistory })),
+  ].filter(x => x.time).sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 5)
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-page)', position: 'relative', overflow: 'hidden', paddingBottom: '5.5rem' }}>
-      {/* ambient glow */}
-      <div style={{ position: 'absolute', top: '-15%', right: '-20%', width: 360, height: 360, background: 'radial-gradient(circle, rgba(249,115,22,0.22), rgba(251,191,36,0.08) 45%, transparent 70%)', filter: 'blur(20px)', pointerEvents: 'none' }} />
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-page)', position: 'relative', overflow: 'hidden', paddingBottom: '2.5rem' }}>
+      {/* ambient aurora glow */}
+      <div style={{ position: 'absolute', top: '-15%', right: '-20%', width: 380, height: 380, background: 'radial-gradient(circle, rgba(139,123,247,0.26), rgba(79,141,247,0.10) 45%, transparent 70%)', filter: 'blur(20px)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', top: '10%', left: '-25%', width: 300, height: 300, background: 'radial-gradient(circle, rgba(55,227,194,0.12), transparent 65%)', filter: 'blur(24px)', pointerEvents: 'none' }} />
 
       <div style={{ maxWidth: 720, margin: '0 auto', padding: '0 1rem', position: 'relative' }}>
         {/* Header */}
@@ -73,81 +135,91 @@ export default function HomeScreen({ currentShift, shiftHistory, incidentCount, 
           </div>
         </div>
 
-        {/* Greeting */}
-        <div style={{ marginTop: '1.25rem', marginBottom: '1.5rem' }}>
-          <h1 style={{ fontSize: '2rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em', lineHeight: 1.1, background: theme === 'light' ? 'linear-gradient(180deg, #3d2b1a 0%, #ea580c 130%)' : 'linear-gradient(180deg, #ffffff 0%, #f3e5cf 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            {greeting}
+        {/* Greeting + headline */}
+        <div style={{ marginTop: '1.5rem', marginBottom: '1.25rem' }}>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0 0 0.4rem', fontWeight: 700 }}>
+            {first ? `Hi ${first} 👋` : "G'day 👋"}
+          </p>
+          <h1 style={{ fontSize: '1.9rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em', lineHeight: 1.15, color: 'var(--text-primary)' }}>
+            What's happening<br />
+            <span style={{ background: 'linear-gradient(90deg, var(--glow-a), var(--glow-b) 55%, var(--glow-c))', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              on site today?
+            </span>
           </h1>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0.35rem 0 0', fontWeight: 600 }}>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-faint)', margin: '0.5rem 0 0', fontWeight: 600 }}>
             {formatTime(now)} · {formatDate(now)}
           </p>
         </div>
 
-        {/* Primary CTA — start / resume shift */}
+        {/* Hero ask input — opens Gaz */}
+        <button onClick={onAskAI} style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', padding: '0.55rem 0.55rem 0.55rem 1.1rem', borderRadius: '999px', border: '1px solid var(--border-accent)', backgroundColor: 'var(--bg-input)', color: 'var(--text-faint)', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', marginBottom: '0.875rem', boxShadow: '0 8px 28px rgba(0,0,0,0.35)' }}>
+          <span>Ask Gaz anything…</span>
+          <span style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', background: 'linear-gradient(135deg, var(--glow-b), var(--glow-c))', boxShadow: '0 0 16px rgba(79,141,247,0.55)' }}><MicIcon size={18} /></span>
+        </button>
+
+        {/* Quick actions — turnstile carousel, swipe to spin */}
+        <Turnstile>
+          <QuickCard onClick={onDailyLog} icon={<MicIcon size={20} />} label="Daily Log" />
+          <QuickCard onClick={onFieldReport} icon={<ClipboardIcon size={19} />} label="Field Report" />
+          <QuickCard onClick={onLearnings} icon={<LearningsIcon size={19} />} label="Learnings" n={learningCount} />
+          <QuickCard onClick={onViewHistory} icon={<HistoryIcon size={19} />} label="Past Shifts" n={(shiftHistory || []).length} />
+        </Turnstile>
+
+        {/* Primary CTA — start / resume shift (aurora gradient, dark text) */}
         <button
           onClick={currentShift ? onContinueShift : onStartShift}
           style={{
             width: '100%', textAlign: 'left', border: 'none', borderRadius: '1rem', padding: '1.1rem 1.25rem',
-            cursor: 'pointer', marginBottom: '0.75rem', color: '#fff',
-            background: 'linear-gradient(135deg, var(--glow-a) 0%, #ea580c 55%, var(--glow-c) 100%)',
-            boxShadow: '0 8px 26px rgba(249,115,22,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            cursor: 'pointer', marginBottom: '0.75rem', color: '#04182b',
+            background: 'linear-gradient(120deg, var(--glow-a) 0%, #6fd6f7 55%, var(--glow-b) 115%)',
+            boxShadow: '0 8px 26px rgba(55,227,194,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}
         >
           <div>
             <div style={{ fontSize: '1.15rem', fontWeight: 800 }}>{currentShift ? "Resume today's shift" : 'Start New Shift'}</div>
-            <div style={{ fontSize: '0.78rem', opacity: 0.92, fontWeight: 600, marginTop: '0.2rem' }}>
+            <div style={{ fontSize: '0.78rem', opacity: 0.75, fontWeight: 700, marginTop: '0.2rem' }}>
               {currentShift ? `Phase ${(currentShift.phase || 0) + 1} · ${PHASE_NAMES[currentShift.phase || 0]}` : 'Begin your shift workflow'}
             </div>
           </div>
-          <span style={{ fontSize: '1.5rem', opacity: 0.9 }}>→</span>
+          <span style={{ fontSize: '1.5rem', opacity: 0.85 }}>→</span>
         </button>
 
-        {/* Action grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
-          <ActionCard emoji="🎤" label="Daily Log" sub="what I've been up to" onClick={onDailyLog} />
-          <ActionCard emoji="📋" label="Field Leadership" sub="VFL observation" onClick={onFieldReport} />
-        </div>
-
-        {/* Report Incident — full width, prominent */}
+        {/* Report Incident — always one tap from home */}
         <button
           onClick={onReportIncident}
-          style={{ width: '100%', textAlign: 'left', backgroundColor: 'var(--bg-card)', border: '1px solid var(--error-border)', borderRadius: '1rem', padding: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '1rem' }}
+          style={{ width: '100%', textAlign: 'left', backgroundColor: 'var(--bg-card)', border: '1px solid var(--error-border)', borderRadius: '1rem', padding: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '1.5rem' }}
         >
-          <IconOrb danger>⚠️</IconOrb>
+          <IconOrb danger><span style={{ color: '#fff', display: 'flex' }}><IncidentsIcon size={20} /></span></IconOrb>
           <div>
             <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>Report Incident</div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-faint)', fontWeight: 600, marginTop: '0.15rem' }}>Log an incident with photos &amp; AI report</div>
           </div>
         </button>
 
-        {/* Count chips */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.625rem', marginBottom: '0.75rem' }}>
-          <Chip onClick={onIncidents} label="Incidents" n={incidentCount} />
-          <Chip onClick={onLearnings} label="Learnings" n={learningCount} />
-          <Chip onClick={onViewFieldReports} label="Field Reports" n={fieldReportCount} />
-        </div>
-
-        {shiftHistory.length > 0 && (
-          <button onClick={onViewHistory} style={{ width: '100%', padding: '0.75rem', backgroundColor: 'transparent', border: '1px solid var(--border)', borderRadius: '0.75rem', color: 'var(--text-muted)', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 700, marginBottom: '1rem' }}>
-            View Past Shifts ({shiftHistory.length})
-          </button>
-        )}
-
-        {/* Active / last shift summary */}
-        {(currentShift || lastShift) && (
-          <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '1rem', padding: '1rem', marginBottom: '1rem' }}>
-            <div style={{ ...SECTION_LABEL, color: currentShift ? 'var(--accent)' : 'var(--text-muted)' }}>{currentShift ? 'Active Shift' : 'Last Shift'}</div>
-            <ShiftCard shift={currentShift || lastShift} />
+        {/* Active shift summary */}
+        {currentShift && (
+          <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '1rem', padding: '1rem', marginBottom: '1.5rem' }}>
+            <div style={SECTION_LABEL}>Active Shift</div>
+            <ShiftCard shift={currentShift} />
           </div>
         )}
-      </div>
 
-      {/* Bottom CTA pill — quick Gaz access */}
-      <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, padding: '0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom))', background: 'linear-gradient(180deg, transparent, var(--bg-page) 45%)', pointerEvents: 'none' }}>
-        <button onClick={onAskAI} style={{ pointerEvents: 'auto', display: 'flex', width: '100%', maxWidth: 700, margin: '0 auto', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', padding: '0.7rem 0.75rem 0.7rem 1.1rem', borderRadius: '999px', border: '1px solid var(--border-accent)', backgroundColor: 'var(--bg-panel)', color: 'var(--text-muted)', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,0,0,0.45)' }}>
-          <span>Ask Gaz anything…</span>
-          <span style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', background: 'linear-gradient(135deg, var(--glow-a), var(--glow-c))', boxShadow: '0 0 16px rgba(249,115,22,0.6)' }}><MicIcon size={17} /></span>
-        </button>
+        {/* Recent activity */}
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+          <div style={{ ...SECTION_LABEL, marginBottom: 0 }}>Recent Activity</div>
+          {recentItems.length > 0 && (
+            <button onClick={onViewHistory} style={{ background: 'none', border: 'none', color: 'var(--accent-soft)', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}>View All</button>
+          )}
+        </div>
+        {recentItems.length === 0 ? (
+          <div style={{ backgroundColor: 'var(--bg-card)', border: '1px dashed var(--border-accent)', borderRadius: '0.875rem', padding: '1.25rem', textAlign: 'center' }}>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-faint)', margin: 0, fontWeight: 600 }}>
+              Your shifts, incidents and reports will show up here.
+            </p>
+          </div>
+        ) : (
+          recentItems.map((item, i) => <RecentRow key={i} {...item} />)
+        )}
       </div>
     </div>
   )

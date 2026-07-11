@@ -74,7 +74,7 @@ export default function Navigation({ phases, currentPhase, shift, onPhaseChange,
                   style={{
                     width: 10, height: 10, borderRadius: '50%', border: 'none', cursor: 'pointer', flexShrink: 0,
                     backgroundColor: currentPhase === i ? 'var(--accent)' : done[i] ? 'var(--success)' : 'var(--border)',
-                    boxShadow: currentPhase === i ? '0 0 8px rgba(249,115,22,0.6)' : 'none',
+                    boxShadow: currentPhase === i ? '0 0 8px rgba(79,141,247,0.6)' : 'none',
                     transition: 'background-color 0.2s',
                   }}
                 />
@@ -87,50 +87,19 @@ export default function Navigation({ phases, currentPhase, shift, onPhaseChange,
         </div>
       </div>
 
-      {/* Mobile top bar */}
-      <div className="md:hidden" style={{ backgroundColor: 'var(--bg-header)', borderBottom: '1px solid var(--border)', flexShrink: 0, paddingTop: 'env(safe-area-inset-top)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', height: '2.75rem', padding: '0 0.75rem' }}>
-          <button onClick={onHome} style={{ color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem', marginRight: '0.5rem' }}>
-            <HomeIcon />
-          </button>
-          <div style={{ flex: 1, textAlign: 'center', minWidth: 0 }}>
-            <div style={{ fontWeight: 800, fontSize: '0.75rem', color: 'var(--accent-soft)' }}>
-              {phases[currentPhase]}
-            </div>
-            <div style={{ fontSize: '0.6rem', color: 'var(--text-faint)', fontWeight: 600, marginTop: '1px' }}>
-              Step {currentPhase + 1} of {phases.length}
-            </div>
-          </div>
-          {tools.map(({ onClick, title, color, Icon }) => (
-            <button key={title} onClick={onClick} title={title} style={{ color, background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem' }}>
-              <Icon size={16} />
-            </button>
-          ))}
-        </div>
-
-        {/* Mobile progress dots */}
-        <div style={{ display: 'flex', alignItems: 'center', padding: '0 1.25rem 0.4rem' }}>
-          {phases.map((_, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-              <button
-                onClick={() => onPhaseChange(i)}
-                style={{
-                  width: 8, height: 8, borderRadius: '50%', border: 'none', cursor: 'pointer', flexShrink: 0,
-                  backgroundColor: currentPhase === i ? 'var(--accent)' : done[i] ? 'var(--success)' : 'var(--border)',
-                }}
-              />
-              {i < phases.length - 1 && <div style={{ flex: 1, height: 2, backgroundColor: done[i] ? 'var(--success-border)' : 'var(--border)' }} />}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Mobile bottom tab bar */}
+      {/* Mobile bottom tab bar — Home + the five phases; no top bar on mobile */}
       <div className="md:hidden" style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 30,
         backgroundColor: 'var(--bg-header)', borderTop: '1px solid var(--border)',
         display: 'flex', paddingBottom: 'env(safe-area-inset-bottom)',
       }}>
+        <button
+          onClick={onHome}
+          title="Home"
+          style={{ flexShrink: 0, padding: '0.5rem 0.9rem 0.4rem', background: 'none', border: 'none', borderTop: '2.5px solid transparent', borderRight: '1px solid var(--border)', cursor: 'pointer', color: 'var(--accent)', display: 'flex', alignItems: 'center' }}
+        >
+          <HomeIcon size={18} />
+        </button>
         {PHASE_SHORT.map((short, i) => (
           <button
             key={i}

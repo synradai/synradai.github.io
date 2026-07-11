@@ -272,6 +272,16 @@ export default function App() {
     setView('shift')
   }, [currentShift, archiveShift])
 
+  // End the shift for good: archive it, clear the active slot, back to home.
+  const finishShift = useCallback(() => {
+    if (!currentShift) return
+    archiveShift(currentShift)
+    setCurrentShift(null)
+    setCurrentPhase(0)
+    try { localStorage.removeItem(STORAGE_KEYS.CURRENT_SHIFT) } catch (_) {}
+    setView('home')
+  }, [currentShift, archiveShift])
+
   const navigateToPhase = (phase) => {
     setSlideDir(phase > currentPhase ? 'in-right' : phase < currentPhase ? 'in-left' : '')
     setCurrentPhase(phase)
@@ -302,7 +312,7 @@ export default function App() {
   ].sort((a, b) => new Date(b.time) - new Date(a.time)), [currentShift, shiftHistory, incidents])
 
   const renderPhase = () => {
-    const props = { shift: currentShift, updateShift, apiKey: aiKey }
+    const props = { shift: currentShift, updateShift, apiKey: aiKey, onFinish: finishShift }
     const phases = [IncomingHandover, MorningMeeting, SiteRounds, FindingsMeeting, DebriefHandover]
     const Phase = phases[currentPhase]
     if (!Phase) return null
@@ -394,8 +404,10 @@ export default function App() {
         <HomeScreen
           currentShift={currentShift}
           shiftHistory={shiftHistory}
-          incidentCount={allIncidents.length}
+          incidents={allIncidents}
           learningCount={learnings.length}
+          fieldReports={fieldReports}
+          dailyLog={dailyLog}
           onStartShift={startNewShift}
           onContinueShift={() => setView('shift')}
           onViewHistory={() => setView('history')}
@@ -405,7 +417,6 @@ export default function App() {
           onAskAI={() => setShowAskSafety(true)}
           onFieldReport={() => setShowFieldReport(true)}
           onViewFieldReports={() => setView('fieldreports')}
-          fieldReportCount={fieldReports.length}
           onReportIncident={() => setShowIncident(true)}
           onDailyLog={() => setView('dailylog')}
           advisorName={session?.user?.user_metadata?.full_name || session?.user?.email || ''}
@@ -431,7 +442,7 @@ export default function App() {
             theme={theme}
             onToggleTheme={toggleTheme}
           />
-          <main className="flex-1 overflow-y-auto scrollbar-thin" style={{ paddingBottom: 'calc(5.5rem + env(safe-area-inset-bottom))' }}>
+          <main className="flex-1 overflow-y-auto scrollbar-thin" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'calc(5.5rem + env(safe-area-inset-bottom))' }}>
             <div style={{ maxWidth: '720px', margin: '0 auto' }}>
               <SwipeContainer
                 canPrev={currentPhase > 0}

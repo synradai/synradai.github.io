@@ -37,6 +37,44 @@ export default function DocScanner({ onClose, onSave }) {
   const videoRef = useRef()
   const streamRef = useRef(null)
 
+  // Redaction: strokes live in result-canvas pixel coords and are burnt into
+  // every preview/save composite, so a redaction can never be peeled off.
+  const [strokeCount, setStrokeCount] = useState(0)
+  const redactStrokesRef = useRef([])
+  const drawingRef = useRef(null)
+  const redactBaseRef = useRef(null) // enhanced base, cached while redacting
+  const redactCanvasRef = useRef(null)
+  const redactRafRef = useRef(0)
+
+  const paintStrokes = (ctx, strokes) => {
+    ctx.strokeStyle = '#000'
+    ctx.fillStyle = '#000'
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+    for (const s of strokes) {
+      if (!s || !s.points.length) continue
+      if (s.points.length === 1) {
+        const [p] = s.points
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, s.size / 2, 0, Math.PI * 2)
+        ctx.fill()
+        continue
+      }
+      ctx.lineWidth = s.size
+      ctx.beginPath()
+      ctx.moveTo(s.points[0].x, s.points[0].y)
+      for (let i = 1; i < s.points.length; i++) ctx.lineTo(s.points[i].x, s.points[i].y)
+      ctx.stroke()
+    }
+  }
+
+  // Enhanced result + redactions — the single source for preview and save.
+  const composite = (m = mode) => {
+    const c = applyEnhancement(cloneCanvas(resultCanvas), m)
+    paintStrokes(c.getContext('2d'), redactStrokesRef.current)
+    return c
+  }
+
   const resetCorners = (w, h) => ([
     { x: w * 0.06, y: h * 0.06 },
     { x: w * 0.94, y: h * 0.06 },
@@ -188,6 +226,8 @@ export default function DocScanner({ onClose, onSave }) {
         }
         const canvas = warpPerspective(imgEl, pts, outW, outH)
         setResultCanvas(canvas)
+        redactStrokesRef.current = [] // geometry changed — old strokes no longer line up
+        setStrokeCount(0)
         const enhanced = applyEnhancement(cloneCanvas(canvas), mode)
         setPreviewUrl(enhanced.toDataURL('image/jpeg', 0.8))
         setStep('preview')
@@ -201,11 +241,83 @@ export default function DocScanner({ onClose, onSave }) {
 
   useEffect(() => {
     if (step === 'preview' && resultCanvas) {
-      const enhanced = applyEnhancement(cloneCanvas(resultCanvas), mode)
-      setPreviewUrl(enhanced.toDataURL('image/jpeg', 0.8))
+      setPreviewUrl(composite().toDataURL('image/jpeg', 0.8))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode])
+
+  // Entering the redact step: size the drawing canvas and cache the enhanced
+  // base so per-stroke redraws are just two cheap drawImage calls.
+  useEffect(() => {
+    if (step !== 'redact' || !resultCanvas) return
+    const base = applyEnhancement(cloneCanvas(resultCanvas), mode)
+    redactBaseRef.current = base
+    const el = redactCanvasRef.current
+    el.width = base.width
+    el.height = base.height
+    redrawRedact()
+    return () => { drawingRef.current = null; cancelAnimationFrame(redactRafRef.current) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step])
+
+  const redrawRedact = () => {
+    const el = redactCanvasRef.current
+    const base = redactBaseRef.current
+    if (!el || !base) return
+    const ctx = el.getContext('2d')
+    ctx.drawImage(base, 0, 0)
+    paintStrokes(ctx, [...redactStrokesRef.current, drawingRef.current].filter(Boolean))
+  }
+
+  const scheduleRedraw = () => {
+    if (!redactRafRef.current) {
+      redactRafRef.current = requestAnimationFrame(() => { redactRafRef.current = 0; redrawRedact() })
+    }
+  }
+
+  const redactPoint = (e) => {
+    const el = redactCanvasRef.current
+    const rect = el.getBoundingClientRect()
+    return {
+      x: (e.clientX - rect.left) / rect.width * el.width,
+      y: (e.clientY - rect.top) / rect.height * el.height,
+    }
+  }
+
+  const onRedactDown = (e) => {
+    e.preventDefault()
+    redactCanvasRef.current.setPointerCapture?.(e.pointerId)
+    drawingRef.current = { size: redactCanvasRef.current.width * 0.05, points: [redactPoint(e)] }
+    scheduleRedraw()
+  }
+  const onRedactMove = (e) => {
+    if (!drawingRef.current) return
+    drawingRef.current.points.push(redactPoint(e))
+    scheduleRedraw()
+  }
+  const onRedactUp = () => {
+    if (!drawingRef.current) return
+    redactStrokesRef.current.push(drawingRef.current)
+    drawingRef.current = null
+    setStrokeCount(redactStrokesRef.current.length)
+    scheduleRedraw()
+  }
+
+  const undoRedact = () => {
+    redactStrokesRef.current.pop()
+    setStrokeCount(redactStrokesRef.current.length)
+    redrawRedact()
+  }
+  const clearRedact = () => {
+    redactStrokesRef.current = []
+    setStrokeCount(0)
+    redrawRedact()
+  }
+
+  const finishRedact = () => {
+    setPreviewUrl(composite().toDataURL('image/jpeg', 0.8))
+    setStep('preview')
+  }
 
   const save = () => { if (previewUrl) onSave(previewUrl) }
 
@@ -288,8 +400,8 @@ export default function DocScanner({ onClose, onSave }) {
             >
               <polygon
                 points={corners.map(c => `${c.x},${c.y}`).join(' ')}
-                fill="rgba(249,115,22,0.22)"
-                stroke="#f97316"
+                fill="rgba(79,141,247,0.22)"
+                stroke="#4f8df7"
                 strokeWidth={imgEl.width * 0.005}
               />
               {corners.map((c, i) => (
@@ -298,7 +410,7 @@ export default function DocScanner({ onClose, onSave }) {
                   cx={c.x}
                   cy={c.y}
                   r={imgEl.width * 0.022}
-                  fill="#f97316"
+                  fill="#4f8df7"
                   stroke="#fff"
                   strokeWidth={imgEl.width * 0.006}
                   onPointerDown={onCornerDown(i)}
@@ -338,8 +450,36 @@ export default function DocScanner({ onClose, onSave }) {
               </button>
             ))}
           </div>
+          <button onClick={() => setStep('redact')} style={{ width: '100%', marginBottom: '0.75rem', padding: '0.75rem', backgroundColor: 'var(--bg-panel)', border: '1.5px solid var(--border-accent)', borderRadius: '0.75rem', color: 'var(--accent-soft)', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer' }}>
+            🖍 Redact sensitive info{strokeCount > 0 ? ` (${strokeCount})` : ''}
+          </button>
           <PrimaryButton onClick={save} style={{ marginBottom: '0.5rem' }}>Use This Scan</PrimaryButton>
           <button onClick={() => setStep('crop')} style={{ ...btnSecondary, width: '100%' }}>← Adjust Corners</button>
+        </div>
+      )}
+
+      {step === 'redact' && resultCanvas && (
+        <div>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', marginBottom: '0.75rem', fontWeight: 600, lineHeight: 1.5 }}>
+            Swipe over anything that shouldn't leave site — company names, people, signatures, phone numbers. Blacked-out areas are permanent in the saved scan.
+          </p>
+          <div style={{ position: 'relative', width: '100%', borderRadius: '0.5rem', overflow: 'hidden', border: '1px solid var(--border)' }}>
+            <canvas
+              ref={redactCanvasRef}
+              onPointerDown={onRedactDown}
+              onPointerMove={onRedactMove}
+              onPointerUp={onRedactUp}
+              onPointerCancel={onRedactUp}
+              style={{ width: '100%', display: 'block', touchAction: 'none', cursor: 'crosshair' }}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+            <button onClick={undoRedact} disabled={strokeCount === 0} style={{ ...btnSecondary, flex: 1, opacity: strokeCount === 0 ? 0.4 : 1, cursor: strokeCount === 0 ? 'not-allowed' : 'pointer' }}>↩ Undo</button>
+            <button onClick={clearRedact} disabled={strokeCount === 0} style={{ ...btnSecondary, flex: 1, opacity: strokeCount === 0 ? 0.4 : 1, cursor: strokeCount === 0 ? 'not-allowed' : 'pointer' }}>Clear All</button>
+          </div>
+          <PrimaryButton onClick={finishRedact} style={{ marginTop: '0.75rem' }}>
+            {strokeCount > 0 ? `Apply ${strokeCount} redaction${strokeCount === 1 ? '' : 's'}` : 'Done'}
+          </PrimaryButton>
         </div>
       )}
     </FullScreenModal>

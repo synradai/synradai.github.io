@@ -3,76 +3,76 @@
 @tailwind utilities;
 
 :root {
-  /* Sunset industrial — warm charcoal ground, molten amber/ember accents.
-     Grounded in the mining world (hi-vis orange, hot metal, heat haze) —
-     premium fintech-dark treatment rather than generic tech-blue. */
+  /* Night shift — pre-dawn navy ground, aurora (mint -> signal blue -> violet)
+     as the intelligence accent. Red/amber are reserved for hazards and
+     warnings only, so safety colour-coding is never diluted by branding. */
   color-scheme: dark; /* tells iOS/Safari to render form controls + typed text for a dark UI */
-  --bg-page: #0b0908;
-  --bg-header: #161007;
-  --bg-card: #171208;
-  --bg-input: #100b06;
-  --bg-panel: #1c150a;
-  --bg-stat: #161007;
-  --bg-highlight: #2a1a0a;
-  --border: #251c11;
-  --border-accent: #45301a;
-  --border-strong: #5c4023;
-  --text-primary: #f7f2ea;
-  --text-muted: #a89a88;
-  --text-faint: #6e6053;
-  --accent: #f97316;
-  --accent-strong: #ea580c;
-  --accent-soft: #fb923c;
+  --bg-page: #070b13;
+  --bg-header: #0a1120;
+  --bg-card: #0e1626;
+  --bg-input: #0a111e;
+  --bg-panel: #111b2e;
+  --bg-stat: #0c1422;
+  --bg-highlight: #14213b;
+  --border: #1b2536;
+  --border-accent: #2a3a56;
+  --border-strong: #3d5680;
+  --text-primary: #f1f5fc;
+  --text-muted: #93a1ba;
+  --text-faint: #5d6a84;
+  --accent: #4f8df7;
+  --accent-strong: #2f6fe4;
+  --accent-soft: #85adff;
   --on-accent: #fff;
-  /* molten glow gradient (amber -> orange -> ember red) for the hero orb + accents */
-  --glow-a: #f97316;
-  --glow-b: #fbbf24;
-  --glow-c: #ef4444;
+  /* aurora gradient (mint -> signal blue -> violet) for the hero orb + accents */
+  --glow-a: #37e3c2;
+  --glow-b: #4f8df7;
+  --glow-c: #8b7bf7;
   --danger: #dc2626;
   --error-text: #fca5a5;
   --error-border: #7f1d1d;
-  --error-bg: #1a0808;
-  --error-bg-strong: #3b0a0a;
-  --success: #22c55e;
-  --success-text: #86efac;
-  --success-border: #166534;
-  --success-bg: #052e16;
-  --warning-bg: #3b2a0a;
+  --error-bg: #150a10;
+  --error-bg-strong: #380d14;
+  --success: #2fd28e;
+  --success-text: #8ceec7;
+  --success-border: #14684a;
+  --success-bg: #072a1e;
+  --warning-bg: #2a2310;
   --warning-text: #fcd34d;
   --warning-border: #b45309;
 }
 
 [data-theme="light"] {
   color-scheme: light;
-  --bg-page: #f7f4ef;
+  --bg-page: #f3f6fb;
   --bg-header: #ffffff;
   --bg-card: #ffffff;
-  --bg-input: #fbf8f3;
-  --bg-panel: #fdf3e7;
-  --bg-stat: #faf7f1;
-  --bg-highlight: #ffedd5;
-  --border: #ece4d8;
-  --border-accent: #e0d0bb;
-  --border-strong: #a08c72;
-  --text-primary: #1c1611;
-  --text-muted: #6b5f52;
-  --text-faint: #b3a793;
-  --accent: #ea580c;
-  --accent-strong: #c2410c;
-  --accent-soft: #ea580c;
+  --bg-input: #f8fafd;
+  --bg-panel: #e9f0fb;
+  --bg-stat: #f5f8fc;
+  --bg-highlight: #dbe8ff;
+  --border: #e2e8f2;
+  --border-accent: #c7d7ee;
+  --border-strong: #7e95ba;
+  --text-primary: #131c2b;
+  --text-muted: #55637c;
+  --text-faint: #a3b0c5;
+  --accent: #2f6fe4;
+  --accent-strong: #2456b8;
+  --accent-soft: #2f6fe4;
   --on-accent: #fff;
-  --glow-a: #f97316;
-  --glow-b: #fbbf24;
-  --glow-c: #ef4444;
+  --glow-a: #17c3a3;
+  --glow-b: #2f6fe4;
+  --glow-c: #7a63e8;
   --danger: #dc2626;
   --error-text: #b91c1c;
   --error-border: #fca5a5;
   --error-bg: #fef2f2;
   --error-bg-strong: #fee2e2;
-  --success: #16a34a;
-  --success-text: #15803d;
-  --success-border: #86efac;
-  --success-bg: #f0fdf4;
+  --success: #0ea371;
+  --success-text: #0f7a55;
+  --success-border: #8ce3c3;
+  --success-bg: #edfaf4;
   --warning-bg: #fffbeb;
   --warning-text: #92400e;
   --warning-border: #fcd34d;
@@ -80,6 +80,14 @@
 
 @layer base {
   * { box-sizing: border-box; }
+
+  /* Phone-app feel: no visible scrollbars anywhere. Scrolling itself is
+     untouched — touch, wheel and trackpad all still work. */
+  * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  *::-webkit-scrollbar { width: 0; height: 0; display: none; }
 
   html, body, #root {
     width: 100%;
@@ -145,16 +153,32 @@
 @keyframes swipe-in-left  { from { transform: translateX(-56px); opacity: 0.35 } to { transform: translateX(0); opacity: 1 } }
 .swipe-in-right { animation: swipe-in-right 0.22s ease-out }
 .swipe-in-left  { animation: swipe-in-left 0.22s ease-out }
+
+/* New list entries slide in — the "it landed" cue after logging. */
+@keyframes entry-in { from { transform: translateY(-6px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+.entry-in { animation: entry-in 0.25s ease-out }
+
+/* Shift-wrapped recap: content rises in once. */
+@keyframes rise-in { from { transform: translateY(14px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+.rise-in { animation: rise-in 0.35s ease-out both }
+
 @media (prefers-reduced-motion: reduce) {
-  .swipe-in-right, .swipe-in-left { animation: none }
+  .swipe-in-right, .swipe-in-left, .entry-in, .rise-in { animation: none }
 }
 
 @layer utilities {
-  .scrollbar-thin {
-    scrollbar-width: thin;
-    scrollbar-color: var(--border-accent) transparent;
+  /* Swipeable rows: scrolls by touch/trackpad with no visible scrollbar. */
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
   }
-  .scrollbar-thin::-webkit-scrollbar { width: 4px; }
-  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
-  .scrollbar-thin::-webkit-scrollbar-thumb { background-color: var(--border-accent); border-radius: 2px; }
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+
+  /* Legacy class — scrollbars are now hidden app-wide (see base layer). */
+  .scrollbar-thin {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-thin::-webkit-scrollbar { display: none; }
 }
