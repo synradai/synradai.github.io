@@ -1,0 +1,16 @@
+{
+  "name": "SwingTrack",
+  "short_name": "SwingTrack",
+  "description": "Daily food, water, steps, exercise, sleep and weight log for the swing.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#100E0C",
+  "theme_color": "#100E0C",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
