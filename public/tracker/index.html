@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0c">
+<title>SwingTrack</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SwingTrack">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header id="topbar">
+  <div class="brand">SwingTrack</div>
+  <div class="datenav">
+    <button id="prevDay" aria-label="Previous day">&lsaquo;</button>
+    <button id="dateLabel" aria-label="Jump to today">Today</button>
+    <button id="nextDay" aria-label="Next day">&rsaquo;</button>
+  </div>
+  <button id="settingsBtn" aria-label="Settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><circle cx="9" cy="7" r="2.6" fill="var(--card)"/><line x1="4" y1="16" x2="20" y2="16"/><circle cx="15" cy="16" r="2.6" fill="var(--card)"/></svg>
+  </button>
+</header>
+
+<main id="pager">
+
+  <!-- ============ TODAY ============ -->
+  <section class="panel" id="panel-today">
+    <div id="swingStrip" aria-label="Swing days"></div>
+    <div class="dayline">
+      <h1 id="dayTitle">SwingTrack</h1>
+      <div class="sub" id="daySub"></div>
+    </div>
+
+    <div class="card">
+      <div class="cardhead"><span class="dot" style="--c:#f5f5f7"></span><span class="eyebrow">Weight</span><span class="headval" id="weightHeadVal"></span></div>
+      <div class="bignum-row"><span class="bignum" id="weightBig">&mdash;</span><span class="unit">kg</span><span class="delta" id="weightDelta"></span></div>
+      <div class="controls">
+        <input type="number" id="weightInput" inputmode="decimal" step="0.1" min="30" max="250" placeholder="Morning weigh-in">
+        <button class="btn small" id="weightSave">Log</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="cardhead"><span class="dot" style="--c:var(--c-food)"></span><span class="eyebrow">Food</span><span class="headval" id="kcalHeadVal"></span></div>
+      <div class="meter"><i id="kcalMeter" style="--c:var(--c-food)"></i></div>
+      <div class="cardsub" id="kcalSub"></div>
+      <div class="controls">
+        <button class="btn ghost small" id="goFoodPhoto">Photo meal</button>
+        <button class="btn ghost small" id="goFoodScan">Scan barcode</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="cardhead"><span class="dot" style="--c:var(--c-water)"></span><span class="eyebrow">Water</span><span class="headval" id="waterHeadVal"></span></div>
+      <div class="meter"><i id="waterMeter" style="--c:var(--c-water)"></i></div>
+      <div class="controls">
+        <button class="btn ghost small waterAdd" data-ml="250">+ Cup 250 ml</button>
+        <button class="btn ghost small waterAdd" data-ml="600">+ Bottle 600 ml</button>
+        <button class="btn ghost small" id="waterUndo" aria-label="Remove 250 ml">&minus;</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="cardhead"><span class="dot" style="--c:var(--c-steps)"></span><span class="eyebrow">Steps</span><span class="headval" id="stepsHeadVal"></span></div>
+      <div class="meter"><i id="stepsMeter" style="--c:var(--c-steps)"></i></div>
+      <div class="controls">
+        <input type="number" id="stepsInput" inputmode="numeric" min="0" max="150000" placeholder="From your watch or phone">
+        <button class="btn small" id="stepsSave">Log</button>
+      </div>
+    </div>
+
+    <button class="card" id="cardSleepToday" style="width:100%;text-align:left">
+      <div class="cardhead"><span class="dot" style="--c:var(--c-sleep)"></span><span class="eyebrow">Sleep</span><span class="headval" id="sleepHeadVal"></span></div>
+      <div class="cardsub" id="sleepSubToday">Tap to log last night</div>
+    </button>
+  </section>
+
+  <!-- ============ FOOD ============ -->
+  <section class="panel" id="panel-food">
+    <h2 class="paneltitle">Food</h2>
+    <div class="card">
+      <div class="cardhead"><span class="dot" style="--c:var(--c-food)"></span><span class="eyebrow">Day total</span><span class="headval" id="foodHeadVal"></span></div>
+      <div class="meter"><i id="foodMeter" style="--c:var(--c-food)"></i></div>
+      <div class="cardsub" id="foodSub"></div>
+    </div>
+
+    <div class="actionrow">
+      <button class="action" id="btnPhoto">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 7h3l2-2.5h6L17 7h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.4"/></svg>
+        Photo meal
+      </button>
+      <button class="action" id="btnScan">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6v12M8 6v12M11.5 6v8M15 6v12M19.5 6v12"/></svg>
+        Scan barcode
+      </button>
+      <button class="action" id="btnQuick">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Quick add
+      </button>
+    </div>
+
+    <div id="mealList"></div>
+  </section>
+
+  <!-- ============ MOVE ============ -->
+  <section class="panel" id="panel-move">
+    <h2 class="paneltitle">Move</h2>
+
+    <div class="card">
+      <div class="cardhead"><span class="dot" style="--c:var(--c-steps)"></span><span class="eyebrow">Steps</span><span class="headval" id="stepsHeadVal2"></span></div>
+      <div class="meter"><i id="stepsMeter2" style="--c:var(--c-steps)"></i></div>
+      <div class="controls">
+        <input type="number" id="stepsInput2" inputmode="numeric" min="0" max="150000" placeholder="From your watch or phone">
+        <button class="btn small" id="stepsSave2">Log</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="cardhead"><span class="dot" style="--c:var(--c-move)"></span><span class="eyebrow">Exercise</span><span class="headval" id="exHeadVal"></span></div>
+      <div class="chiprow" id="exChips">
+        <button class="chip" data-type="Gym">Gym</button>
+        <button class="chip" data-type="Walk">Walk</button>
+        <button class="chip" data-type="Run">Run</button>
+        <button class="chip" data-type="Swim">Swim</button>
+        <button class="chip" data-type="Bike">Bike</button>
+        <button class="chip" data-type="Other">Other</button>
+      </div>
+      <div class="controls">
+        <div class="stepper">
+          <button id="exMinsMinus" aria-label="Less minutes">&minus;</button>
+          <input type="number" id="exMins" inputmode="numeric" value="30" min="5" max="600" aria-label="Minutes">
+          <button id="exMinsPlus" aria-label="More minutes">+</button>
+        </div>
+        <span class="cardsub" style="margin:0">min</span>
+        <button class="btn small" id="exAdd" style="margin-left:auto">Add session</button>
+      </div>
+    </div>
+
+    <div id="exList"></div>
+    <div class="card" id="exSummary" style="display:none"></div>
+  </section>
+
+  <!-- ============ SLEEP ============ -->
+  <section class="panel" id="panel-sleep">
+    <h2 class="paneltitle">Sleep</h2>
+
+    <div class="card">
+      <div class="cardhead"><span class="dot" style="--c:var(--c-sleep)"></span><span class="eyebrow">Last night</span><span class="headval" id="sleepHoursHead"></span></div>
+      <div class="formrow" style="display:flex;gap:10px">
+        <div style="flex:1">
+          <label class="flabel" for="bedTime">Lights out</label>
+          <input type="time" id="bedTime" style="width:100%">
+        </div>
+        <div style="flex:1">
+          <label class="flabel" for="wakeTime">Woke up</label>
+          <input type="time" id="wakeTime" style="width:100%">
+        </div>
+      </div>
+      <div class="bignum-row" style="margin-top:12px"><span class="bignum" id="sleepHoursBig">&mdash;</span><span class="unit">hours</span></div>
+      <label class="flabel">How was it?</label>
+      <div class="qrow" id="qualityRow">
+        <button data-q="1" aria-label="Quality 1 of 5">1</button>
+        <button data-q="2" aria-label="Quality 2 of 5">2</button>
+        <button data-q="3" aria-label="Quality 3 of 5">3</button>
+        <button data-q="4" aria-label="Quality 4 of 5">4</button>
+        <button data-q="5" aria-label="Quality 5 of 5">5</button>
+      </div>
+      <div class="controls"><button class="btn" id="sleepSave" style="flex:1">Save sleep</button></div>
+    </div>
+
+    <div class="card chartcard">
+      <div class="charttitle">Last 7 nights (hours)</div>
+      <div class="readout" id="ro-sleepmini"></div>
+      <div class="chartbox" id="ch-sleepmini"></div>
+    </div>
+  </section>
+
+  <!-- ============ TRENDS ============ -->
+  <section class="panel" id="panel-trends">
+    <h2 class="paneltitle">Trends</h2>
+
+    <div class="rangebar" id="rangeBar">
+      <button data-range="swing" class="on">Swing</button>
+      <button data-range="7">7 days</button>
+      <button data-range="all">All</button>
+    </div>
+
+    <div class="statrow" id="statRow"></div>
+
+    <div class="card chartcard">
+      <div class="charttitle">Weight (kg)</div>
+      <div class="readout" id="ro-weight"></div>
+      <div class="chartbox" id="ch-weight"></div>
+    </div>
+    <div class="card chartcard">
+      <div class="charttitle">Food (kcal)</div>
+      <div class="readout" id="ro-kcal"></div>
+      <div class="chartbox" id="ch-kcal"></div>
+    </div>
+    <div class="card chartcard">
+      <div class="charttitle">Steps</div>
+      <div class="readout" id="ro-steps"></div>
+      <div class="chartbox" id="ch-steps"></div>
+    </div>
+    <div class="card chartcard">
+      <div class="charttitle">Water (litres)</div>
+      <div class="readout" id="ro-water"></div>
+      <div class="chartbox" id="ch-water"></div>
+    </div>
+    <div class="card chartcard">
+      <div class="charttitle">Sleep (hours)</div>
+      <div class="readout" id="ro-sleep"></div>
+      <div class="chartbox" id="ch-sleep"></div>
+    </div>
+
+    <button class="btn ghost" id="exportBtn" style="width:100%">Export data (JSON)</button>
+    <p class="finenote">Everything lives on this phone only &mdash; nothing is uploaded. Meal photos stay on the device and aren't included in the export file.</p>
+  </section>
+
+</main>
+
+<!-- ============ TAB BAR ============ -->
+<nav id="tabbar" aria-label="Sections">
+  <button data-i="0" class="on" aria-label="Today">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></svg>
+  </button>
+  <button data-i="1" aria-label="Food">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 2.5v6a2.5 2.5 0 0 0 5 0v-6"/><path d="M6.5 2.5V22"/><path d="M20 15.5V2.5a4.5 4.5 0 0 0-4 4.5v6.5h4z"/><path d="M20 15.5V22"/></svg>
+  </button>
+  <button data-i="2" aria-label="Move">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="2" y="9" width="3.5" height="6" rx="1"/><rect x="18.5" y="9" width="3.5" height="6" rx="1"/><line x1="5.5" y1="12" x2="18.5" y2="12"/></svg>
+  </button>
+  <button data-i="3" aria-label="Sleep">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M20.5 14.1A8.5 8.5 0 1 1 9.9 3.5a7 7 0 0 0 10.6 10.6z"/></svg>
+  </button>
+  <button data-i="4" aria-label="Trends">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 3.5v17h17"/><path d="m7 14.5 4-4.5 3 3 5.5-6.5"/></svg>
+  </button>
+</nav>
+
+<!-- ============ SHEETS ============ -->
+<div id="backdrop"></div>
+
+<div class="sheet" id="sheetMeal" role="dialog" aria-label="Log a meal">
+  <div class="grab"></div>
+  <h2 id="mealSheetTitle">Log a meal</h2>
+  <div id="mealThumbWrap"><img id="mealThumb" alt="Meal photo"></div>
+
+  <label class="flabel">Meal</label>
+  <div class="chiprow" id="mealTypeChips">
+    <button class="chip" data-mt="Breakfast">Breakfast</button>
+    <button class="chip" data-mt="Crib">Crib</button>
+    <button class="chip" data-mt="Dinner">Dinner</button>
+    <button class="chip" data-mt="Snack">Snack</button>
+  </div>
+
+  <label class="flabel" for="mealName">What was it? (optional)</label>
+  <input type="text" id="mealName" placeholder="e.g. Chicken + veg, small chips" style="width:100%" maxlength="60">
+
+  <label class="flabel">Size</label>
+  <div class="chiprow" id="kcalChips">
+    <button class="chip" data-kcal="350">Light &middot; ~350</button>
+    <button class="chip" data-kcal="600">Standard &middot; ~600</button>
+    <button class="chip" data-kcal="850">Big plate &middot; ~850</button>
+  </div>
+
+  <label class="flabel" for="mealKcal">Calories (kcal)</label>
+  <input type="number" id="mealKcal" inputmode="numeric" min="0" max="4000" placeholder="kcal" style="width:100%">
+
+  <div class="sheetbtns">
+    <button class="btn ghost" id="mealCancel">Cancel</button>
+    <button class="btn" id="mealSave">Save meal</button>
+  </div>
+</div>
+
+<div class="sheet" id="sheetScan" role="dialog" aria-label="Scan a barcode">
+  <div class="grab"></div>
+  <h2>Scan barcode</h2>
+  <div id="scanVideoWrap">
+    <video id="scanVideo" playsinline muted></video>
+    <div id="scanFrame"></div>
+  </div>
+  <div id="scanHint">Point the camera at the barcode</div>
+  <label class="flabel" for="scanManual">Or type the numbers under the barcode</label>
+  <div class="formrow">
+    <input type="number" id="scanManual" inputmode="numeric" placeholder="e.g. 9300633001234">
+    <button class="btn ghost small" id="scanGo" style="flex:0 0 auto">Look up</button>
+  </div>
+  <div class="sheetbtns">
+    <button class="btn ghost" id="scanCancel">Close</button>
+  </div>
+</div>
+
+<div class="sheet" id="sheetProduct" role="dialog" aria-label="Product details">
+  <div class="grab"></div>
+  <div id="productBody"></div>
+</div>
+
+<div class="sheet" id="sheetSettings" role="dialog" aria-label="Settings">
+  <div class="grab"></div>
+  <h2>Set up your swing</h2>
+  <div class="introbox" id="settingsIntro">
+    <b>G'day. Quick setup, then you're off.</b><br>
+    Check the numbers below, tick any foods you need to avoid, and hit save. You can change all of this later from the top-right button.
+  </div>
+
+  <div class="formrow">
+    <div>
+      <label class="flabel" for="setSwingStart">Swing starts</label>
+      <input type="date" id="setSwingStart" style="width:100%">
+    </div>
+    <div>
+      <label class="flabel" for="setSwingLen">Days</label>
+      <input type="number" id="setSwingLen" inputmode="numeric" min="1" max="60" style="width:100%">
+    </div>
+  </div>
+
+  <div class="formrow">
+    <div>
+      <label class="flabel" for="setStartWeight">Start weight (kg)</label>
+      <input type="number" id="setStartWeight" inputmode="decimal" step="0.1" style="width:100%">
+    </div>
+    <div>
+      <label class="flabel" for="setGoalWeight">Goal weight (kg)</label>
+      <input type="number" id="setGoalWeight" inputmode="decimal" step="0.1" placeholder="optional" style="width:100%">
+    </div>
+  </div>
+
+  <div class="formrow">
+    <div>
+      <label class="flabel" for="setKcal">Daily kcal budget</label>
+      <input type="number" id="setKcal" inputmode="numeric" min="1000" max="6000" step="50" style="width:100%">
+    </div>
+    <div>
+      <label class="flabel" for="setWater">Water target (ml)</label>
+      <input type="number" id="setWater" inputmode="numeric" min="500" max="10000" step="250" style="width:100%">
+    </div>
+  </div>
+
+  <div class="formrow">
+    <div>
+      <label class="flabel" for="setSteps">Step target</label>
+      <input type="number" id="setSteps" inputmode="numeric" min="1000" max="50000" step="500" style="width:100%">
+    </div>
+    <div>
+      <label class="flabel" for="setSleep">Sleep target (h)</label>
+      <input type="number" id="setSleep" inputmode="decimal" min="4" max="12" step="0.5" style="width:100%">
+    </div>
+  </div>
+
+  <label class="flabel">Foods to avoid &mdash; barcode scans get checked against these</label>
+  <div class="aboxes" id="allergenBoxes"></div>
+
+  <label class="flabel" for="setCustomAllergens">Other ingredient words to flag (comma separated)</label>
+  <input type="text" id="setCustomAllergens" placeholder="e.g. aspartame, MSG" style="width:100%">
+
+  <div class="sheetbtns">
+    <button class="btn" id="settingsSave" style="flex:1">Save</button>
+  </div>
+  <div class="sheetbtns">
+    <button class="btn danger small" id="wipeBtn">Erase all data</button>
+  </div>
+</div>
+
+<div id="toast" role="status"></div>
+
+<input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
+
+<script src="vendor/zxing.min.js" defer></script>
+<script src="app.js" defer></script>
+</body>
+</html>

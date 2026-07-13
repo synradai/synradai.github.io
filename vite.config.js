@@ -17,6 +17,11 @@ export default defineConfig({
       manifest: false,
       workbox: {
         globPatterns: ['**/*.{js,css,html,png,svg,webmanifest}'],
+        // /tracker/ (SwingTrack) is a separate standalone PWA with its own
+        // service worker — keep it out of this app's precache and never serve
+        // the Safe Intelligence shell for its navigations.
+        globIgnores: ['tracker/**'],
+        navigateFallbackDenylist: [/^\/tracker\//],
         cleanupOutdatedCaches: true,
         // App data/API calls (Supabase, AI proxy) always go to the network —
         // never cache them. Only same-origin static assets are precached, plus
