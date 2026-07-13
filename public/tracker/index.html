@@ -106,8 +106,20 @@
       </button>
     </div>
 
+    <div class="card">
+      <div class="cardhead"><span class="dot" style="--c:var(--c-food)"></span><span class="eyebrow">Drinks</span><span class="headval" id="drinksHeadVal"></span></div>
+      <div class="chiprow" id="drinkChips">
+        <button class="chip" data-name="Black coffee" data-kcal="5">Black coffee &middot; 5</button>
+        <button class="chip" data-name="Tea with milk" data-kcal="30">Tea + milk &middot; 30</button>
+        <button class="chip" data-name="Flat white" data-kcal="120">Flat white &middot; 120</button>
+        <button class="chip" data-name="Soft drink" data-kcal="160">Soft drink &middot; 160</button>
+        <button class="chip" data-name="Energy drink" data-kcal="115">Energy drink &middot; 115</button>
+        <button class="chip" data-custom>Custom&hellip;</button>
+      </div>
+    </div>
+
     <div id="mealList"></div>
-    <p class="finenote">Tap any meal to add what it was or fix the calories &mdash; handy when you logged it in a rush.</p>
+    <p class="finenote">Drinks log with one tap and count toward your kcal budget. Tap any entry to add what it was or fix the calories &mdash; handy when you logged it in a rush.</p>
   </section>
 
   <!-- ============ MOVE ============ -->
@@ -260,6 +272,7 @@
     <button class="chip" data-mt="Crib">Crib</button>
     <button class="chip" data-mt="Dinner">Dinner</button>
     <button class="chip" data-mt="Snack">Snack</button>
+    <button class="chip" data-mt="Drinks">Drinks</button>
   </div>
 
   <label class="flabel" for="mealName">What was it? (optional)</label>

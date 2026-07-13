@@ -27,7 +27,7 @@ const ALLERGENS = [
   { id: 'sesame', label: 'Sesame', tags: ['en:sesame-seeds'] },
 ];
 
-const MEAL_TYPES = ['Breakfast', 'Crib', 'Dinner', 'Snack'];
+const MEAL_TYPES = ['Breakfast', 'Crib', 'Dinner', 'Snack', 'Drinks'];
 
 const DEFAULTS = {
   swingStart: null, // set at first run
@@ -279,6 +279,7 @@ async function renderToday(day, meals, kcal) {
 }
 
 const THUMB_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 2.5v6a2.5 2.5 0 0 0 5 0v-6"/><path d="M6.5 2.5V22"/><path d="M20 15.5V2.5a4.5 4.5 0 0 0-4 4.5v6.5h4z"/><path d="M20 15.5V22"/></svg>';
+const CUP_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h12v7a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z"/><path d="M16 9.5h2a2.5 2.5 0 0 1 0 5h-2"/><path d="M7.5 3.5v2M10.5 3.5v2M13.5 3.5v2"/></svg>';
 const X_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 
 function renderFood(day, meals, kcal) {
@@ -288,6 +289,11 @@ function renderFood(day, meals, kcal) {
   $('foodSub').textContent = kcal <= budget
     ? `${nfmt(budget - kcal)} kcal left`
     : `${nfmt(kcal - budget)} kcal over`;
+
+  const drinks = meals.filter((m) => m.type === 'Drinks');
+  $('drinksHeadVal').textContent = drinks.length
+    ? `${drinks.length} today · ${nfmt(drinks.reduce((a, m) => a + (m.kcal || 0), 0))} kcal`
+    : '';
 
   for (const u of mealURLs.values()) URL.revokeObjectURL(u);
   mealURLs.clear();
@@ -316,7 +322,7 @@ function renderFood(day, meals, kcal) {
         mealURLs.set(m.id, u);
         thumb = `<img class="thumb" src="${u}" alt="">`;
       } else {
-        thumb = `<div class="thumb">${THUMB_SVG}</div>`;
+        thumb = `<div class="thumb">${m.type === 'Drinks' ? CUP_SVG : THUMB_SVG}</div>`;
       }
       const src = m.source === 'scan' ? ' · scanned' : m.photo ? ' · photo' : '';
       row.innerHTML = `${thumb}
@@ -648,10 +654,10 @@ function defaultMealType() {
   return 'Snack';
 }
 
-function openMealSheet(photoBlob, meal) {
+function openMealSheet(photoBlob, meal, presetType) {
   pendingPhoto = photoBlob || null;
   editingMealId = meal ? meal.id : null;
-  mealType = meal ? meal.type : defaultMealType();
+  mealType = meal ? meal.type : (presetType || defaultMealType());
   $('mealSheetTitle').textContent = meal ? 'Edit meal' : photoBlob ? 'Photo meal' : 'Quick add';
   $('mealName').value = meal && meal.name !== meal.type ? meal.name : '';
   $('mealKcal').value = meal ? meal.kcal : '';
@@ -673,6 +679,23 @@ function bindMeals() {
   $('btnPhoto').addEventListener('click', () => $('photoInput').click());
   $('btnQuick').addEventListener('click', () => openMealSheet(null));
   $('btnScan').addEventListener('click', startScan);
+
+  $('drinkChips').addEventListener('click', async (e) => {
+    const c = e.target.closest('.chip');
+    if (!c) return;
+    if ('custom' in c.dataset) { openMealSheet(null, null, 'Drinks'); return; }
+    await dbPut('meals', {
+      id: (crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random()),
+      date: activeDate,
+      time: activeDate === cachedToday ? nowTime() : '12:00',
+      type: 'Drinks',
+      name: c.dataset.name,
+      kcal: +c.dataset.kcal,
+      source: 'drink',
+    });
+    showToast(`${c.dataset.name} · ${c.dataset.kcal} kcal`);
+    renderAll();
+  });
 
   $('photoInput').addEventListener('change', async () => {
     const f = $('photoInput').files[0];
