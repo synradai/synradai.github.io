@@ -326,11 +326,13 @@ function renderFood(day, meals, kcal) {
         </div>
         <div class="rowval">${nfmt(m.kcal || 0)} <small>kcal</small></div>
         <button class="rowdel" aria-label="Delete">${X_SVG}</button>`;
-      row.querySelector('.rowdel').addEventListener('click', async () => {
+      row.querySelector('.rowdel').addEventListener('click', async (e) => {
+        e.stopPropagation();
         if (!confirm(`Delete "${m.name || type}"?`)) return;
         await dbDel('meals', m.id);
         renderAll();
       });
+      row.addEventListener('click', () => openMealSheet(null, m));
       list.appendChild(row);
     }
   }
@@ -634,6 +636,8 @@ function bindToday() {
 /* ---------------- meals ---------------- */
 
 let mealType = 'Crib';
+let editingMealId = null;
+let thumbURL = null;
 
 function defaultMealType() {
   const h = new Date().getHours() + new Date().getMinutes() / 60;
@@ -644,18 +648,22 @@ function defaultMealType() {
   return 'Snack';
 }
 
-function openMealSheet(photoBlob) {
+function openMealSheet(photoBlob, meal) {
   pendingPhoto = photoBlob || null;
-  mealType = defaultMealType();
-  $('mealSheetTitle').textContent = photoBlob ? 'Photo meal' : 'Quick add';
-  $('mealName').value = '';
-  $('mealKcal').value = '';
+  editingMealId = meal ? meal.id : null;
+  mealType = meal ? meal.type : defaultMealType();
+  $('mealSheetTitle').textContent = meal ? 'Edit meal' : photoBlob ? 'Photo meal' : 'Quick add';
+  $('mealName').value = meal && meal.name !== meal.type ? meal.name : '';
+  $('mealKcal').value = meal ? meal.kcal : '';
   document.querySelectorAll('#kcalChips .chip').forEach((c) => c.classList.remove('on'));
   document.querySelectorAll('#mealTypeChips .chip').forEach((c) =>
     c.classList.toggle('on', c.dataset.mt === mealType));
   const wrap = $('mealThumbWrap');
-  if (photoBlob) {
-    $('mealThumb').src = URL.createObjectURL(photoBlob);
+  if (thumbURL) { URL.revokeObjectURL(thumbURL); thumbURL = null; }
+  const shot = photoBlob || (meal && meal.photo);
+  if (shot) {
+    thumbURL = URL.createObjectURL(shot);
+    $('mealThumb').src = thumbURL;
     wrap.classList.add('show');
   } else wrap.classList.remove('show');
   openSheet('sheetMeal');
@@ -697,12 +705,27 @@ function bindMeals() {
   $('mealSave').addEventListener('click', async () => {
     const kcal = parseInt($('mealKcal').value, 10);
     if (!(kcal >= 0)) { showToast('Add calories — tap a size button if unsure'); return; }
+    const name = $('mealName').value.trim() || mealType;
+    if (editingMealId) {
+      const existing = await dbGet('meals', editingMealId);
+      if (existing) {
+        existing.name = name;
+        existing.kcal = kcal;
+        existing.type = mealType;
+        await dbPut('meals', existing);
+      }
+      editingMealId = null;
+      closeSheets();
+      showToast('Meal updated');
+      renderAll();
+      return;
+    }
     const meal = {
       id: (crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random()),
       date: activeDate,
       time: activeDate === cachedToday ? nowTime() : '12:00',
       type: mealType,
-      name: $('mealName').value.trim() || mealType,
+      name,
       kcal,
       source: pendingPhoto ? 'photo' : 'manual',
     };

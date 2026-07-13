@@ -1,7 +1,7 @@
 /* SwingTrack service worker — precache the shell so the app opens with no signal.
    Bump VERSION whenever any shell file changes. */
 
-const VERSION = 'swingtrack-v1';
+const VERSION = 'swingtrack-v2';
 const SHELL = [
   './',
   './index.html',
