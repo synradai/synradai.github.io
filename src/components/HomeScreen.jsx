@@ -24,14 +24,21 @@ function IconOrb({ children, danger, size = 42 }) {
   )
 }
 
-// Quick-action card inside the turnstile (Daily Log, Field Report, …)
-function QuickCard({ onClick, icon, label, n }) {
+// Big action card inside the turnstile deck — glowing orb, condensed label,
+// count badge. One deck holds everything: report incident, daily log, field
+// reports, incidents, past shifts, learnings.
+function ActionCard({ onClick, icon, label, sub, n, danger }) {
   return (
-    <button onClick={onClick} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.55rem', padding: '0.9rem 0.5rem 0.75rem', width: '6.75rem', backgroundColor: 'var(--bg-card)', border: '2px solid var(--border)', borderRadius: '0.6rem', cursor: 'pointer', flexShrink: 0, scrollSnapAlign: 'center', position: 'relative', willChange: 'transform' }}>
-      <span style={{ width: 44, height: 44, borderRadius: '0.4rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-soft)', backgroundColor: 'var(--bg-highlight)', border: '1px solid var(--border)' }}>{icon}</span>
-      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{label}</span>
+    <button onClick={onClick} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.65rem', padding: '1.05rem 0.4rem 0.9rem', width: '8.25rem', backgroundColor: 'var(--bg-card)', border: danger ? '2px solid var(--error-border)' : '2px solid var(--border)', borderRadius: '0.6rem', cursor: 'pointer', flexShrink: 0, scrollSnapAlign: 'center', position: 'relative', willChange: 'transform' }}>
+      <IconOrb danger={danger} size={48}>
+        <span style={{ color: danger ? '#fff' : '#171310', display: 'flex' }}>{icon}</span>
+      </IconOrb>
+      <div>
+        <div style={{ fontFamily: DISPLAY, fontSize: '0.76rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>{label}</div>
+        {sub && <div style={{ fontSize: '0.62rem', fontWeight: 600, color: 'var(--text-faint)', marginTop: '0.2rem', whiteSpace: 'nowrap' }}>{sub}</div>}
+      </div>
       {n > 0 && (
-        <span style={{ position: 'absolute', top: 7, right: 7, minWidth: 18, height: 18, padding: '0 5px', borderRadius: '999px', backgroundColor: 'var(--accent)', color: 'var(--on-accent)', fontSize: '0.62rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{n}</span>
+        <span style={{ position: 'absolute', top: 6, right: 6, minWidth: 20, height: 20, padding: '0 6px', borderRadius: '999px', backgroundColor: danger ? 'var(--danger)' : 'var(--accent)', color: danger ? 'var(--on-danger)' : 'var(--on-accent)', fontSize: '0.66rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', fontVariantNumeric: 'tabular-nums' }}>{n}</span>
       )}
     </button>
   )
@@ -71,7 +78,7 @@ function Turnstile({ children }) {
     <div
       ref={ref}
       className="scrollbar-none"
-      style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', scrollSnapType: 'x mandatory', margin: '0 -1rem 1.25rem', padding: '0.25rem calc(50% - 3.375rem)', alignItems: 'stretch', isolation: 'isolate', position: 'relative', zIndex: 0 }}
+      style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', scrollSnapType: 'x mandatory', margin: '0 -1rem 1.25rem', padding: '0.25rem calc(50% - 4.125rem)', alignItems: 'stretch', isolation: 'isolate', position: 'relative', zIndex: 0 }}
     >
       {children}
     </div>
@@ -256,28 +263,18 @@ export default function HomeScreen({ currentShift, shiftHistory, incidents, lear
           <span style={{ width: 38, height: 38, borderRadius: '0.35rem', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--on-accent)', backgroundColor: 'var(--accent)', boxShadow: '0 0 14px rgba(255,122,26,0.4)' }}><MicIcon size={18} /></span>
         </button>
 
-        {/* Report Incident — always one tap from home */}
-        <button
-          onClick={onReportIncident}
-          style={{ width: '100%', textAlign: 'left', backgroundColor: 'var(--bg-card)', border: '2px solid var(--error-border)', borderRadius: '0.5rem', padding: '0.9rem 1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '1.5rem' }}
-        >
-          <IconOrb danger><span style={{ color: '#fff', display: 'flex' }}><IncidentsIcon size={20} /></span></IconOrb>
-          <div>
-            <div style={{ fontFamily: DISPLAY, fontSize: '1rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-primary)' }}>Report Incident</div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-faint)', fontWeight: 600, marginTop: '0.15rem' }}>Log an incident with photos &amp; AI report</div>
-          </div>
-        </button>
+        {/* The deck — everything one swipe away. Spin the drum, tap the card. */}
+        <Turnstile>
+          <ActionCard danger onClick={onReportIncident} icon={<IncidentsIcon size={22} />} label="Report Incident" sub="Log it now" />
+          <ActionCard onClick={onDailyLog} icon={<MicIcon size={22} />} label="Daily Log" sub="Talk it in" n={(dailyLog || []).length} />
+          <ActionCard onClick={onViewFieldReports} icon={<ClipboardIcon size={21} />} label="Field Reports" sub="VFL observations" n={(fieldReports || []).length} />
+          <ActionCard onClick={onIncidents} icon={<IncidentsIcon size={21} />} label="Incidents" sub="The record" n={(incidents || []).length} />
+          <ActionCard onClick={onViewHistory} icon={<HistoryIcon size={21} />} label="Past Shifts" sub="Filed & done" n={(shiftHistory || []).length} />
+          <ActionCard onClick={onLearnings} icon={<LearningsIcon size={21} />} label="Learnings" sub="Site knowledge" n={learningCount} />
+        </Turnstile>
 
         {/* Site board — running totals, mine-gate style */}
         <SiteBoard shiftHistory={shiftHistory} incidents={incidents} fieldReports={fieldReports} dailyLog={dailyLog} />
-
-        {/* Quick actions — turnstile carousel, swipe to spin */}
-        <Turnstile>
-          <QuickCard onClick={onDailyLog} icon={<MicIcon size={20} />} label="Daily Log" />
-          <QuickCard onClick={onFieldReport} icon={<ClipboardIcon size={19} />} label="Field Report" />
-          <QuickCard onClick={onLearnings} icon={<LearningsIcon size={19} />} label="Learnings" n={learningCount} />
-          <QuickCard onClick={onViewHistory} icon={<HistoryIcon size={19} />} label="Past Shifts" n={(shiftHistory || []).length} />
-        </Turnstile>
 
         {/* Recent activity */}
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.75rem' }}>

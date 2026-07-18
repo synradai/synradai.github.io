@@ -45,11 +45,16 @@ function fieldReportPdf(r, advisor) {
   }
 }
 
-export default function FieldLeadershipView({ reports, onBack, advisorName = '' }) {
+export default function FieldLeadershipView({ reports, onBack, onNew, advisorName = '' }) {
   const [expanded, setExpanded] = useState(null)
 
   return (
     <PageShell title="Field Leadership Reports" onBack={onBack}>
+      {onNew && (
+        <button onClick={onNew} style={{ width: '100%', padding: '0.8rem', marginBottom: '1rem', backgroundColor: 'var(--accent)', border: 'none', borderRadius: 4, color: 'var(--on-accent)', fontWeight: 800, fontSize: '0.85rem', letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer' }}>
+          + New Field Report
+        </button>
+      )}
       {reports.length === 0 ? (
         <p style={EMPTY_PAGE}>No field leadership reports yet.</p>
       ) : reports.map(r => (

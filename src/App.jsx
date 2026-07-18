@@ -504,7 +504,7 @@ export default function App() {
       )}
 
       {view === 'fieldreports' && (
-        <FieldLeadershipView reports={fieldReports} onBack={() => setView(currentShift ? 'shift' : 'home')} advisorName={session?.user?.user_metadata?.full_name || session?.user?.email || ''} />
+        <FieldLeadershipView reports={fieldReports} onBack={() => setView(currentShift ? 'shift' : 'home')} onNew={() => setShowFieldReport(true)} advisorName={session?.user?.user_metadata?.full_name || session?.user?.email || ''} />
       )}
 
       {view === 'learnings' && (
