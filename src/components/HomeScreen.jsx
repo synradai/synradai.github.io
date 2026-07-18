@@ -74,6 +74,74 @@ function Turnstile({ children }) {
   )
 }
 
+// Count-up for the board numerals — eases to the target on mount so opening
+// the app always starts with your numbers ticking upward. Respects
+// reduced-motion (jumps straight to the value).
+function useCountUp(target, ms = 900) {
+  const [v, setV] = useState(target)
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setV(target); return }
+    let raf
+    const start = performance.now()
+    const step = (t) => {
+      const p = Math.min(1, (t - start) / ms)
+      const e = 1 - Math.pow(1 - p, 3) // ease-out cubic
+      setV(Math.round(target * e))
+      if (p < 1) raf = requestAnimationFrame(step)
+    }
+    raf = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(raf)
+  }, [target, ms])
+  return v
+}
+
+// "Your Board" — the safety board at the mine gate, except these numbers are
+// yours and they only go up. Running totals across everything ever filed.
+function SiteBoard({ shiftHistory, incidents, fieldReports, dailyLog }) {
+  const shifts = (shiftHistory || []).length
+  const actions = (shiftHistory || []).reduce((n, s) => n + (s.rounds || []).filter(r => r.tag === 'Action').length, 0)
+  // Same conservative maths as the shift-complete screen: each captured item
+  // ≈ 6 min of typing you didn't do.
+  const items = (shiftHistory || []).reduce((n, s) => n + (s.rounds || []).length + (s.incidents || []).length + (s.findingsReport ? 1 : 0), 0)
+    + (incidents || []).length + (fieldReports || []).length + (dailyLog || []).length
+  const mins = items * 6
+
+  const cShifts = useCountUp(shifts)
+  const cActions = useCountUp(actions)
+  const cMins = useCountUp(mins)
+  const savedLabel = cMins >= 60 ? (cMins / 60).toFixed(cMins % 60 === 0 ? 0 : 1) : cMins
+  const savedUnit = cMins >= 60 ? 'hrs saved' : 'min saved'
+
+  if (shifts + items === 0) return null
+
+  const cell = (val, label, glow) => (
+    <div key={label} style={{ flex: 1, textAlign: 'center', padding: '0.8rem 0.25rem' }}>
+      <div style={{
+        fontSize: '1.85rem', fontWeight: 800, lineHeight: 1, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums',
+        ...(glow
+          ? { background: 'linear-gradient(135deg, var(--glow-a), var(--glow-b))', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }
+          : { color: 'var(--text-primary)' }),
+      }}>{val}</div>
+      <div style={{ fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-faint)', marginTop: '0.4rem' }}>{label}</div>
+    </div>
+  )
+
+  return (
+    <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '1rem', padding: '0.9rem 1rem 0.4rem', marginBottom: '1.5rem', position: 'relative', overflow: 'hidden' }}>
+      {/* board top-rail, like the gate board */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, var(--glow-a), var(--glow-b) 55%, var(--glow-c))' }} />
+      <div style={{ ...SECTION_LABEL, marginBottom: 0 }}>Your board</div>
+      <div style={{ display: 'flex', alignItems: 'stretch' }}>
+        {cell(cShifts, 'Shifts filed')}
+        <div style={{ width: 1, backgroundColor: 'var(--border)', margin: '0.9rem 0' }} />
+        {cell(cActions, 'Actions raised')}
+        <div style={{ width: 1, backgroundColor: 'var(--border)', margin: '0.9rem 0' }} />
+        {cell(`${savedLabel}`, savedUnit, true)}
+      </div>
+    </div>
+  )
+}
+
 // "2h ago" / "Yesterday" / date — recent-activity timestamps.
 function ago(time) {
   const d = new Date(time)
@@ -195,6 +263,9 @@ export default function HomeScreen({ currentShift, shiftHistory, incidents, lear
             <div style={{ fontSize: '0.72rem', color: 'var(--text-faint)', fontWeight: 600, marginTop: '0.15rem' }}>Log an incident with photos &amp; AI report</div>
           </div>
         </button>
+
+        {/* Your board — running totals, mine-gate style */}
+        <SiteBoard shiftHistory={shiftHistory} incidents={incidents} fieldReports={fieldReports} dailyLog={dailyLog} />
 
         {/* Active shift summary */}
         {currentShift && (

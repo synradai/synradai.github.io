@@ -7,8 +7,12 @@ import { pushItems, pullItems, mergeById, clearOwner } from './utils/sync'
 import { getSubscription, computeAccess, isBillingEnabled, startCheckout } from './utils/billing'
 import { needsMfaChallenge } from './utils/mfa'
 import { needsAiAck } from './utils/disclaimer'
+import { buzz } from './utils/haptics'
 import AuthScreen from './components/AuthScreen'
 import AiDisclaimer from './components/AiDisclaimer'
+import Onboarding from './components/Onboarding'
+import SaveTick from './components/SaveTick'
+import ShiftComplete from './components/ShiftComplete'
 import Paywall from './components/Paywall'
 import TwoFactorChallenge from './components/TwoFactorChallenge'
 import DailyLog from './components/DailyLog'
@@ -61,6 +65,14 @@ export default function App() {
   const [mfaChecked, setMfaChecked] = useState(false)
   const [ackNeeded, setAckNeeded] = useState(false)
   const [ackChecked, setAckChecked] = useState(false)
+  // First-run walkthrough — remembered per device, shown once.
+  const [onboardNeeded, setOnboardNeeded] = useState(() => {
+    try { return !localStorage.getItem(STORAGE_KEYS.ONBOARDED) } catch (_) { return false }
+  })
+  // Holds the just-finished shift while the completion celebration is showing.
+  const [celebrating, setCelebrating] = useState(null)
+  // Transient "filed ✓" pill after a save — { id, label } so rapid saves restart it.
+  const [tick, setTick] = useState(null)
 
   // Persist to localStorage and surface a warning if it fails (usually the
   // device is out of space). Never silently drop a save.
@@ -275,7 +287,9 @@ export default function App() {
   // End the shift for good: archive it, clear the active slot, back to home.
   const finishShift = useCallback(() => {
     if (!currentShift) return
-    archiveShift(currentShift)
+    const done = currentShift
+    archiveShift(done)
+    setCelebrating(done) // show the completion celebration over home
     setCurrentShift(null)
     setCurrentPhase(0)
     try { localStorage.removeItem(STORAGE_KEYS.CURRENT_SHIFT) } catch (_) {}
@@ -286,6 +300,7 @@ export default function App() {
     setSlideDir(phase > currentPhase ? 'in-right' : phase < currentPhase ? 'in-left' : '')
     setCurrentPhase(phase)
     updateShift({ phase })
+    buzz(15) // tactile phase click
   }
 
   const saveApiKey = (key) => {
@@ -295,14 +310,30 @@ export default function App() {
 
   const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark')
 
-  const addLearning = (entry) => setLearnings(prev => [...prev, entry])
+  const dismissOnboarding = () => {
+    setOnboardNeeded(false)
+    persist(STORAGE_KEYS.ONBOARDED, '1')
+  }
+
+  // Micro-win: buzz + a brief "filed ✓" pill. Every save should feel like one.
+  const showTick = useCallback((label) => {
+    buzz(20)
+    setTick({ id: Date.now(), label })
+  }, [])
+  useEffect(() => {
+    if (!tick) return
+    const t = setTimeout(() => setTick(null), 1450)
+    return () => clearTimeout(t)
+  }, [tick])
+
+  const addLearning = (entry) => { setLearnings(prev => [...prev, entry]); showTick('Learning saved') }
   const removeLearning = (id) => setLearnings(prev => prev.filter(l => l.id !== id))
 
-  const addFieldReport = (entry) => setFieldReports(prev => [entry, ...prev])
+  const addFieldReport = (entry) => { setFieldReports(prev => [entry, ...prev]); showTick('Field report filed') }
 
-  const addIncident = (entry) => setIncidents(prev => [entry, ...prev])
+  const addIncident = (entry) => { setIncidents(prev => [entry, ...prev]); showTick('Incident filed') }
 
-  const addDailyEntry = (entry) => setDailyLog(prev => [...prev, entry])
+  const addDailyEntry = (entry) => { setDailyLog(prev => [...prev, entry]); showTick('Logged') }
   const removeDailyEntry = (id) => setDailyLog(prev => prev.filter(e => e.id !== id))
 
   const allIncidents = useMemo(() => [
@@ -376,6 +407,11 @@ export default function App() {
   // Trial ended + no active subscription → paywall.
   if (isBillingEnabled && !access.allowed) {
     return <Paywall onSignOut={signOut} expired={access.status === 'expired'} />
+  }
+
+  // First run on this device → one-time walkthrough before the app.
+  if (onboardNeeded) {
+    return <Onboarding onDone={dismissOnboarding} advisorName={session?.user?.user_metadata?.full_name || ''} />
   }
 
   return (
@@ -508,6 +544,7 @@ export default function App() {
           onSave={(incident) => {
             if (currentShift) {
               updateShift({ incidents: [...(currentShift.incidents || []), incident] })
+              showTick('Incident filed')
             } else {
               addIncident(incident)
             }
@@ -536,6 +573,16 @@ export default function App() {
           onClose={() => setShowAskSafety(false)}
         />
       )}
+
+      {celebrating && (
+        <ShiftComplete
+          shift={celebrating}
+          advisorName={session?.user?.user_metadata?.full_name || session?.user?.email || ''}
+          onDone={() => setCelebrating(null)}
+        />
+      )}
+
+      {tick && <SaveTick key={tick.id} label={tick.label} />}
     </div>
   )
 }
