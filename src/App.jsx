@@ -418,7 +418,7 @@ export default function App() {
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-page)', color: 'var(--text-primary)' }}>
 
       {storageWarning && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000, display: 'flex', gap: '0.5rem', alignItems: 'flex-start', padding: 'calc(env(safe-area-inset-top) + 0.625rem) 0.875rem 0.625rem', backgroundColor: 'var(--danger)', color: 'var(--on-accent)' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000, display: 'flex', gap: '0.5rem', alignItems: 'flex-start', padding: 'calc(env(safe-area-inset-top) + 0.625rem) 0.875rem 0.625rem', backgroundColor: 'var(--danger)', color: 'var(--on-danger)' }}>
           <span style={{ fontSize: '0.9rem', lineHeight: 1.3 }}>⚠</span>
           <p style={{ flex: 1, fontSize: '0.75rem', fontWeight: 600, lineHeight: 1.4, margin: 0 }}>{storageWarning}</p>
           <button onClick={() => setStorageWarning('')} aria-label="Dismiss" style={{ background: 'none', border: 'none', color: 'var(--on-accent)', fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer', lineHeight: 1, padding: '0 0.25rem' }}>✕</button>

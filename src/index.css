@@ -3,68 +3,72 @@
 @tailwind utilities;
 
 :root {
-  /* Night shift — pre-dawn navy ground, aurora (mint -> signal blue -> violet)
-     as the intelligence accent. Red/amber are reserved for hazards and
-     warnings only, so safety colour-coding is never diluted by branding. */
+  /* HELM — steel-capped mission control. Charcoal ground, safety-orange
+     "molten" ramp as the brand accent (orange -> amber -> gold). Red stays
+     reserved for hazards; yellow for warnings — brand never dilutes the
+     safety colour-coding. */
   color-scheme: dark; /* tells iOS/Safari to render form controls + typed text for a dark UI */
-  --bg-page: #070b13;
-  --bg-header: #0a1120;
-  --bg-card: #0e1626;
-  --bg-input: #0a111e;
-  --bg-panel: #111b2e;
-  --bg-stat: #0c1422;
-  --bg-highlight: #14213b;
-  --border: #1b2536;
-  --border-accent: #2a3a56;
-  --border-strong: #3d5680;
-  --text-primary: #f1f5fc;
-  --text-muted: #93a1ba;
-  --text-faint: #5d6a84;
-  --accent: #4f8df7;
-  --accent-strong: #2f6fe4;
-  --accent-soft: #85adff;
-  --on-accent: #fff;
-  /* aurora gradient (mint -> signal blue -> violet) for the hero orb + accents */
-  --glow-a: #37e3c2;
-  --glow-b: #4f8df7;
-  --glow-c: #8b7bf7;
-  --danger: #dc2626;
-  --error-text: #fca5a5;
+  --bg-page: #131518;
+  --bg-header: #17191c;
+  --bg-card: #1c1f23;
+  --bg-input: #17191d;
+  --bg-panel: #22262b;
+  --bg-stat: #191c20;
+  --bg-highlight: #2b2620;
+  --border: #2b2f35;
+  --border-accent: #3d4249;
+  --border-strong: #565d66;
+  --text-primary: #f2f3f4;
+  --text-muted: #aab3bd;
+  --text-faint: #6e767f;
+  --accent: #ff7a1a;
+  --accent-strong: #e05f00;
+  --accent-soft: #ffa05c;
+  --on-accent: #171310;
+  --on-danger: #fff;
+  /* molten ramp (safety orange -> amber -> gold) for the hero orb + accents */
+  --glow-a: #ff7a1a;
+  --glow-b: #ff9d3d;
+  --glow-c: #ffc24d;
+  --danger: #e03131;
+  --error-text: #ff8f8f;
   --error-border: #7f1d1d;
-  --error-bg: #150a10;
-  --error-bg-strong: #380d14;
+  --error-bg: #1d1213;
+  --error-bg-strong: #3a1214;
   --success: #2fd28e;
   --success-text: #8ceec7;
   --success-border: #14684a;
-  --success-bg: #072a1e;
-  --warning-bg: #2a2310;
+  --success-bg: #0e211a;
+  --warning-bg: #262113;
   --warning-text: #fcd34d;
   --warning-border: #b45309;
 }
 
 [data-theme="light"] {
+  /* HELM light — poured concrete + hi-vis. Same orange, darker for contrast. */
   color-scheme: light;
-  --bg-page: #f3f6fb;
+  --bg-page: #f2f2f0;
   --bg-header: #ffffff;
   --bg-card: #ffffff;
-  --bg-input: #f8fafd;
-  --bg-panel: #e9f0fb;
-  --bg-stat: #f5f8fc;
-  --bg-highlight: #dbe8ff;
-  --border: #e2e8f2;
-  --border-accent: #c7d7ee;
-  --border-strong: #7e95ba;
-  --text-primary: #131c2b;
-  --text-muted: #55637c;
-  --text-faint: #a3b0c5;
-  --accent: #2f6fe4;
-  --accent-strong: #2456b8;
-  --accent-soft: #2f6fe4;
-  --on-accent: #fff;
-  --glow-a: #17c3a3;
-  --glow-b: #2f6fe4;
-  --glow-c: #7a63e8;
-  --danger: #dc2626;
+  --bg-input: #fafaf8;
+  --bg-panel: #ecebe7;
+  --bg-stat: #f6f6f4;
+  --bg-highlight: #ffe9d6;
+  --border: #dddedb;
+  --border-accent: #c8c9c4;
+  --border-strong: #8f938e;
+  --text-primary: #1b1d20;
+  --text-muted: #565b61;
+  --text-faint: #9aa0a6;
+  --accent: #e05f00;
+  --accent-strong: #bf4e00;
+  --accent-soft: #c25200;
+  --on-accent: #171310; /* hi-vis convention: dark text on orange */
+  --on-danger: #fff;
+  --glow-a: #e05f00;
+  --glow-b: #ef8a1f;
+  --glow-c: #d9a221;
+  --danger: #d32f2f;
   --error-text: #b91c1c;
   --error-border: #fca5a5;
   --error-bg: #fef2f2;
@@ -101,15 +105,22 @@
   body {
     background-color: var(--bg-page);
     color: var(--text-primary);
-    font-family: 'Nunito', sans-serif;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
     overscroll-behavior: none;
     transition: background-color 0.2s, color 0.2s;
   }
 
   textarea, input, select, button {
-    font-family: 'Nunito', sans-serif;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
     outline: none;
+  }
+
+  /* HELM display type — condensed industrial for headings (Bahnschrift on
+     Windows, Avenir Next Condensed on iOS). Body stays a neutral system face. */
+  h1, h2, h3 {
+    font-family: 'Bahnschrift', 'Avenir Next Condensed', 'Arial Narrow', system-ui, sans-serif;
+    letter-spacing: 0.01em;
   }
 
   /* Touch feedback: every tap visibly presses. Kills the grey iOS tap flash

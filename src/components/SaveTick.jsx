@@ -18,13 +18,13 @@ export default function SaveTick({ label }) {
       <div className="tick-pill" style={{
         display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.1rem', borderRadius: '999px',
         backgroundColor: 'var(--bg-panel)', border: '1.5px solid var(--border-accent)',
-        boxShadow: '0 8px 28px rgba(0,0,0,0.45), 0 0 18px rgba(55,227,194,0.25)',
+        boxShadow: '0 8px 28px rgba(0,0,0,0.45), 0 0 18px rgba(255,122,26,0.25)',
         animation: 'tick-pop 1.4s ease both',
       }}>
         <span style={{
           width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem',
-          background: 'radial-gradient(circle at 50% 32%, #d6fff4 0%, var(--glow-a) 60%, #1b3a6b 100%)',
-          boxShadow: '0 0 10px rgba(55,227,194,0.5)', color: '#04182b', fontWeight: 800,
+          background: 'radial-gradient(circle at 50% 32%, #ffe4c4 0%, var(--glow-a) 60%, #6b2d08 100%)',
+          boxShadow: '0 0 10px rgba(255,122,26,0.5)', color: '#171310', fontWeight: 800,
         }}>✓</span>
         <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-primary)' }}>{label}</span>
       </div>

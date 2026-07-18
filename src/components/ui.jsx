@@ -48,7 +48,7 @@ export function CaptureBar({ onClick, prompt, icon = '＋', style }) {
   return (
     <button onClick={onClick} style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', padding: '0.55rem 0.55rem 0.55rem 1.1rem', borderRadius: '999px', border: '1px solid var(--border-accent)', backgroundColor: 'var(--bg-input)', color: 'var(--text-faint)', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', textAlign: 'left', boxShadow: '0 8px 28px rgba(0,0,0,0.25)', ...style }}>
       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{prompt}</span>
-      <span style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '1.2rem', fontWeight: 700, background: 'linear-gradient(135deg, var(--glow-b), var(--glow-c))', boxShadow: '0 0 16px rgba(79,141,247,0.45)' }}>{icon}</span>
+      <span style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '1.2rem', fontWeight: 700, background: 'linear-gradient(135deg, var(--glow-b), var(--glow-c))', boxShadow: '0 0 16px rgba(255,157,61,0.45)' }}>{icon}</span>
     </button>
   )
 }
@@ -120,7 +120,7 @@ export function PrimaryButton({ onClick, disabled, loading, children, danger, st
         width: '100%', padding: '0.875rem',
         backgroundColor: danger ? 'var(--danger)' : 'var(--accent)',
         border: 'none', borderRadius: '0.75rem',
-        color: 'var(--on-accent)', fontWeight: 700, fontSize: '0.9rem',
+        color: danger ? 'var(--on-danger)' : 'var(--on-accent)', fontWeight: 700, fontSize: '0.9rem',
         cursor: loading ? 'wait' : disabled ? 'not-allowed' : 'pointer',
         opacity: disabled && !loading ? 0.5 : loading ? 0.7 : 1,
         ...style,

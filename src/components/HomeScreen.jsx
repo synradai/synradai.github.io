@@ -4,6 +4,10 @@ import { formatDate, formatTime } from '../utils/format'
 import { SettingsIcon, ThemeIcon, MicIcon, ClipboardIcon, LearningsIcon, HistoryIcon, IncidentsIcon } from './icons'
 import { SECTION_LABEL } from './ui'
 
+// HELM display face — condensed industrial (Bahnschrift on Windows, Avenir
+// Next Condensed on iOS). Used for the brand mark and mission titles.
+const DISPLAY = "'Bahnschrift', 'Avenir Next Condensed', 'Arial Narrow', system-ui, sans-serif"
+
 // Small glowing icon "orb" — the signature element across the app.
 function IconOrb({ children, danger, size = 42 }) {
   return (
@@ -12,10 +16,10 @@ function IconOrb({ children, danger, size = 42 }) {
       display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size > 38 ? '1.2rem' : '1rem',
       background: danger
         ? 'radial-gradient(circle at 50% 32%, #fda4af 0%, #f43f5e 60%, #7f1d1d 100%)'
-        : 'radial-gradient(circle at 50% 32%, #d6fff4 0%, var(--glow-a) 55%, #1b3a6b 100%)',
+        : 'radial-gradient(circle at 50% 32%, #ffe4c4 0%, var(--glow-a) 55%, #6b2d08 100%)',
       boxShadow: danger
         ? '0 0 18px rgba(244,63,94,0.45), inset 0 4px 7px rgba(255,255,255,0.3)'
-        : '0 0 18px rgba(55,227,194,0.4), inset 0 4px 7px rgba(255,255,255,0.3)',
+        : '0 0 18px rgba(255,122,26,0.4), inset 0 4px 7px rgba(255,255,255,0.3)',
     }}>{children}</div>
   )
 }
@@ -23,8 +27,8 @@ function IconOrb({ children, danger, size = 42 }) {
 // Quick-action card inside the turnstile (Daily Log, Field Report, …)
 function QuickCard({ onClick, icon, label, n }) {
   return (
-    <button onClick={onClick} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.55rem', padding: '0.9rem 0.5rem 0.75rem', width: '6.75rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '1.1rem', cursor: 'pointer', flexShrink: 0, scrollSnapAlign: 'center', position: 'relative', willChange: 'transform' }}>
-      <span style={{ width: 44, height: 44, borderRadius: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-soft)', backgroundColor: 'var(--bg-highlight)', border: '1px solid var(--border)' }}>{icon}</span>
+    <button onClick={onClick} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.55rem', padding: '0.9rem 0.5rem 0.75rem', width: '6.75rem', backgroundColor: 'var(--bg-card)', border: '2px solid var(--border)', borderRadius: '0.6rem', cursor: 'pointer', flexShrink: 0, scrollSnapAlign: 'center', position: 'relative', willChange: 'transform' }}>
+      <span style={{ width: 44, height: 44, borderRadius: '0.4rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-soft)', backgroundColor: 'var(--bg-highlight)', border: '1px solid var(--border)' }}>{icon}</span>
       <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{label}</span>
       {n > 0 && (
         <span style={{ position: 'absolute', top: 7, right: 7, minWidth: 18, height: 18, padding: '0 5px', borderRadius: '999px', backgroundColor: 'var(--accent)', color: 'var(--on-accent)', fontSize: '0.62rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{n}</span>
@@ -127,15 +131,15 @@ function SiteBoard({ shiftHistory, incidents, fieldReports, dailyLog }) {
   )
 
   return (
-    <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '1rem', padding: '0.9rem 1rem 0.4rem', marginBottom: '1.5rem', position: 'relative', overflow: 'hidden' }}>
-      {/* board top-rail, like the gate board */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, var(--glow-a), var(--glow-b) 55%, var(--glow-c))' }} />
-      <div style={{ ...SECTION_LABEL, marginBottom: 0 }}>Your board</div>
+    <div style={{ backgroundColor: 'var(--bg-card)', border: '2px solid var(--border-accent)', borderRadius: '0.5rem', padding: '0.9rem 1rem 0.4rem', marginBottom: '0.75rem', position: 'relative', overflow: 'hidden' }}>
+      {/* solid top-rail, like the gate board */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, backgroundColor: 'var(--accent)' }} />
+      <div style={{ ...SECTION_LABEL, marginBottom: 0, letterSpacing: '0.22em' }}>Site board</div>
       <div style={{ display: 'flex', alignItems: 'stretch' }}>
         {cell(cShifts, 'Shifts filed')}
-        <div style={{ width: 1, backgroundColor: 'var(--border)', margin: '0.9rem 0' }} />
+        <div style={{ width: 2, backgroundColor: 'var(--border)', margin: '0.9rem 0' }} />
         {cell(cActions, 'Actions raised')}
-        <div style={{ width: 1, backgroundColor: 'var(--border)', margin: '0.9rem 0' }} />
+        <div style={{ width: 2, backgroundColor: 'var(--border)', margin: '0.9rem 0' }} />
         {cell(`${savedLabel}`, savedUnit, true)}
       </div>
     </div>
@@ -157,8 +161,8 @@ function ago(time) {
 // One row in the Recent Activity list: tinted icon tile + title + kind · time.
 function RecentRow({ icon, tint, title, kind, time, onClick }) {
   return (
-    <button onClick={onClick} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem', textAlign: 'left', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '0.875rem', padding: '0.75rem 0.875rem', cursor: 'pointer', marginBottom: '0.5rem' }}>
-      <div style={{ width: 38, height: 38, borderRadius: '0.625rem', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', backgroundColor: tint, border: '1px solid var(--border)' }}>
+    <button onClick={onClick} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem', textAlign: 'left', backgroundColor: 'var(--bg-card)', border: '2px solid var(--border)', borderRadius: '0.5rem', padding: '0.75rem 0.875rem', cursor: 'pointer', marginBottom: '0.5rem' }}>
+      <div style={{ width: 38, height: 38, borderRadius: '0.4rem', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', backgroundColor: tint, border: '1px solid var(--border)' }}>
         {icon}
       </div>
       <div style={{ minWidth: 0, flex: 1 }}>
@@ -190,40 +194,82 @@ export default function HomeScreen({ currentShift, shiftHistory, incidents, lear
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-page)', position: 'relative', overflow: 'hidden', paddingBottom: '2.5rem' }}>
       {/* ambient aurora glow */}
-      <div style={{ position: 'absolute', top: '-15%', right: '-20%', width: 380, height: 380, background: 'radial-gradient(circle, rgba(139,123,247,0.26), rgba(79,141,247,0.10) 45%, transparent 70%)', filter: 'blur(20px)', pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', top: '10%', left: '-25%', width: 300, height: 300, background: 'radial-gradient(circle, rgba(55,227,194,0.12), transparent 65%)', filter: 'blur(24px)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', top: '-15%', right: '-20%', width: 380, height: 380, background: 'radial-gradient(circle, rgba(255,122,26,0.26), rgba(255,157,61,0.10) 45%, transparent 70%)', filter: 'blur(20px)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', top: '10%', left: '-25%', width: 300, height: 300, background: 'radial-gradient(circle, rgba(255,122,26,0.12), transparent 65%)', filter: 'blur(24px)', pointerEvents: 'none' }} />
 
       <div style={{ maxWidth: 720, margin: '0 auto', padding: '0 1rem', position: 'relative' }}>
-        {/* Header */}
+        {/* Topbar — brand mark, live clock, controls */}
         <div style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ ...SECTION_LABEL, marginBottom: 0 }}>Safe Intelligence</div>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div style={{ fontFamily: DISPLAY, fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--accent)' }}>
+            Safe Intelligence
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-faint)', fontVariantNumeric: 'tabular-nums', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'var(--accent)', boxShadow: '0 0 6px var(--accent)' }} />
+              {formatTime(now)}
+            </span>
             <button onClick={onToggleTheme} title="Toggle theme" style={headerBtn}><ThemeIcon theme={theme} /></button>
             <button onClick={onSettings} title="Settings" style={headerBtn}><SettingsIcon size={22} /></button>
           </div>
         </div>
+        <p style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-faint)', margin: '0.5rem 0 1.1rem' }}>
+          {first ? `G'day ${first}` : "G'day"} · {formatDate(now)}
+        </p>
 
-        {/* Greeting + headline */}
-        <div style={{ marginTop: '1.5rem', marginBottom: '1.25rem' }}>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0 0 0.4rem', fontWeight: 700 }}>
-            {first ? `Hi ${first} 👋` : "G'day 👋"}
-          </p>
-          <h1 style={{ fontSize: '1.9rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em', lineHeight: 1.15, color: 'var(--text-primary)' }}>
-            What's happening<br />
-            <span style={{ background: 'linear-gradient(90deg, var(--glow-a), var(--glow-b) 55%, var(--glow-c))', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              on site today?
-            </span>
-          </h1>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-faint)', margin: '0.5rem 0 0', fontWeight: 600 }}>
-            {formatTime(now)} · {formatDate(now)}
-          </p>
+        {/* TODAY'S MISSION — the one glance: where you're up to, what's next */}
+        <div style={{ position: 'relative', backgroundColor: 'var(--bg-panel)', border: '2px solid var(--border-accent)', borderRadius: '0.5rem', padding: '1rem 1.1rem 1.1rem 1.45rem', marginBottom: '0.75rem', overflow: 'hidden' }}>
+          {/* hazard stripe */}
+          <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 8, background: 'repeating-linear-gradient(-45deg, var(--accent) 0 7px, var(--bg-page) 7px 14px)' }} />
+          <div style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.24em', textTransform: 'uppercase', color: 'var(--text-faint)', marginBottom: '0.55rem' }}>
+            Today's Mission
+          </div>
+          <div style={{ fontFamily: DISPLAY, fontSize: '1.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.02em', lineHeight: 1.05, color: 'var(--text-primary)' }}>
+            {currentShift ? PHASE_NAMES[currentShift.phase || 0] : 'Shift not started'}
+          </div>
+          <div style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.1em', color: 'var(--accent)', marginTop: '0.3rem' }}>
+            {currentShift ? `PHASE ${(currentShift.phase || 0) + 1} OF 5` : 'READY WHEN YOU ARE'}
+          </div>
+          {/* phase track */}
+          <div style={{ display: 'flex', gap: 4, margin: '0.7rem 0 0.55rem' }}>
+            {PHASE_NAMES.map((_, i) => (
+              <span key={i} style={{ height: 6, flex: 1, borderRadius: 2, backgroundColor: currentShift && i <= (currentShift.phase || 0) ? 'var(--accent)' : 'var(--border)' }} />
+            ))}
+          </div>
+          <div style={{ fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.85rem' }}>
+            {currentShift
+              ? ((currentShift.phase || 0) < 4
+                ? <>Next: <b style={{ color: 'var(--text-primary)' }}>{PHASE_NAMES[(currentShift.phase || 0) + 1]}</b></>
+                : <>Final phase — <b style={{ color: 'var(--text-primary)' }}>bring it home</b></>)
+              : <>First up: <b style={{ color: 'var(--text-primary)' }}>{PHASE_NAMES[0]}</b></>}
+          </div>
+          <button
+            onClick={currentShift ? onContinueShift : onStartShift}
+            style={{ width: '100%', padding: '0.85rem', backgroundColor: 'var(--accent)', border: 'none', borderRadius: 4, color: 'var(--on-accent)', fontFamily: DISPLAY, fontWeight: 800, fontSize: '0.92rem', letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer', boxShadow: '0 6px 20px rgba(255,122,26,0.3)' }}
+          >
+            {currentShift ? 'Resume ▸' : 'Start shift ▸'}
+          </button>
         </div>
 
-        {/* Hero ask input — opens Gaz */}
-        <button onClick={onAskAI} style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', padding: '0.55rem 0.55rem 0.55rem 1.1rem', borderRadius: '999px', border: '1px solid var(--border-accent)', backgroundColor: 'var(--bg-input)', color: 'var(--text-faint)', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', marginBottom: '0.875rem', boxShadow: '0 8px 28px rgba(0,0,0,0.35)' }}>
+        {/* Ask Gaz */}
+        <button onClick={onAskAI} style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', padding: '0.55rem 0.55rem 0.55rem 1.1rem', borderRadius: '0.5rem', border: '2px solid var(--border)', backgroundColor: 'var(--bg-input)', color: 'var(--text-faint)', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', marginBottom: '0.75rem' }}>
           <span>Ask Gaz anything…</span>
-          <span style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', background: 'linear-gradient(135deg, var(--glow-b), var(--glow-c))', boxShadow: '0 0 16px rgba(79,141,247,0.55)' }}><MicIcon size={18} /></span>
+          <span style={{ width: 38, height: 38, borderRadius: '0.35rem', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--on-accent)', backgroundColor: 'var(--accent)', boxShadow: '0 0 14px rgba(255,122,26,0.4)' }}><MicIcon size={18} /></span>
         </button>
+
+        {/* Report Incident — always one tap from home */}
+        <button
+          onClick={onReportIncident}
+          style={{ width: '100%', textAlign: 'left', backgroundColor: 'var(--bg-card)', border: '2px solid var(--error-border)', borderRadius: '0.5rem', padding: '0.9rem 1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '1.5rem' }}
+        >
+          <IconOrb danger><span style={{ color: '#fff', display: 'flex' }}><IncidentsIcon size={20} /></span></IconOrb>
+          <div>
+            <div style={{ fontFamily: DISPLAY, fontSize: '1rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-primary)' }}>Report Incident</div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-faint)', fontWeight: 600, marginTop: '0.15rem' }}>Log an incident with photos &amp; AI report</div>
+          </div>
+        </button>
+
+        {/* Site board — running totals, mine-gate style */}
+        <SiteBoard shiftHistory={shiftHistory} incidents={incidents} fieldReports={fieldReports} dailyLog={dailyLog} />
 
         {/* Quick actions — turnstile carousel, swipe to spin */}
         <Turnstile>
@@ -232,48 +278,6 @@ export default function HomeScreen({ currentShift, shiftHistory, incidents, lear
           <QuickCard onClick={onLearnings} icon={<LearningsIcon size={19} />} label="Learnings" n={learningCount} />
           <QuickCard onClick={onViewHistory} icon={<HistoryIcon size={19} />} label="Past Shifts" n={(shiftHistory || []).length} />
         </Turnstile>
-
-        {/* Primary CTA — start / resume shift (aurora gradient, dark text) */}
-        <button
-          onClick={currentShift ? onContinueShift : onStartShift}
-          style={{
-            width: '100%', textAlign: 'left', border: 'none', borderRadius: '1rem', padding: '1.1rem 1.25rem',
-            cursor: 'pointer', marginBottom: '0.75rem', color: '#04182b',
-            background: 'linear-gradient(120deg, var(--glow-a) 0%, #6fd6f7 55%, var(--glow-b) 115%)',
-            boxShadow: '0 8px 26px rgba(55,227,194,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          }}
-        >
-          <div>
-            <div style={{ fontSize: '1.15rem', fontWeight: 800 }}>{currentShift ? "Resume today's shift" : 'Start New Shift'}</div>
-            <div style={{ fontSize: '0.78rem', opacity: 0.75, fontWeight: 700, marginTop: '0.2rem' }}>
-              {currentShift ? `Phase ${(currentShift.phase || 0) + 1} · ${PHASE_NAMES[currentShift.phase || 0]}` : 'Begin your shift workflow'}
-            </div>
-          </div>
-          <span style={{ fontSize: '1.5rem', opacity: 0.85 }}>→</span>
-        </button>
-
-        {/* Report Incident — always one tap from home */}
-        <button
-          onClick={onReportIncident}
-          style={{ width: '100%', textAlign: 'left', backgroundColor: 'var(--bg-card)', border: '1px solid var(--error-border)', borderRadius: '1rem', padding: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '1.5rem' }}
-        >
-          <IconOrb danger><span style={{ color: '#fff', display: 'flex' }}><IncidentsIcon size={20} /></span></IconOrb>
-          <div>
-            <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>Report Incident</div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-faint)', fontWeight: 600, marginTop: '0.15rem' }}>Log an incident with photos &amp; AI report</div>
-          </div>
-        </button>
-
-        {/* Your board — running totals, mine-gate style */}
-        <SiteBoard shiftHistory={shiftHistory} incidents={incidents} fieldReports={fieldReports} dailyLog={dailyLog} />
-
-        {/* Active shift summary */}
-        {currentShift && (
-          <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '1rem', padding: '1rem', marginBottom: '1.5rem' }}>
-            <div style={SECTION_LABEL}>Active Shift</div>
-            <ShiftCard shift={currentShift} />
-          </div>
-        )}
 
         {/* Recent activity */}
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.75rem' }}>

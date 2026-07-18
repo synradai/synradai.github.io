@@ -121,7 +121,7 @@ export default function SiteRounds({ shift, updateShift, apiKey }) {
               <button
                 onClick={addEntry}
                 disabled={!text.trim()}
-                style={{ flex: 1, padding: '0.8rem', border: 'none', borderRadius: '999px', background: text.trim() ? 'linear-gradient(135deg, var(--glow-b), var(--glow-c))' : 'var(--border)', color: text.trim() ? '#fff' : 'var(--text-faint)', fontWeight: 800, fontSize: '0.9rem', cursor: text.trim() ? 'pointer' : 'not-allowed', boxShadow: text.trim() ? '0 6px 20px rgba(79,141,247,0.35)' : 'none' }}
+                style={{ flex: 1, padding: '0.8rem', border: 'none', borderRadius: '999px', background: text.trim() ? 'linear-gradient(135deg, var(--glow-b), var(--glow-c))' : 'var(--border)', color: text.trim() ? '#fff' : 'var(--text-faint)', fontWeight: 800, fontSize: '0.9rem', cursor: text.trim() ? 'pointer' : 'not-allowed', boxShadow: text.trim() ? '0 6px 20px rgba(255,157,61,0.35)' : 'none' }}
               >
                 Log {tag}
               </button>
@@ -170,7 +170,7 @@ export default function SiteRounds({ shift, updateShift, apiKey }) {
               <img src={photo} alt="Entry" style={{ maxHeight: '8rem', borderRadius: '0.75rem', objectFit: 'contain' }} />
               <button
                 onClick={() => setPhoto(null)}
-                style={{ position: 'absolute', top: 6, right: 6, width: 22, height: 22, borderRadius: '50%', backgroundColor: 'var(--danger)', border: 'none', color: 'var(--on-accent)', fontSize: '0.65rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{ position: 'absolute', top: 6, right: 6, width: 22, height: 22, borderRadius: '50%', backgroundColor: 'var(--danger)', border: 'none', color: 'var(--on-danger)', fontSize: '0.65rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 ✕
               </button>
@@ -201,7 +201,7 @@ export default function SiteRounds({ shift, updateShift, apiKey }) {
                   <img src={rectifiedPhoto} alt="Rectified hazard" style={{ maxHeight: '6rem', borderRadius: '0.75rem', objectFit: 'contain', verticalAlign: 'middle' }} />
                   <button
                     onClick={() => setRectifiedPhoto(null)}
-                    style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: '50%', backgroundColor: 'var(--danger)', border: 'none', color: 'var(--on-accent)', fontSize: '0.65rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: '50%', backgroundColor: 'var(--danger)', border: 'none', color: 'var(--on-danger)', fontSize: '0.65rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   >
                     ✕
                   </button>
@@ -441,7 +441,7 @@ function EntryDetail({ entry, onClose, onRemove, onUpdate, apiKey }) {
                   <img src={draftRectifiedPhoto} alt="Rectified hazard" style={{ maxHeight: '6rem', borderRadius: '0.5rem', objectFit: 'contain' }} />
                   <button
                     onClick={() => setDraftRectifiedPhoto(null)}
-                    style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: '50%', backgroundColor: 'var(--danger)', border: 'none', color: 'var(--on-accent)', fontSize: '0.65rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: '50%', backgroundColor: 'var(--danger)', border: 'none', color: 'var(--on-danger)', fontSize: '0.65rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   >
                     ✕
                   </button>

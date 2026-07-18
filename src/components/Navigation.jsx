@@ -74,7 +74,7 @@ export default function Navigation({ phases, currentPhase, shift, onPhaseChange,
                   style={{
                     width: 10, height: 10, borderRadius: '50%', border: 'none', cursor: 'pointer', flexShrink: 0,
                     backgroundColor: currentPhase === i ? 'var(--accent)' : done[i] ? 'var(--success)' : 'var(--border)',
-                    boxShadow: currentPhase === i ? '0 0 8px rgba(79,141,247,0.6)' : 'none',
+                    boxShadow: currentPhase === i ? '0 0 8px rgba(255,157,61,0.6)' : 'none',
                     transition: 'background-color 0.2s',
                   }}
                 />

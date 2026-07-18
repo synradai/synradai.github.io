@@ -98,7 +98,7 @@ export default function DailyLog({ entries, onAdd, onRemove, apiKey, onBack }) {
             <button
               onClick={log}
               disabled={!text.trim()}
-              style={{ width: '100%', padding: '0.8rem', border: 'none', borderRadius: '999px', background: text.trim() ? 'linear-gradient(135deg, var(--glow-b), var(--glow-c))' : 'var(--border)', color: text.trim() ? '#fff' : 'var(--text-faint)', fontWeight: 800, fontSize: '0.9rem', cursor: text.trim() ? 'pointer' : 'not-allowed', boxShadow: text.trim() ? '0 6px 20px rgba(79,141,247,0.35)' : 'none' }}
+              style={{ width: '100%', padding: '0.8rem', border: 'none', borderRadius: '999px', background: text.trim() ? 'linear-gradient(135deg, var(--glow-b), var(--glow-c))' : 'var(--border)', color: text.trim() ? '#fff' : 'var(--text-faint)', fontWeight: 800, fontSize: '0.9rem', cursor: text.trim() ? 'pointer' : 'not-allowed', boxShadow: text.trim() ? '0 6px 20px rgba(255,157,61,0.35)' : 'none' }}
             >
               Log it
             </button>

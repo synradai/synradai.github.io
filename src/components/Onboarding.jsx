@@ -56,7 +56,7 @@ export default function Onboarding({ onDone, advisorName }) {
       {/* Slide body */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', maxWidth: 380, margin: '0 auto', width: '100%' }}>
         <div key={i} className="entry-in" style={{ width: '100%' }}>
-          <div style={{ width: 96, height: 96, borderRadius: '50%', margin: '0 auto 1.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.6rem', backgroundColor: 'var(--bg-panel)', border: '1.5px solid var(--border-accent)', boxShadow: '0 0 44px rgba(79,141,247,0.22)' }}>
+          <div style={{ width: 96, height: 96, borderRadius: '50%', margin: '0 auto 1.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.6rem', backgroundColor: 'var(--bg-panel)', border: '1.5px solid var(--border-accent)', boxShadow: '0 0 44px rgba(255,157,61,0.22)' }}>
             {slide.icon}
           </div>
 

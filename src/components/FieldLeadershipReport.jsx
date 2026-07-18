@@ -96,7 +96,7 @@ export default function FieldLeadershipReport({ apiKey, onClose, onSave }) {
   useEffect(() => () => { walkRef.current = false; try { recRef.current?.stop() } catch (_) {} }, [])
 
   const isActive = (k) => walk && STEPS[step].key === k
-  const sectionStyle = (k) => ({ marginBottom: '1rem', borderRadius: '0.5rem', padding: isActive(k) ? '0.6rem' : 0, border: isActive(k) ? '1.5px solid var(--accent)' : '1.5px solid transparent', boxShadow: isActive(k) ? '0 0 16px rgba(79,141,247,0.35)' : 'none', transition: 'border-color 0.2s, box-shadow 0.2s' })
+  const sectionStyle = (k) => ({ marginBottom: '1rem', borderRadius: '0.5rem', padding: isActive(k) ? '0.6rem' : 0, border: isActive(k) ? '1.5px solid var(--accent)' : '1.5px solid transparent', boxShadow: isActive(k) ? '0 0 16px rgba(255,157,61,0.35)' : 'none', transition: 'border-color 0.2s, box-shadow 0.2s' })
 
   const handlePhoto = async (e) => {
     const file = e.target.files[0]
@@ -134,7 +134,7 @@ export default function FieldLeadershipReport({ apiKey, onClose, onSave }) {
 
       {/* Voice walkthrough control */}
       {!walk ? (
-        <button onClick={startWalk} style={{ width: '100%', marginBottom: '1.25rem', padding: '0.85rem', border: 'none', borderRadius: '0.75rem', background: 'linear-gradient(135deg, var(--glow-b), var(--glow-c))', color: '#fff', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', boxShadow: '0 6px 20px rgba(79,141,247,0.35)' }}>
+        <button onClick={startWalk} style={{ width: '100%', marginBottom: '1.25rem', padding: '0.85rem', border: 'none', borderRadius: '0.75rem', background: 'linear-gradient(135deg, var(--glow-b), var(--glow-c))', color: '#fff', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', boxShadow: '0 6px 20px rgba(255,157,61,0.35)' }}>
           <MicIcon size={18} /> Voice walkthrough — fill by talking
         </button>
       ) : (
@@ -217,7 +217,7 @@ export default function FieldLeadershipReport({ apiKey, onClose, onSave }) {
             {photos.map((p, idx) => (
               <div key={idx} style={{ position: 'relative' }}>
                 <img src={p} alt={`Photo ${idx + 1}`} style={{ height: '5.5rem', borderRadius: '0.5rem', objectFit: 'cover' }} />
-                <button onClick={() => removePhoto(idx)} style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: '50%', backgroundColor: 'var(--danger)', border: 'none', color: 'var(--on-accent)', fontSize: '0.65rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                <button onClick={() => removePhoto(idx)} style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: '50%', backgroundColor: 'var(--danger)', border: 'none', color: 'var(--on-danger)', fontSize: '0.65rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
               </div>
             ))}
           </div>

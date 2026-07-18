@@ -56,7 +56,7 @@ export default function ShiftWrapped({ shift, onFinish, onKeepWorking }) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 90, backgroundColor: 'var(--bg-page)', overflowY: 'auto' }}>
       {/* aurora glow */}
-      <div style={{ position: 'fixed', top: '-12%', left: '50%', transform: 'translateX(-50%)', width: 460, height: 460, background: 'radial-gradient(circle, rgba(55,227,194,0.22), rgba(79,141,247,0.12) 45%, transparent 70%)', filter: 'blur(20px)', pointerEvents: 'none' }} />
+      <div style={{ position: 'fixed', top: '-12%', left: '50%', transform: 'translateX(-50%)', width: 460, height: 460, background: 'radial-gradient(circle, rgba(255,122,26,0.22), rgba(255,157,61,0.12) 45%, transparent 70%)', filter: 'blur(20px)', pointerEvents: 'none' }} />
 
       <div style={{ minHeight: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', maxWidth: 420, margin: '0 auto', padding: 'calc(env(safe-area-inset-top) + 2rem) 1.5rem calc(env(safe-area-inset-bottom) + 2rem)', position: 'relative' }}>
         <div className="rise-in" style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
@@ -84,7 +84,7 @@ export default function ShiftWrapped({ shift, onFinish, onKeepWorking }) {
         <button
           onClick={onFinish}
           className="rise-in"
-          style={{ animationDelay: '0.6s', width: '100%', padding: '0.95rem', border: 'none', borderRadius: '999px', background: 'linear-gradient(120deg, var(--glow-a) 0%, #6fd6f7 55%, var(--glow-b) 115%)', color: '#04182b', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 8px 26px rgba(55,227,194,0.28)' }}
+          style={{ animationDelay: '0.6s', width: '100%', padding: '0.95rem', border: 'none', borderRadius: '999px', background: 'linear-gradient(120deg, var(--glow-a) 0%, #ff9d3d 55%, var(--glow-b) 115%)', color: '#171310', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 8px 26px rgba(255,122,26,0.28)' }}
         >
           Wrap up shift
         </button>

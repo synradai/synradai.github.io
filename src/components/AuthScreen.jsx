@@ -92,7 +92,7 @@ export default function AuthScreen() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-page)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', position: 'relative', overflow: 'hidden' }}>
       {/* ambient glow behind everything */}
-      <div style={{ position: 'absolute', top: '-12%', left: '50%', transform: 'translateX(-50%)', width: 460, height: 460, background: 'radial-gradient(circle, rgba(139,123,247,0.30), rgba(79,141,247,0.12) 45%, transparent 70%)', filter: 'blur(20px)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', top: '-12%', left: '50%', transform: 'translateX(-50%)', width: 460, height: 460, background: 'radial-gradient(circle, rgba(255,122,26,0.30), rgba(255,157,61,0.12) 45%, transparent 70%)', filter: 'blur(20px)', pointerEvents: 'none' }} />
 
       <div style={{ width: '100%', maxWidth: 360, position: 'relative' }}>
         <div style={{ textAlign: 'center', marginBottom: '2.25rem' }}>
@@ -102,7 +102,7 @@ export default function AuthScreen() {
             <div style={{
               width: 104, height: 104, borderRadius: '50%',
               background: 'radial-gradient(circle at 50% 36%, #e8fffa 0%, var(--glow-a) 34%, var(--glow-b) 62%, #241d5e 88%)',
-              boxShadow: '0 0 48px 6px rgba(55,227,194,0.45), 0 0 110px 26px rgba(79,141,247,0.30), inset 0 -10px 22px rgba(139,123,247,0.55), inset 0 8px 16px rgba(255,255,255,0.30)',
+              boxShadow: '0 0 48px 6px rgba(255,122,26,0.45), 0 0 110px 26px rgba(255,157,61,0.30), inset 0 -10px 22px rgba(255,122,26,0.55), inset 0 8px 16px rgba(255,255,255,0.30)',
             }} />
           </div>
 
@@ -158,7 +158,7 @@ export default function AuthScreen() {
             background: 'linear-gradient(135deg, var(--glow-a) 0%, var(--glow-b) 55%, var(--glow-c) 100%)',
             color: '#fff', fontWeight: 800, fontSize: '0.95rem', letterSpacing: '0.01em',
             cursor: loading ? 'wait' : 'pointer', opacity: loading ? 0.7 : 1,
-            boxShadow: '0 8px 26px rgba(79,141,247,0.45)', marginTop: '0.25rem',
+            boxShadow: '0 8px 26px rgba(255,157,61,0.45)', marginTop: '0.25rem',
           }}
         >
           {loading ? 'Please wait…' : mode === 'signin' ? 'Sign In' : 'Create Account'}

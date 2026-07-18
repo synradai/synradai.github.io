@@ -35,7 +35,7 @@ function PhotoPicker({ photos, onAdd, onRemove, onScan }) {
           {photos.map((p, idx) => (
             <div key={idx} style={{ position: 'relative' }}>
               <img src={p} alt={`Photo ${idx + 1}`} style={{ height: '5.5rem', borderRadius: '0.5rem', objectFit: 'cover' }} />
-              <button onClick={() => onRemove(idx)} style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: '50%', backgroundColor: 'var(--danger)', border: 'none', color: 'var(--on-accent)', fontSize: '0.65rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+              <button onClick={() => onRemove(idx)} style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: '50%', backgroundColor: 'var(--danger)', border: 'none', color: 'var(--on-danger)', fontSize: '0.65rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
             </div>
           ))}
         </div>
@@ -239,7 +239,7 @@ export default function IncidentReport({ apiKey, onClose, onSave }) {
       )}
 
       <div style={{ display: 'flex', gap: '0.5rem', paddingBottom: '1rem' }}>
-        <button onClick={save} style={{ flex: 1, padding: '0.75rem', backgroundColor: 'var(--danger)', border: 'none', borderRadius: '0.75rem', color: 'var(--on-accent)', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}>
+        <button onClick={save} style={{ flex: 1, padding: '0.75rem', backgroundColor: 'var(--danger)', border: 'none', borderRadius: '0.75rem', color: 'var(--on-danger)', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}>
           Save Incident
         </button>
         <button onClick={onClose} style={{ padding: '0.75rem 1.25rem', backgroundColor: 'var(--border)', border: 'none', borderRadius: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>

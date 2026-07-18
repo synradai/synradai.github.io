@@ -42,8 +42,8 @@ export default function ShiftComplete({ shift, advisorName, onDone }) {
       `}</style>
 
       {/* ambient aurora, matching home */}
-      <div style={{ position: 'absolute', top: '-12%', right: '-18%', width: 360, height: 360, background: 'radial-gradient(circle, rgba(55,227,194,0.22), rgba(79,141,247,0.10) 45%, transparent 70%)', filter: 'blur(22px)', pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', bottom: '-15%', left: '-20%', width: 320, height: 320, background: 'radial-gradient(circle, rgba(139,123,247,0.16), transparent 65%)', filter: 'blur(24px)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', top: '-12%', right: '-18%', width: 360, height: 360, background: 'radial-gradient(circle, rgba(255,122,26,0.22), rgba(255,157,61,0.10) 45%, transparent 70%)', filter: 'blur(22px)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', bottom: '-15%', left: '-20%', width: 320, height: 320, background: 'radial-gradient(circle, rgba(255,122,26,0.16), transparent 65%)', filter: 'blur(24px)', pointerEvents: 'none' }} />
 
       <div style={{ position: 'relative', width: '100%', maxWidth: 380, textAlign: 'center' }}>
         {/* The signature orb, celebrating */}
@@ -67,8 +67,8 @@ export default function ShiftComplete({ shift, advisorName, onDone }) {
           {/* orb */}
           <div className="sc-pop" style={{
             position: 'absolute', inset: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'radial-gradient(circle at 50% 32%, #d6fff4 0%, var(--glow-a) 55%, #1b3a6b 100%)',
-            boxShadow: '0 0 40px rgba(55,227,194,0.5), inset 0 6px 12px rgba(255,255,255,0.35)',
+            background: 'radial-gradient(circle at 50% 32%, #ffe4c4 0%, var(--glow-a) 55%, #6b2d08 100%)',
+            boxShadow: '0 0 40px rgba(255,122,26,0.5), inset 0 6px 12px rgba(255,255,255,0.35)',
             animation: 'sc-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both',
           }}>
             <span style={{ fontSize: '3.2rem', lineHeight: 1, filter: 'drop-shadow(0 2px 3px rgba(4,24,43,0.4))' }}>✅</span>
