@@ -5,11 +5,13 @@ import { TAG_STYLES } from '../../constants'
 import { formatTime, formatDateTime } from '../../utils/format'
 import SafetyTextarea from '../SafetyTextarea'
 import { CameraIcon, UploadIcon } from '../icons'
-import { FullScreenModal, PhaseHeader, SECTION_LABEL, TEXTAREA, BTN_SECONDARY, BTN_MUTED, CaptureBar, CAPTION_TEXTAREA } from '../ui'
+import { DISPLAY, FullScreenModal, PhaseHeader, SECTION_LABEL, TEXTAREA, BTN_SECONDARY, BTN_MUTED, CaptureBar, CAPTION_TEXTAREA } from '../ui'
 
 const TAGS = ['Hazard', 'Action', 'Observation', 'Near Miss']
 
 const TAG_EMOJI = { Hazard: '⚠️', Action: '🔧', Observation: '👀', 'Near Miss': '⚡' }
+
+const TAG_PLURAL = { Hazard: 'Hazards', Action: 'Actions', Observation: 'Obs', 'Near Miss': 'Near Miss' }
 
 const TAG_PROMPTS = {
   Hazard: "What's the hazard? Where is it, and what did you do about it right away?",
@@ -82,15 +84,37 @@ export default function SiteRounds({ shift, updateShift, apiKey }) {
         phase={3}
         title="Site Rounds"
         blurb="Walk the site and log observations as you go. Use voice for speed, or type. Tag each entry so it's easy to sort later."
-        meta={rounds.length > 0 ? `${rounds.length} ${rounds.length === 1 ? 'entry' : 'entries'} recorded this shift` : null}
+        stat={rounds.length > 0 ? rounds.length : null}
+        statLabel={rounds.length === 1 ? 'entry' : 'entries'}
       />
 
       {/* Capture bar — opens the full-page composer */}
       <CaptureBar
         onClick={() => setComposing(true)}
         prompt="Log what you see — hazard, action, near miss…"
-        style={{ marginBottom: '1.5rem' }}
+        style={{ marginBottom: '1rem' }}
       />
+
+      {/* Stat board — big numbers per tag; tap to filter the log, tap again for all */}
+      {rounds.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, backgroundColor: 'var(--border)', border: '1px solid var(--border)', borderTop: '3px solid var(--accent)', borderRadius: '0.5rem', overflow: 'hidden', marginBottom: '1.25rem' }}>
+          {TAGS.map(t => {
+            const n = countFor(t)
+            const s = TAG_STYLES[t]
+            const active = filter === t
+            return (
+              <button
+                key={t}
+                onClick={() => setFilter(filter === t ? 'All' : t)}
+                style={{ padding: '0.7rem 0.2rem 0.6rem', backgroundColor: active ? 'var(--bg-highlight)' : 'var(--bg-card)', border: 'none', cursor: 'pointer', textAlign: 'center' }}
+              >
+                <div style={{ fontFamily: DISPLAY, fontSize: '1.5rem', fontWeight: 800, lineHeight: 1, fontVariantNumeric: 'tabular-nums', color: n > 0 ? s.text : 'var(--text-faint)' }}>{n}</div>
+                <div style={{ fontFamily: DISPLAY, fontSize: '0.52rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: active ? 'var(--accent-soft)' : 'var(--text-faint)', marginTop: '0.3rem', whiteSpace: 'nowrap' }}>{TAG_PLURAL[t]}</div>
+              </button>
+            )
+          })}
+        </div>
+      )}
       <input ref={photoRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
       <input ref={photoUploadRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: 'none' }} />
       <input ref={rectifiedPhotoRef} type="file" accept="image/*" onChange={handleRectifiedPhoto} style={{ display: 'none' }} />
@@ -121,7 +145,7 @@ export default function SiteRounds({ shift, updateShift, apiKey }) {
               <button
                 onClick={addEntry}
                 disabled={!text.trim()}
-                style={{ flex: 1, padding: '0.8rem', border: 'none', borderRadius: '999px', background: text.trim() ? 'linear-gradient(135deg, var(--glow-b), var(--glow-c))' : 'var(--border)', color: text.trim() ? '#fff' : 'var(--text-faint)', fontWeight: 800, fontSize: '0.9rem', cursor: text.trim() ? 'pointer' : 'not-allowed', boxShadow: text.trim() ? '0 6px 20px rgba(255,157,61,0.35)' : 'none' }}
+                style={{ flex: 1, padding: '0.8rem', border: 'none', borderRadius: '999px', background: text.trim() ? 'linear-gradient(135deg, var(--glow-b), var(--glow-c))' : 'var(--border)', color: text.trim() ? '#fff' : 'var(--text-faint)', fontFamily: DISPLAY, fontWeight: 800, fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.06em', cursor: text.trim() ? 'pointer' : 'not-allowed', boxShadow: text.trim() ? '0 6px 20px rgba(255,157,61,0.35)' : 'none' }}
               >
                 Log {tag}
               </button>
@@ -231,22 +255,18 @@ export default function SiteRounds({ shift, updateShift, apiKey }) {
       {/* Running log */}
       {rounds.length > 0 && (
         <div>
-          <div style={{ ...SECTION_LABEL, color: 'var(--text-faint)' }}>
-            Entries Log — newest first
-          </div>
-
-          {/* Filter chips */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.75rem' }}>
-            <FilterChip label={`All (${rounds.length})`} active={filter === 'All'} onClick={() => setFilter('All')} />
-            {TAGS.map(t => countFor(t) > 0 && (
-              <FilterChip
-                key={t}
-                label={`${t} (${countFor(t)})`}
-                active={filter === t}
-                onClick={() => setFilter(filter === t ? 'All' : t)}
-                tagStyle={TAG_STYLES[t]}
-              />
-            ))}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <div style={{ ...SECTION_LABEL, color: 'var(--text-faint)', marginBottom: 0 }}>
+              Entries Log — newest first
+            </div>
+            {filter !== 'All' && (
+              <button
+                onClick={() => setFilter('All')}
+                style={{ padding: '0.2rem 0.6rem', borderRadius: '999px', border: `1.5px solid ${TAG_STYLES[filter].border}`, backgroundColor: TAG_STYLES[filter].bg, color: TAG_STYLES[filter].text, fontSize: '0.65rem', fontWeight: 800, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.04em' }}
+              >
+                {filter} ✕
+              </button>
+            )}
           </div>
 
           {visible.length === 0 ? (
@@ -267,23 +287,6 @@ export default function SiteRounds({ shift, updateShift, apiKey }) {
         />
       )}
     </div>
-  )
-}
-
-function FilterChip({ label, active, onClick, tagStyle }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        padding: '0.25rem 0.65rem', borderRadius: '1rem',
-        border: `1.5px solid ${active ? (tagStyle?.border || 'var(--accent)') : 'var(--border)'}`,
-        backgroundColor: active ? (tagStyle?.bg || 'var(--bg-highlight)') : 'transparent',
-        color: active ? (tagStyle?.text || 'var(--accent-soft)') : 'var(--text-faint)',
-        fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer',
-      }}
-    >
-      {label}
-    </button>
   )
 }
 

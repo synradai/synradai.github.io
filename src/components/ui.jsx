@@ -8,6 +8,9 @@ import SafetyTextarea from './SafetyTextarea'
 
 /* ---------- tokens ---------- */
 
+// HELM display face — condensed industrial type for titles and big numbers.
+export const DISPLAY = "'Bahnschrift', 'Avenir Next Condensed', 'Arial Narrow', system-ui, sans-serif"
+
 // Tiny uppercase section heading (cards, page sections)
 export const SECTION_LABEL = { fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--accent)', marginBottom: '0.75rem' }
 
@@ -30,7 +33,7 @@ export const BTN_SECONDARY = { padding: '0.6rem 1.25rem', backgroundColor: 'var(
 // Quiet tertiary action — grey (Sign Out, Cancel, Show/Hide, Clear)
 export const BTN_MUTED = { padding: '0.6rem 1.25rem', backgroundColor: 'var(--border)', border: 'none', borderRadius: '0.5rem', color: 'var(--text-muted)', fontSize: '0.875rem', fontWeight: 700, cursor: 'pointer' }
 
-export const CARD = { backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '1rem', padding: '1.5rem', marginBottom: '1rem' }
+export const CARD = { backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '0.6rem', padding: '1.5rem', marginBottom: '1rem' }
 
 export const EMPTY_TEXT = { fontSize: '0.75rem', color: 'var(--text-faint)', margin: 0, fontWeight: 600 }
 
@@ -58,9 +61,12 @@ export function CaptureBar({ onClick, prompt, icon = '＋', style }) {
 export function PageShell({ title, onBack, children }) {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-page)' }}>
-      <div style={{ backgroundColor: 'var(--bg-header)', borderBottom: '1px solid var(--border)', paddingTop: 'env(safe-area-inset-top)' }}>
+      <div style={{ backgroundColor: 'var(--bg-header)', borderBottom: '1px solid var(--border-accent)', paddingTop: 'env(safe-area-inset-top)' }}>
         <div style={{ maxWidth: 720, margin: '0 auto', padding: '0.875rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--accent-soft)', letterSpacing: '0.02em' }}>{title}</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', fontFamily: DISPLAY, fontWeight: 800, fontSize: '0.95rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-primary)' }}>
+            <span style={{ width: 5, height: 16, backgroundColor: 'var(--accent)', borderRadius: 1, flexShrink: 0 }} />
+            {title}
+          </span>
           <button onClick={onBack} aria-label="Close" style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.5rem', lineHeight: 1, padding: '0.25rem 0.5rem' }}>×</button>
         </div>
       </div>
@@ -73,7 +79,7 @@ export function PageShell({ title, onBack, children }) {
 
 // Full-screen overlay with a pinned safe-area header and scrollable body.
 // `badge` renders inside a coloured circle (or pass `badgeEl` for custom chips).
-export function FullScreenModal({ badge, badgeColor = 'var(--accent)', badgeEl, title, titleColor = 'var(--accent-soft)', headerBg = 'var(--bg-panel)', headerBorder = 'var(--border-accent)', onClose, footer, headerLeft, overlay, children }) {
+export function FullScreenModal({ badge, badgeColor = 'var(--accent)', badgeEl, title, titleColor = 'var(--text-primary)', headerBg = 'var(--bg-panel)', headerBorder = 'var(--border-accent)', onClose, footer, headerLeft, overlay, children }) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 50, backgroundColor: 'var(--bg-header)', display: 'flex', flexDirection: 'column' }}>
       <div style={{ backgroundColor: headerBg, borderBottom: `1px solid ${headerBorder}`, padding: '0.875rem 1rem', paddingTop: 'calc(0.875rem + env(safe-area-inset-top))', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
@@ -84,7 +90,7 @@ export function FullScreenModal({ badge, badgeColor = 'var(--accent)', badgeEl, 
               <span style={{ fontSize: '0.9rem', lineHeight: 1, color: 'var(--on-accent)', fontWeight: 800 }}>{badge}</span>
             </div>
           )}
-          {title && <span style={{ fontWeight: 800, fontSize: '0.9rem', color: titleColor, letterSpacing: '0.02em' }}>{title}</span>}
+          {title && <span style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: '0.95rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: titleColor }}>{title}</span>}
         </div>
         <button onClick={onClose} style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.5rem', lineHeight: 1, padding: '0.25rem 0.5rem' }}>×</button>
       </div>
@@ -119,8 +125,9 @@ export function PrimaryButton({ onClick, disabled, loading, children, danger, st
       style={{
         width: '100%', padding: '0.875rem',
         backgroundColor: danger ? 'var(--danger)' : 'var(--accent)',
-        border: 'none', borderRadius: '0.75rem',
-        color: danger ? 'var(--on-danger)' : 'var(--on-accent)', fontWeight: 700, fontSize: '0.9rem',
+        border: 'none', borderRadius: '0.5rem',
+        color: danger ? 'var(--on-danger)' : 'var(--on-accent)', fontWeight: 800, fontSize: '0.9rem',
+        fontFamily: DISPLAY, textTransform: 'uppercase', letterSpacing: '0.08em',
         cursor: loading ? 'wait' : disabled ? 'not-allowed' : 'pointer',
         opacity: disabled && !loading ? 0.5 : loading ? 0.7 : 1,
         ...style,
@@ -131,14 +138,34 @@ export function PrimaryButton({ onClick, disabled, loading, children, danger, st
   )
 }
 
-// Standard phase intro: "Phase N of 5" + title + description + optional meta line.
-export function PhaseHeader({ phase, title, blurb, meta }) {
+// Standard phase intro, mission-card style: hazard-stripe rail, "PHASE N OF 5",
+// condensed uppercase title, 5-segment progress track. Optional big `stat` +
+// `statLabel` render top-right (e.g. entries logged this shift).
+export function PhaseHeader({ phase, title, blurb, meta, stat, statLabel }) {
   return (
-    <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '1rem', marginBottom: '1.75rem' }}>
-      <div style={{ fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--accent)', marginBottom: '0.25rem' }}>Phase {phase} of 5</div>
-      <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 0.3rem' }}>{title}</h2>
-      <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.6, fontWeight: 600 }}>{blurb}</p>
-      {meta && <div style={{ fontSize: '0.65rem', color: 'var(--text-faint)', marginTop: '0.5rem', fontWeight: 600 }}>{meta}</div>}
+    <div style={{ display: 'flex', backgroundColor: 'var(--bg-card)', border: '2px solid var(--border-accent)', borderRadius: '0.5rem', overflow: 'hidden', marginBottom: '1.5rem' }}>
+      <div style={{ width: 8, flexShrink: 0, background: 'repeating-linear-gradient(-45deg, var(--accent) 0 7px, var(--bg-page) 7px 14px)' }} />
+      <div style={{ flex: 1, padding: '0.9rem 1rem', minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem' }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.18em', color: 'var(--accent)', marginBottom: '0.3rem' }}>Phase {phase} of 5</div>
+            <h2 style={{ fontFamily: DISPLAY, fontSize: '1.45rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.02em', color: 'var(--text-primary)', margin: '0 0 0.35rem', lineHeight: 1.1 }}>{title}</h2>
+          </div>
+          {stat != null && (
+            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+              <div style={{ fontFamily: DISPLAY, fontSize: '1.9rem', fontWeight: 800, color: 'var(--accent)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{stat}</div>
+              {statLabel && <div style={{ fontSize: '0.55rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-faint)', marginTop: '0.2rem' }}>{statLabel}</div>}
+            </div>
+          )}
+        </div>
+        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.55, fontWeight: 600 }}>{blurb}</p>
+        <div style={{ display: 'flex', gap: 4, marginTop: '0.75rem' }}>
+          {[0, 1, 2, 3, 4].map(i => (
+            <div key={i} style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: i < phase ? 'var(--accent)' : 'var(--border)' }} />
+          ))}
+        </div>
+        {meta && <div style={{ fontSize: '0.65rem', color: 'var(--text-faint)', marginTop: '0.5rem', fontWeight: 700 }}>{meta}</div>}
+      </div>
     </div>
   )
 }
@@ -238,7 +265,7 @@ export function FullScreenButton({ label = 'Note', value, onChange }) {
 // Collapsible list card with a header row and expandable detail (history/incident/report lists).
 export function ExpandableCard({ expanded, onToggle, accentBorder, header, sub, children }) {
   return (
-    <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: accentBorder ? `3px solid ${accentBorder}` : '1px solid var(--border)', borderRadius: '0.75rem', marginBottom: '0.75rem', overflow: 'hidden' }}>
+    <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: accentBorder ? `3px solid ${accentBorder}` : '1px solid var(--border)', borderRadius: '0.6rem', marginBottom: '0.75rem', overflow: 'hidden' }}>
       <button
         onClick={onToggle}
         style={{ width: '100%', padding: '1rem', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', textAlign: 'left', gap: '0.75rem' }}

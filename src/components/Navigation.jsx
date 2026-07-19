@@ -1,4 +1,5 @@
 import { PHASE_SHORT } from '../constants'
+import { DISPLAY } from './ui'
 import { HomeIcon, IncidentsIcon, LearningsIcon, SettingsIcon, ThemeIcon, SparkleIcon, AlertCircleIcon, ClipboardIcon } from './icons'
 
 function phaseHasContent(shift, i) {
@@ -46,7 +47,8 @@ export default function Navigation({ phases, currentPhase, shift, onPhaseChange,
                     background: 'none', border: 'none',
                     borderBottom: `2.5px solid ${currentPhase === i ? 'var(--accent)' : 'transparent'}`,
                     color: currentPhase === i ? 'var(--accent-soft)' : done[i] ? 'var(--text-muted)' : 'var(--text-faint)',
-                    fontSize: '0.7rem', fontWeight: currentPhase === i ? 800 : 600,
+                    fontFamily: DISPLAY, textTransform: 'uppercase', letterSpacing: '0.04em',
+                    fontSize: '0.66rem', fontWeight: currentPhase === i ? 800 : 600,
                     cursor: 'pointer', whiteSpace: 'nowrap',
                     display: 'flex', alignItems: 'center', gap: '0.3rem',
                   }}
@@ -90,7 +92,7 @@ export default function Navigation({ phases, currentPhase, shift, onPhaseChange,
       {/* Mobile bottom tab bar — Home + the five phases; no top bar on mobile */}
       <div className="md:hidden" style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 30,
-        backgroundColor: 'var(--bg-header)', borderTop: '1px solid var(--border)',
+        backgroundColor: 'var(--bg-header)', borderTop: '1px solid var(--border-accent)',
         display: 'flex', paddingBottom: 'env(safe-area-inset-bottom)',
       }}>
         <button
@@ -110,10 +112,10 @@ export default function Navigation({ phases, currentPhase, shift, onPhaseChange,
               borderTop: `2.5px solid ${currentPhase === i ? 'var(--accent)' : 'transparent'}`,
             }}
           >
-            <span style={{ fontWeight: 800, fontSize: '0.75rem', color: currentPhase === i ? 'var(--accent-soft)' : done[i] ? 'var(--success)' : 'var(--text-faint)' }}>
+            <span style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: '0.9rem', lineHeight: 1, fontVariantNumeric: 'tabular-nums', color: currentPhase === i ? 'var(--accent)' : done[i] ? 'var(--success)' : 'var(--text-faint)' }}>
               {done[i] && currentPhase !== i ? '✓' : i + 1}
             </span>
-            <span style={{ fontSize: '0.55rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: currentPhase === i ? 'var(--accent-soft)' : done[i] ? 'var(--text-muted)' : 'var(--text-faint)' }}>
+            <span style={{ fontFamily: DISPLAY, fontSize: '0.55rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: currentPhase === i ? 'var(--accent-soft)' : done[i] ? 'var(--text-muted)' : 'var(--text-faint)' }}>
               {short}
             </span>
           </button>

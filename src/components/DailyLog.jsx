@@ -5,7 +5,7 @@ import { callAnthropicAPI, buildDaySummaryPrompt } from '../utils/api'
 import { buzz } from '../utils/haptics'
 import SafetyTextarea from './SafetyTextarea'
 import { MicIcon } from './icons'
-import { PageShell, FullScreenModal, SECTION_LABEL, TEXTAREA, EMPTY_PAGE, ErrorBox, ShareButton, FullScreenButton, BTN_SECONDARY, CaptureBar, CAPTION_TEXTAREA } from './ui'
+import { DISPLAY, PageShell, FullScreenModal, SECTION_LABEL, TEXTAREA, EMPTY_PAGE, ErrorBox, ShareButton, FullScreenButton, BTN_SECONDARY, CaptureBar, CAPTION_TEXTAREA } from './ui'
 
 const dayKey = (iso) => new Date(iso).toDateString()
 const hourLabel = (h) => { const ampm = h < 12 ? 'am' : 'pm'; const hr = h % 12 === 0 ? 12 : h % 12; return `${hr} ${ampm}` }
@@ -98,7 +98,7 @@ export default function DailyLog({ entries, onAdd, onRemove, apiKey, onBack }) {
             <button
               onClick={log}
               disabled={!text.trim()}
-              style={{ width: '100%', padding: '0.8rem', border: 'none', borderRadius: '999px', background: text.trim() ? 'linear-gradient(135deg, var(--glow-b), var(--glow-c))' : 'var(--border)', color: text.trim() ? '#fff' : 'var(--text-faint)', fontWeight: 800, fontSize: '0.9rem', cursor: text.trim() ? 'pointer' : 'not-allowed', boxShadow: text.trim() ? '0 6px 20px rgba(255,157,61,0.35)' : 'none' }}
+              style={{ width: '100%', padding: '0.8rem', border: 'none', borderRadius: '999px', background: text.trim() ? 'linear-gradient(135deg, var(--glow-b), var(--glow-c))' : 'var(--border)', color: text.trim() ? '#fff' : 'var(--text-faint)', fontFamily: DISPLAY, fontWeight: 800, fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.06em', cursor: text.trim() ? 'pointer' : 'not-allowed', boxShadow: text.trim() ? '0 6px 20px rgba(255,157,61,0.35)' : 'none' }}
             >
               Log it
             </button>
@@ -118,7 +118,12 @@ export default function DailyLog({ entries, onAdd, onRemove, apiKey, onBack }) {
 
       {/* Today header + sum-up */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
-        <div style={SECTION_LABEL}>Today</div>
+        <div style={{ ...SECTION_LABEL, marginBottom: 0, display: 'flex', alignItems: 'baseline', gap: '0.45rem' }}>
+          Today
+          {today.length > 0 && (
+            <span style={{ fontFamily: DISPLAY, fontSize: '1.05rem', fontWeight: 800, color: 'var(--accent)', lineHeight: 1, fontVariantNumeric: 'tabular-nums', letterSpacing: 0 }}>{today.length}</span>
+          )}
+        </div>
         {today.length > 0 && (
           <button
             onClick={sumUpDay}
