@@ -79,9 +79,19 @@ export function PageShell({ title, onBack, children }) {
 
 // Full-screen overlay with a pinned safe-area header and scrollable body.
 // `badge` renders inside a coloured circle (or pass `badgeEl` for custom chips).
-export function FullScreenModal({ badge, badgeColor = 'var(--accent)', badgeEl, title, titleColor = 'var(--text-primary)', headerBg = 'var(--bg-panel)', headerBorder = 'var(--border-accent)', onClose, footer, headerLeft, overlay, children }) {
+// Slides up on mount; the ✕ plays the exit animation before calling onClose.
+// Callers that close themselves (save buttons) pass `leaving` and delay their
+// unmount ~160ms so the same exit motion plays — see MODAL_EXIT_MS.
+export const MODAL_EXIT_MS = 160
+export function FullScreenModal({ badge, badgeColor = 'var(--accent)', badgeEl, title, titleColor = 'var(--text-primary)', headerBg = 'var(--bg-panel)', headerBorder = 'var(--border-accent)', onClose, footer, headerLeft, overlay, leaving, children }) {
+  const [out, setOut] = useState(false)
+  const requestClose = () => {
+    if (out || leaving) return
+    setOut(true)
+    setTimeout(onClose, MODAL_EXIT_MS)
+  }
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 50, backgroundColor: 'var(--bg-header)', display: 'flex', flexDirection: 'column' }}>
+    <div className={out || leaving ? 'modal-out' : 'modal-in'} style={{ position: 'fixed', inset: 0, zIndex: 50, backgroundColor: 'var(--bg-header)', display: 'flex', flexDirection: 'column' }}>
       <div style={{ backgroundColor: headerBg, borderBottom: `1px solid ${headerBorder}`, padding: '0.875rem 1rem', paddingTop: 'calc(0.875rem + env(safe-area-inset-top))', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
           {headerLeft}
@@ -92,7 +102,7 @@ export function FullScreenModal({ badge, badgeColor = 'var(--accent)', badgeEl, 
           )}
           {title && <span style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: '0.95rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: titleColor }}>{title}</span>}
         </div>
-        <button onClick={onClose} style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.5rem', lineHeight: 1, padding: '0.25rem 0.5rem' }}>×</button>
+        <button onClick={requestClose} style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.5rem', lineHeight: 1, padding: '0.25rem 0.5rem' }}>×</button>
       </div>
       <div style={{ padding: '1rem', paddingBottom: footer ? '1rem' : 'calc(1rem + env(safe-area-inset-bottom))', overflowY: 'auto', flex: 1 }}>
         {children}

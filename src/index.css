@@ -173,8 +173,15 @@
 @keyframes rise-in { from { transform: translateY(14px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
 .rise-in { animation: rise-in 0.35s ease-out both }
 
+/* Full-screen composers slide up on open and drop away on close/save, so
+   returning to the page underneath reads as one motion, not a hard cut. */
+@keyframes modal-in  { from { transform: translateY(18px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+@keyframes modal-out { from { transform: translateY(0); opacity: 1 } to { transform: translateY(24px); opacity: 0 } }
+.modal-in  { animation: modal-in 0.2s ease-out both }
+.modal-out { animation: modal-out 0.16s ease-in both }
+
 @media (prefers-reduced-motion: reduce) {
-  .swipe-in-right, .swipe-in-left, .entry-in, .rise-in { animation: none }
+  .swipe-in-right, .swipe-in-left, .entry-in, .rise-in, .modal-in, .modal-out { animation: none }
 }
 
 @layer utilities {

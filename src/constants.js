@@ -29,6 +29,7 @@ export const STORAGE_KEYS = {
   DEIDENT_TERMS: 'sa_deident_terms',
   DAILY_LOG: 'sa_daily_log',
   ONBOARDED: 'sa_onboarded',
+  KNOWN_COMPANIES: 'sa_known_companies',
 }
 
 export const INCIDENT_TYPES = [

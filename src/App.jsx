@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { STORAGE_KEYS, PHASE_NAMES, createNewShift } from './constants'
 import { safeSetItem } from './utils/storage'
+import { seedCompanies } from './utils/companies'
 import { isProxyMode } from './utils/api'
 import { supabase, isBackendEnabled } from './utils/supabase'
 import { pushItems, pullItems, mergeById, clearOwner } from './utils/sync'
@@ -199,6 +200,17 @@ export default function App() {
   useEffect(() => {
     persist(STORAGE_KEYS.DAILY_LOG, JSON.stringify(dailyLog))
   }, [dailyLog, persist])
+
+  // Backfill company memory from reports saved before it existed — no-op once
+  // anything is stored, so counts never inflate on reload.
+  useEffect(() => {
+    seedCompanies([
+      ...incidents.map(i => i.companyName),
+      ...(currentShift?.incidents || []).map(i => i.companyName),
+      ...shiftHistory.flatMap(s => (s.incidents || []).map(i => i.companyName)),
+      ...fieldReports.flatMap(r => [r.companyAssessed, r.yourCompany]),
+    ])
+  }, [incidents, fieldReports, currentShift, shiftHistory])
 
   // --- Cloud sync (only when a backend is configured + signed in) ---------
 
