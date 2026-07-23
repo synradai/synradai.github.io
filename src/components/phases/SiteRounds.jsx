@@ -3,9 +3,10 @@ import { generateId, compressPhoto } from '../../utils/storage'
 import { buzz } from '../../utils/haptics'
 import { TAG_STYLES } from '../../constants'
 import { formatTime, formatDateTime } from '../../utils/format'
+import { useVoiceWalkthrough } from '../../hooks/useVoiceWalkthrough'
 import SafetyTextarea from '../SafetyTextarea'
-import { CameraIcon, UploadIcon } from '../icons'
-import { DISPLAY, FullScreenModal, PhaseHeader, SECTION_LABEL, TEXTAREA, BTN_SECONDARY, BTN_MUTED, CaptureBar, CAPTION_TEXTAREA } from '../ui'
+import { CameraIcon, UploadIcon, MicIcon, StopIcon } from '../icons'
+import { DISPLAY, FullScreenModal, PhaseHeader, SECTION_LABEL, TEXTAREA, BTN_SECONDARY, BTN_MUTED, CaptureBar, CAPTION_TEXTAREA, ErrorBox } from '../ui'
 
 const TAGS = ['Hazard', 'Action', 'Observation', 'Near Miss']
 
@@ -20,6 +21,29 @@ const TAG_PROMPTS = {
   'Near Miss': 'What nearly happened? Where, and how close was it?',
 }
 
+// Map whatever was said to one of the tags, or null if nothing fits.
+function matchTag(spoken) {
+  const lc = spoken.toLowerCase()
+  if (lc.includes('near') || lc.includes('miss')) return 'Near Miss'
+  if (lc.includes('hazard')) return 'Hazard'
+  if (lc.includes('action')) return 'Action'
+  if (lc.includes('observ')) return 'Observation'
+  return null
+}
+
+// Voice walkthrough order — say the tag, it auto-advances; the description
+// holds until "next"/"done"; hazard/near miss pick up one more optional box.
+function stepsFor(tag) {
+  const hasFollowUp = tag === 'Hazard' || tag === 'Near Miss'
+  const steps = [
+    { key: 'tag', label: 'Type', auto: true, hint: 'Say: hazard, action, observation, or near miss' },
+    { key: 'description', label: 'Description', hint: TAG_PROMPTS[tag] + (hasFollowUp ? ' Say "next" when done.' : ' Say "done" to finish.') },
+  ]
+  if (tag === 'Hazard') steps.push({ key: 'rectification', label: 'Rectification', hint: 'How was it fixed or controlled — optional. Say "done" to finish, or "skip" to leave blank.' })
+  if (tag === 'Near Miss') steps.push({ key: 'prevention', label: 'Prevention', hint: 'What will stop this happening again — optional. Say "done" to finish, or "skip" to leave blank.' })
+  return steps
+}
+
 export default function SiteRounds({ shift, updateShift, apiKey }) {
   const [text, setText] = useState('')
   const [tag, setTag] = useState('Observation')
@@ -30,13 +54,40 @@ export default function SiteRounds({ shift, updateShift, apiKey }) {
   const [selectedId, setSelectedId] = useState(null)
   const [filter, setFilter] = useState('All')
   const [composing, setComposing] = useState(false)
+  const [tagMiss, setTagMiss] = useState(false)
+  const [voiceError, setVoiceError] = useState('')
   const photoRef = useRef()
   const photoUploadRef = useRef()
   const rectifiedPhotoRef = useRef()
   const rectifiedUploadRef = useRef()
+  const sectionRefs = useRef({})
 
   const rounds = shift.rounds || []
   const selected = rounds.find(r => r.id === selectedId) || null
+
+  // --- Voice walkthrough: say the tag → box fills → highlight moves on -----
+  const STEPS = stepsFor(tag)
+  const walk = useVoiceWalkthrough({
+    steps: STEPS,
+    onText: (key, t) => {
+      if (key === 'tag') {
+        const m = matchTag(t)
+        if (!m) { setTagMiss(true); return 'stay' }
+        setTagMiss(false); setTag(m)
+        return
+      }
+      const appendSetters = { description: setText, rectification: setRectification, prevention: setPrevention }
+      appendSetters[key]?.(prev => { const cur = prev || ''; const sep = cur && !/\s$/.test(cur) ? ' ' : ''; return cur + sep + t })
+    },
+    onStep: (i) => {
+      setTagMiss(false)
+      const el = sectionRefs.current[STEPS[i].key]
+      if (el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60)
+    },
+    onError: setVoiceError,
+  })
+  const isActive = (k) => walk.active && STEPS[walk.step]?.key === k
+  const sectionStyle = (k) => ({ borderRadius: '0.5rem', padding: isActive(k) ? '0.5rem' : 0, border: isActive(k) ? '1.5px solid var(--accent)' : '1.5px solid transparent', boxShadow: isActive(k) ? '0 0 16px rgba(255,157,61,0.35)' : 'none', transition: 'border-color 0.2s, box-shadow 0.2s' })
 
   const handlePhoto = async (e) => {
     const file = e.target.files[0]
@@ -64,6 +115,7 @@ export default function SiteRounds({ shift, updateShift, apiKey }) {
     }
     updateShift({ rounds: [...rounds, entry] })
     buzz(20)
+    walk.stop()
     setText('')
     setPhoto(null)
     setRectification('')
@@ -125,7 +177,7 @@ export default function SiteRounds({ shift, updateShift, apiKey }) {
           badge={TAG_EMOJI[tag]}
           badgeColor="var(--bg-highlight)"
           title="New Entry"
-          onClose={() => setComposing(false)}
+          onClose={() => { walk.stop(); setComposing(false) }}
           footer={
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
               <button
@@ -152,8 +204,32 @@ export default function SiteRounds({ shift, updateShift, apiKey }) {
             </div>
           }
         >
+          {/* Voice walkthrough — one mic fills every box in order */}
+          {!walk.active ? (
+            <button onClick={walk.start} style={{ width: '100%', marginBottom: '1rem', padding: '0.85rem', border: 'none', borderRadius: '0.75rem', background: 'linear-gradient(135deg, var(--glow-b), var(--glow-c))', color: '#fff', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', boxShadow: '0 6px 20px rgba(255,157,61,0.35)' }}>
+              <MicIcon size={18} /> Voice walkthrough — talk, boxes fill
+            </button>
+          ) : (
+            <div style={{ position: 'sticky', top: 0, zIndex: 5, backgroundColor: 'var(--bg-panel)', border: '1.5px solid var(--accent)', borderRadius: '0.75rem', padding: '0.8rem 0.9rem', marginBottom: '1rem', boxShadow: '0 6px 20px rgba(0,0,0,0.4)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--accent-soft)' }}>{walk.listening ? '● Listening' : 'Paused'} · {walk.step + 1}/{STEPS.length}</div>
+                  <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)' }}>{STEPS[walk.step].label}</div>
+                </div>
+                <div style={{ display: 'flex', gap: '0.4rem', flexShrink: 0 }}>
+                  <button onClick={walk.next} style={{ padding: '0.45rem 0.85rem', border: 'none', borderRadius: '0.5rem', backgroundColor: 'var(--accent)', color: 'var(--on-accent)', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer' }}>{walk.step === STEPS.length - 1 ? 'Finish' : 'Next →'}</button>
+                  <button onClick={walk.stop} aria-label="Stop" style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', backgroundColor: 'var(--error-bg-strong)', color: 'var(--error-text)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><StopIcon size={13} /></button>
+                </div>
+              </div>
+              <p style={{ fontSize: '0.68rem', color: tagMiss ? 'var(--warning-text)' : 'var(--text-faint)', margin: '0.45rem 0 0', fontWeight: 600, lineHeight: 1.4 }}>
+                {tagMiss ? 'Didn\'t catch a type — say "hazard", "action", "observation", or "near miss", or tap a pill.' : STEPS[walk.step].hint}
+              </p>
+            </div>
+          )}
+          <ErrorBox style={{ marginBottom: '1rem' }}>{voiceError}</ErrorBox>
+
           {/* Tag pills — flowing, colour on when active */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1.25rem' }}>
+          <div ref={el => (sectionRefs.current.tag = el)} style={{ ...sectionStyle('tag'), display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1.25rem' }}>
             {TAGS.map(t => {
               const s = TAG_STYLES[t]
               const active = tag === t
@@ -180,14 +256,16 @@ export default function SiteRounds({ shift, updateShift, apiKey }) {
           </div>
 
           {/* The caption box — the whole page is the writing surface */}
-          <SafetyTextarea
-            value={text}
-            onChange={e => setText(e.target.value)}
-            placeholder={TAG_PROMPTS[tag]}
-            rows={8}
-            style={{ ...CAPTION_TEXTAREA, minHeight: '32vh' }}
-            apiKey={apiKey}
-          />
+          <div ref={el => (sectionRefs.current.description = el)} style={sectionStyle('description')}>
+            <SafetyTextarea
+              value={text}
+              onChange={e => setText(e.target.value)}
+              placeholder={TAG_PROMPTS[tag]}
+              rows={8}
+              style={{ ...CAPTION_TEXTAREA, minHeight: '32vh' }}
+              apiKey={apiKey}
+            />
+          </div>
 
           {photo && (
             <div style={{ position: 'relative', display: 'inline-block', marginTop: '0.75rem' }}>
@@ -202,51 +280,55 @@ export default function SiteRounds({ shift, updateShift, apiKey }) {
           )}
 
           {tag === 'Hazard' && (
-            <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
-              <div style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--success-text)', marginBottom: '0.5rem' }}>
-                ✓ Rectification — optional
-              </div>
-              <SafetyTextarea
-                value={rectification}
-                onChange={e => setRectification(e.target.value)}
-                placeholder="How was it fixed or controlled? Leave blank if still open."
-                rows={3}
-                style={{ ...CAPTION_TEXTAREA, fontSize: '0.95rem', minHeight: '4rem' }}
-                apiKey={apiKey}
-              />
-              <button
-                onClick={() => rectifiedPhotoRef.current?.click()}
-                style={{ marginTop: '0.4rem', padding: '0.45rem 0.85rem', border: '1px solid var(--border-accent)', borderRadius: '999px', backgroundColor: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
-              >
-                <CameraIcon size={14} /> Rectified photo
-              </button>
-              {rectifiedPhoto && (
-                <div style={{ position: 'relative', display: 'inline-block', marginTop: '0.5rem', marginLeft: '0.5rem' }}>
-                  <img src={rectifiedPhoto} alt="Rectified hazard" style={{ maxHeight: '6rem', borderRadius: '0.75rem', objectFit: 'contain', verticalAlign: 'middle' }} />
-                  <button
-                    onClick={() => setRectifiedPhoto(null)}
-                    style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: '50%', backgroundColor: 'var(--danger)', border: 'none', color: 'var(--on-danger)', fontSize: '0.65rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    ✕
-                  </button>
+            <div ref={el => (sectionRefs.current.rectification = el)} style={sectionStyle('rectification')}>
+              <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+                <div style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--success-text)', marginBottom: '0.5rem' }}>
+                  ✓ Rectification — optional
                 </div>
-              )}
+                <SafetyTextarea
+                  value={rectification}
+                  onChange={e => setRectification(e.target.value)}
+                  placeholder="How was it fixed or controlled? Leave blank if still open."
+                  rows={3}
+                  style={{ ...CAPTION_TEXTAREA, fontSize: '0.95rem', minHeight: '4rem' }}
+                  apiKey={apiKey}
+                />
+                <button
+                  onClick={() => rectifiedPhotoRef.current?.click()}
+                  style={{ marginTop: '0.4rem', padding: '0.45rem 0.85rem', border: '1px solid var(--border-accent)', borderRadius: '999px', backgroundColor: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                >
+                  <CameraIcon size={14} /> Rectified photo
+                </button>
+                {rectifiedPhoto && (
+                  <div style={{ position: 'relative', display: 'inline-block', marginTop: '0.5rem', marginLeft: '0.5rem' }}>
+                    <img src={rectifiedPhoto} alt="Rectified hazard" style={{ maxHeight: '6rem', borderRadius: '0.75rem', objectFit: 'contain', verticalAlign: 'middle' }} />
+                    <button
+                      onClick={() => setRectifiedPhoto(null)}
+                      style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: '50%', backgroundColor: 'var(--danger)', border: 'none', color: 'var(--on-danger)', fontSize: '0.65rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
           {tag === 'Near Miss' && (
-            <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
-              <div style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--warning-text)', marginBottom: '0.5rem' }}>
-                ⚡ Prevention — optional
+            <div ref={el => (sectionRefs.current.prevention = el)} style={sectionStyle('prevention')}>
+              <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+                <div style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--warning-text)', marginBottom: '0.5rem' }}>
+                  ⚡ Prevention — optional
+                </div>
+                <SafetyTextarea
+                  value={prevention}
+                  onChange={e => setPrevention(e.target.value)}
+                  placeholder="What will stop this happening again?"
+                  rows={3}
+                  style={{ ...CAPTION_TEXTAREA, fontSize: '0.95rem', minHeight: '4rem' }}
+                  apiKey={apiKey}
+                />
               </div>
-              <SafetyTextarea
-                value={prevention}
-                onChange={e => setPrevention(e.target.value)}
-                placeholder="What will stop this happening again?"
-                rows={3}
-                style={{ ...CAPTION_TEXTAREA, fontSize: '0.95rem', minHeight: '4rem' }}
-                apiKey={apiKey}
-              />
             </div>
           )}
         </FullScreenModal>
