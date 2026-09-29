@@ -13,7 +13,7 @@ const TURNSTILE_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onl
 // App.jsx swaps this screen out for the app. New signups auto-get an
 // "organisation of one" via the database trigger (see supabase/schema.sql).
 export default function AuthScreen() {
-  const [mode, setMode] = useState('signin') // signin | signup
+  const [mode, setMode] = useState('signin') // signin | signup | recover
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
@@ -57,6 +57,26 @@ export default function AuthScreen() {
 
   const submit = async () => {
     setError(''); setNotice('')
+    if (mode === 'recover') {
+      if (!email.trim()) { setError('Enter your email.'); return }
+      setLoading(true)
+      try {
+        const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+          redirectTo: window.location.origin,
+          captchaToken: captchaToken || undefined,
+        })
+        if (error) throw error
+        setNotice('Check your email for a reset link.')
+      } catch (e) {
+        const msg = e?.message || 'Something went wrong. Try again.'
+        setError(/captcha/i.test(msg) ? 'Verification expired — give it a second to refresh, then try again.' : msg)
+        resetCaptcha()
+      } finally {
+        setLoading(false)
+      }
+      return
+    }
+
     if (!email.trim() || !password) { setError('Enter your email and password.'); return }
     if (mode === 'signup' && password.length < 8) { setError('Use at least 8 characters for your password.'); return }
 
@@ -108,10 +128,10 @@ export default function AuthScreen() {
 
           <div style={{ fontSize: '0.66rem', fontWeight: 800, letterSpacing: '0.3em', textTransform: 'uppercase', color: 'var(--accent-soft)', marginBottom: '0.9rem' }}>Safe Intelligence</div>
           <h1 style={{ fontSize: '2rem', fontWeight: 800, margin: '0 0 0.5rem', letterSpacing: '-0.02em', lineHeight: 1.05, whiteSpace: 'pre-line', background: (typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light') ? 'linear-gradient(180deg, #16233c 0%, #2f6fe4 130%)' : 'linear-gradient(180deg, #ffffff 0%, #d5e4ff 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            {mode === 'signin' ? 'Welcome back' : 'Create your\naccount'}
+            {mode === 'signin' ? 'Welcome back' : mode === 'signup' ? 'Create your\naccount' : 'Reset your\npassword'}
           </h1>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0, fontWeight: 600 }}>
-            {mode === 'signin' ? 'Sign in to your safety workspace' : 'Field safety, made simple'}
+            {mode === 'signin' ? 'Sign in to your safety workspace' : mode === 'signup' ? 'Field safety, made simple' : "We'll email you a link to set a new one"}
           </p>
         </div>
 
@@ -124,21 +144,32 @@ export default function AuthScreen() {
 
         <div style={{ marginBottom: '1rem' }}>
           <div style={FIELD_LABEL}>Email</div>
-          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" style={INPUT} />
+          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" onKeyDown={e => e.key === 'Enter' && mode === 'recover' && submit()} style={INPUT} />
         </div>
 
-        <div style={{ marginBottom: '1rem' }}>
-          <div style={FIELD_LABEL}>Password</div>
-          <input
-            type="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            placeholder={mode === 'signup' ? 'At least 8 characters' : 'Your password'}
-            autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-            onKeyDown={e => e.key === 'Enter' && submit()}
-            style={INPUT}
-          />
-        </div>
+        {mode !== 'recover' && (
+          <div style={{ marginBottom: '0.5rem' }}>
+            <div style={FIELD_LABEL}>Password</div>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder={mode === 'signup' ? 'At least 8 characters' : 'Your password'}
+              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+              onKeyDown={e => e.key === 'Enter' && submit()}
+              style={INPUT}
+            />
+          </div>
+        )}
+
+        {mode === 'signin' && (
+          <button
+            onClick={() => { setMode('recover'); setError(''); setNotice('') }}
+            style={{ display: 'block', marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-faint)', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', marginBottom: '0.75rem', padding: '0.25rem 0' }}
+          >
+            Forgot password?
+          </button>
+        )}
 
         {/* Turnstile bot check — invisible for most humans, boxed when challenged */}
         <div ref={captchaRef} style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem' }} />
@@ -161,14 +192,14 @@ export default function AuthScreen() {
             boxShadow: '0 8px 26px rgba(255,157,61,0.45)', marginTop: '0.25rem',
           }}
         >
-          {loading ? 'Please wait…' : mode === 'signin' ? 'Sign In' : 'Create Account'}
+          {loading ? 'Please wait…' : mode === 'signin' ? 'Sign In' : mode === 'signup' ? 'Create Account' : 'Send Reset Link'}
         </button>
 
         <button
           onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(''); setNotice('') }}
           style={{ width: '100%', marginTop: '1rem', background: 'none', border: 'none', color: 'var(--accent)', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}
         >
-          {mode === 'signin' ? "No account? Create one" : 'Already have an account? Sign in'}
+          {mode === 'signin' ? "No account? Create one" : mode === 'signup' ? 'Already have an account? Sign in' : 'Back to sign in'}
         </button>
 
         <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.72rem', color: 'var(--text-faint)', fontWeight: 600, lineHeight: 1.5 }}>

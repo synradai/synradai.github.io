@@ -10,6 +10,7 @@ import { needsMfaChallenge } from './utils/mfa'
 import { needsAiAck } from './utils/disclaimer'
 import { buzz } from './utils/haptics'
 import AuthScreen from './components/AuthScreen'
+import ResetPassword from './components/ResetPassword'
 import AiDisclaimer from './components/AiDisclaimer'
 import Onboarding from './components/Onboarding'
 import SaveTick from './components/SaveTick'
@@ -59,6 +60,7 @@ export default function App() {
   // gates the first paint so we don't flash the login screen before the
   // existing session loads.
   const [session, setSession] = useState(null)
+  const [passwordRecovery, setPasswordRecovery] = useState(false)
   const [authReady, setAuthReady] = useState(!isBackendEnabled)
   const [restored, setRestored] = useState(false) // cloud backup pulled this session?
   const [access, setAccess] = useState({ allowed: true, trial: false, daysLeft: 0, status: 'unknown' })
@@ -116,7 +118,10 @@ export default function App() {
       setSession(data.session)
       setAuthReady(true)
     })
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => setSession(s))
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+      setSession(s)
+      if (event === 'PASSWORD_RECOVERY') setPasswordRecovery(true)
+    })
     return () => sub.subscription.unsubscribe()
   }, [])
 
@@ -393,6 +398,12 @@ export default function App() {
   // Backend on + not signed in → gate the whole app behind login.
   if (isBackendEnabled && !session) {
     return <AuthScreen />
+  }
+
+  // Landed here from a password-reset email link → must set a new password
+  // before doing anything else with the (temporary) recovery session.
+  if (isBackendEnabled && session && passwordRecovery) {
+    return <ResetPassword onDone={() => setPasswordRecovery(false)} />
   }
 
   // Signed in but 2FA code still required this session → hold here.
