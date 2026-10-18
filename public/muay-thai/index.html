@@ -73,7 +73,10 @@ details[open] summary:after{content:"–"}
 .toggle{width:50px;height:30px;border-radius:99px;background:#2a2a2e;position:relative;flex:none;padding:0}
 .toggle:after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:left .2s}
 .toggle.on{background:var(--acc)} .toggle.on:after{left:23px}
-select{font:inherit;font-size:13px;background:#000;color:#fff;border:1px solid #2e2e32;border-radius:12px;padding:10px;max-width:56vw;min-height:42px}
+select{font:inherit;font-size:13px;background:#000;color:#fff;border:1px solid #2e2e32;border-radius:12px;padding:10px;max-width:100%;min-height:42px}
+input[type=range]{width:100%;accent-color:var(--acc);height:32px;margin:4px 0 0;background:transparent}
+.paceMarks{display:flex;justify-content:space-between;color:var(--mut);font-size:10px;letter-spacing:1px;text-transform:uppercase;font-weight:700}
+#voiceNote{display:block;color:var(--mut);font-weight:400;font-size:12px;line-height:1.45;margin-top:8px}
 .col{flex-direction:column;align-items:stretch}
 .note{color:#5d5d62;font-size:11px;line-height:1.6;margin-top:24px;text-align:center}
 .wl{font-size:10px;color:#4a4a4f;margin-top:6px;letter-spacing:1px}
@@ -119,7 +122,10 @@ select{font:inherit;font-size:13px;background:#000;color:#fff;border:1px solid #
     <div class="row"><label>Round length</label><div class="stepper" data-key="roundSec"></div></div>
     <div class="row"><label>Rest</label><div class="stepper" data-key="restSec"></div></div>
     <div class="row"><label>Get-ready time</label><div class="stepper" data-key="prepSec"></div></div>
-    <div class="row"><label>Call every <small>Average secs, randomised ±1s, adjusted by level &amp; combo length</small></label><div class="stepper" data-key="interval"></div></div>
+    <div class="row col"><label>Pace <small id="paceHelp">Normal · 3s between calls</small></label>
+      <input id="paceSlider" type="range" min="0" max="3" step="1" value="1" aria-label="Pace">
+      <div class="paceMarks"><span>Slow</span><span>Normal</span><span>Fast</span><span>Savage</span></div></div>
+    <div class="row"><label>Speed up during round <small>Gaps tighten to about 60% before the last 30 seconds, then a hard push</small></label><button class="toggle" data-toggle="ramp" aria-label="Speed up during round"></button></div>
     <div class="row"><label>Voice speed</label><div class="stepper" data-key="rate"></div></div>
     <div class="row"><label>Stance <small>Sets which side "left / right" means</small></label>
       <div class="seg" data-seg="stance"><button data-v="orthodox">Orthodox</button><button data-v="southpaw">Southpaw</button></div></div>
@@ -127,7 +133,9 @@ select{font:inherit;font-size:13px;background:#000;color:#fff;border:1px solid #
     <div class="row"><label>Kru banter <small>Cheeky coach lines &amp; Thai gym words: "Tae!", "Dee mak!"</small></label><button class="toggle" data-toggle="banter" aria-label="Kru banter"></button></div>
     <div class="row"><label>Motivation shouts <small>"Hands up!", "Breathe!"…</small></label><button class="toggle" data-toggle="motivation" aria-label="Motivation"></button></div>
     <div class="row"><label>Show technique pictures</label><button class="toggle" data-toggle="pics" aria-label="Pictures"></button></div>
-    <div class="row"><label>Voice <small>Deeper voices are picked first</small></label><select id="voiceSel"><option value="">Auto (deep voice)</option></select></div>
+    <div class="row col"><label>Voice <small>A Thai voice if this phone has one, otherwise a deep English voice</small></label>
+      <select id="voiceSel"><option value="">Auto (Thai coach)</option></select>
+      <small id="voiceNote">For the Thai coach voice on iPhone: Settings &gt; Accessibility &gt; Spoken Content &gt; Voices &gt; Thai &gt; Kanya (download).</small></div>
   </details>
 
   <p class="note">Orthodox: lead = left, rear = right. "Kick" = roundhouse. Thai words: Mat = punch · Tae = kick · Kao = knee · Sok = elbow · Dee mak = very good · Chai yo = let's go! Keep this screen open while training. On iPhone, turn off silent mode for the bell.</p>
@@ -201,6 +209,10 @@ var BANTER = [
   "Eyes up! The floor is not your enemy.","Yes! Like that! Now a thousand more.","You are the boss? No. Kru is the boss. Kick!","Sweat now, look good at the beach later.",
   "Slow like grandma on Sunday. Faster!","Tae tae tae! Kick, kick, kick!"
 ];
+/* Short, punchy lines already in the script — used in the last-30s push. */
+var PUSH_LINES=BANTER.concat(MOTIVATION).filter(function(s){
+  return /faster|tae tae|kick, kick|power!|hands up!|keep moving!|stay sharp!|don't drop|light on your feet|strong teeps|exhale/i.test(s);
+});
 var KRU = {
   ready:["Get ready! Kru is waiting. Round one in {s} seconds.","Wai khru, then hands up. Round one in {s} seconds.","Stretch finish? Good. Round one in {s} seconds."],
   start:["Round {n}. Chai yo! Fight!","Round {n}. Hands up, we go!","Round {n}. Show Kru something!","Round {n}! No walking, only fighting!"],
@@ -237,25 +249,56 @@ function strikes(text){
   return out;
 }
 var LEVEL = {
-  beginner:{pace:1.25,label:"Beginner"},
-  intermediate:{pace:1.0,label:"Intermediate"},
-  advanced:{pace:0.8,label:"Advanced",mix:"intermediate",mixChance:0.25}
+  beginner:{label:"Beginner"},
+  intermediate:{label:"Intermediate"},
+  advanced:{label:"Advanced",mix:"intermediate",mixChance:0.25}
 };
+/* Silence AFTER a call ends, at Normal pace. Slow/Fast/Savage scale this. */
+var BASE_GAP={beginner:3,intermediate:2.2,advanced:1.5};
+var PACE_MUL={slow:1.35,normal:1,fast:0.7,savage:0.5};
+var PACE_ORDER=["slow","normal","fast","savage"];
 
 /* ================= SETTINGS ================= */
-var DEFAULTS = {rounds:5,roundSec:180,restSec:60,prepSec:10,interval:5,rate:1.1,level:"beginner",stance:"orthodox",defence:true,motivation:true,banter:true,pics:true,voiceURI:""};
+var DEFAULTS = {rounds:5,roundSec:180,restSec:60,prepSec:10,pace:"normal",ramp:true,rate:1.25,level:"beginner",stance:"orthodox",defence:true,motivation:true,banter:true,pics:true,voiceURI:""};
 var STEP = {
   rounds:{min:1,max:20,step:1,fmt:function(v){return v;}},
   roundSec:{min:30,max:600,step:30,fmt:mmss},
   restSec:{min:0,max:300,step:15,fmt:mmss},
   prepSec:{min:0,max:30,step:5,fmt:function(v){return v+"s";}},
-  interval:{min:2,max:12,step:0.5,fmt:function(v){return v+"s";}},
   rate:{min:0.8,max:1.6,step:0.05,fmt:function(v){return v.toFixed(2)+"×";}}
 };
 var KEY="mtcaller.settings.v1";
+function paceFromInterval(interval){
+  var n=Number(interval);
+  if(!(n>=0))return "normal";
+  if(n>=7)return "slow";
+  if(n>=4)return "normal";
+  if(n>=2.5)return "fast";
+  return "savage";
+}
+function applyLegacy(o){
+  o=o||{};
+  var s={};
+  for(var k in DEFAULTS)s[k]=(k in o)?o[k]:DEFAULTS[k];
+  if(!("pace" in o)){
+    if("interval" in o)s.pace=paceFromInterval(o.interval);
+    if(!("ramp" in o))s.ramp=true;
+    if(!("rate" in o)||Math.abs(Number(o.rate)-1.1)<0.001)s.rate=DEFAULTS.rate;
+  }
+  if(PACE_ORDER.indexOf(s.pace)<0)s.pace="normal";
+  return s;
+}
+function saveSettings(obj){try{localStorage.setItem(KEY,JSON.stringify(obj||S));}catch(e){}}
+function load(){
+  var o={};
+  try{o=JSON.parse(localStorage.getItem(KEY))||{};}catch(e){}
+  var legacy=!("pace" in o);
+  var s=applyLegacy(o);
+  if(legacy)saveSettings(s);
+  return s;
+}
+function save(){saveSettings(S);}
 var S = load();
-function load(){var o={};try{o=JSON.parse(localStorage.getItem(KEY))||{};}catch(e){}var s={};for(var k in DEFAULTS)s[k]=(k in o)?o[k]:DEFAULTS[k];return s;}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
 
 function mmss(sec){sec=Math.max(0,Math.ceil(sec));var m=Math.floor(sec/60),s=sec%60;return m+":"+(s<10?"0":"")+s;}
 
@@ -268,18 +311,37 @@ function pool(level,defence){
   if(!defence)p=p.filter(function(c){return !DEFENCE_RE.test(c);});
   return p;
 }
-function pickCombo(level,stance,defence){
-  var p=pool(level,defence),c,tries=0;
-  do{c=p[Math.floor(Math.random()*p.length)];tries++;}while(recent.indexOf(c)>=0&&tries<20);
+function pickFrom(list){
+  if(!list.length)return "Jab, cross";
+  var c,tries=0;
+  do{c=list[Math.floor(Math.random()*list.length)];tries++;}while(recent.indexOf(c)>=0&&tries<12&&list.length>1);
   recent.push(c);if(recent.length>4)recent.shift();
-  return resolve(c,stance);
+  return c;
 }
-function strikeCount(text){return text.split(/[,!]/).filter(function(x){return x.trim();}).length;}
-function nextInterval(text){
-  var lv=LEVEL[S.level]||LEVEL.beginner;
-  var base=S.interval+(Math.random()*2-1);
-  var extra=Math.max(0,strikeCount(text)-2)*0.45;
-  return Math.max(2,(base*lv.pace)+extra)*1000;
+function pickCombo(level,stance,defence){return resolve(pickFrom(pool(level,defence)),stance);}
+function pickPushCombo(stance,defence){
+  var all=COMBOS.beginner.concat(COMBOS.intermediate);
+  if(!defence)all=all.filter(function(c){return !DEFENCE_RE.test(c);});
+  var short=all.filter(function(c){return strikes(resolve(c,stance)).length<=2;});
+  return resolve(pickFrom(short.length?short:all),stance);
+}
+function startGapSec(){
+  var base=BASE_GAP[S.level]||3, mul=PACE_MUL[S.pace]||1;
+  return base*mul;
+}
+/* Linear shrink to 60% across the round up to the last 30s, then a 50% push. */
+function gapFactor(remMs){
+  if(!S.ramp)return 1;
+  if(remMs<=30000)return 0.5;
+  var roundMs=Math.max(1,S.roundSec*1000), rampMs=Math.max(1,roundMs-30000);
+  var elapsed=Math.max(0,Math.min(rampMs,roundMs-remMs));
+  return 1-0.4*(elapsed/rampMs);
+}
+function nextGapMs(remMs){return Math.max(280,Math.round(startGapSec()*gapFactor(remMs)*1000));}
+function paceCaption(){
+  var names={slow:"Slow",normal:"Normal",fast:"Fast",savage:"Savage"};
+  var g=(Math.round(startGapSec()*100)/100).toFixed(2).replace(/\.?0+$/,"");
+  return (names[S.pace]||"Normal")+" · "+g+"s between calls"+(S.ramp?" · speeds up":"");
 }
 
 /* ================= AUDIO (WebAudio) ================= */
@@ -310,13 +372,29 @@ function beep(freq,dur){var a=audio();if(!a)return;var t=a.currentTime+0.01,o=a.
   g.gain.setValueAtTime(0.25,t);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);o.connect(g);g.connect(master);o.start(t);o.stop(t+dur+0.02);}
 
 /* ================= SPEECH ================= */
-var synth=window.speechSynthesis||null,voices=[];
+var synth=window.speechSynthesis||null,voices=[],speakToken=0;
+function isThai(v){
+  var l=String(v&&v.lang||"").replace(/_/g,"-").toLowerCase();
+  return l==="th"||l.indexOf("th-")===0;
+}
 function loadVoices(){
   if(!synth)return;voices=synth.getVoices()||[];
-  var sel=document.getElementById("voiceSel"),cur=S.voiceURI;
+  fillVoiceList();
+}
+function fillVoiceList(){
+  var sel=document.getElementById("voiceSel");if(!sel)return;
+  var cur=S.voiceURI;
   while(sel.options.length>1)sel.remove(1);
-  voices.filter(function(v){return /^en/i.test(v.lang);}).sort(function(a,b){return rankVoice(b)-rankVoice(a);}).forEach(function(v){
-    var o=document.createElement("option");o.value=v.voiceURI;o.textContent=v.name+" ("+v.lang+")";if(v.voiceURI===cur)o.selected=true;sel.appendChild(o);});
+  voices.filter(function(v){return isThai(v)||/^en/i.test(v.lang||"");}).sort(function(a,b){
+    var dt=(isThai(a)?0:1)-(isThai(b)?0:1);
+    if(dt)return dt;
+    if(isThai(a)){var ka=/kanya/i.test(a.name)?0:1,kb=/kanya/i.test(b.name)?0:1;if(ka!==kb)return ka-kb;}
+    return rankVoice(b)-rankVoice(a);
+  }).forEach(function(v){
+    var o=document.createElement("option");o.value=v.voiceURI;
+    o.textContent=isThai(v)?v.name+" (Thai)":v.name+" ("+v.lang+")";
+    if(v.voiceURI===cur)o.selected=true;sel.appendChild(o);
+  });
 }
 var MALE_RE=/\b(male|man|lee|daniel|arthur|gordon|aaron|fred|alex|tom|oliver|james|rishi|thomas|george|ryan|william|guy|reed|ralph|eddy|rocko|grandpa|liam|noah|brian|russell|david|mark|richard)\b/i;
 var FEMALE_RE=/\b(female|woman|karen|catherine|samantha|moira|tessa|serena|martha|kate|susan|victoria|allison|ava|zoe|nicky|fiona|veena|libby|sonia|natasha|hazel|zira|aria|jenny|emma|sara|amy|olivia|grandma|shelley|sandy|flo|kathy)\b/i;
@@ -326,16 +404,37 @@ function rankVoice(v){var r=0,l=(v.lang||"").replace("_","-").toLowerCase(),n=v.
   if(/google|natural|neural|enhanced|premium|siri/i.test(n))r+=8;if(v.localService)r+=1;return r;}
 function pickVoice(){
   if(S.voiceURI){for(var i=0;i<voices.length;i++)if(voices[i].voiceURI===S.voiceURI)return voices[i];}
+  var thai=null,tr=-1;
+  voices.forEach(function(v){
+    if(!isThai(v))return;
+    var r=0,n=v.name||"";
+    if(/kanya/i.test(n))r+=50;
+    if(/google|natural|neural|enhanced|premium/i.test(n))r+=20;
+    if(v.localService)r+=5;
+    if(r>=tr){tr=r;thai=v;}
+  });
+  if(thai)return thai;
   var best=null,br=-1;voices.forEach(function(v){var r=rankVoice(v);if(r>br){br=r;best=v;}});return br>=10?best:null;
 }
 function isMale(v){return !!(v&&MALE_RE.test(v.name||""));}
 function say(text,opts){
   opts=opts||{};hooks.onSay(text);
-  if(!synth)return;
+  var token=++speakToken,finished=false,dog=null;
+  function end(){
+    if(finished||token!==speakToken)return;
+    finished=true;if(dog)clearTimeout(dog);
+    if(opts.onend)opts.onend();
+  }
+  if(hooks.deferSpeech){hooks.pendingEnd=end;return;}
+  if(!synth||hooks.skipSpeech){end();return;}
   if(!opts.queue)synth.cancel();
-  var u=new SpeechSynthesisUtterance(text.replace(/!/g,"!").replace(/\{|\}/g,""));
+  var u=new SpeechSynthesisUtterance(String(text).replace(/[{}]/g,""));
   var v=pickVoice();if(v){u.voice=v;u.lang=v.lang;}else u.lang="en-AU";
-  u.rate=opts.rate||S.rate;u.pitch=opts.pitch||(isMale(v)?0.95:0.8);u.volume=1;
+  u.rate=opts.rate||S.rate;
+  u.pitch=opts.pitch||(v&&isThai(v)?1:(isMale(v)?0.95:0.8));
+  u.volume=1;u.onend=end;u.onerror=end;
+  var words=String(text).trim().split(/\s+/).filter(Boolean).length||1;
+  dog=setTimeout(end,Math.min(20000,1200+words*(700/(u.rate||1))));
   synth.speak(u);
   if(synth.paused)synth.resume();
 }
@@ -353,15 +452,23 @@ function releaseWake(){if(wakeLock){wakeLock.release().catch(function(){});wakeL
 document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible"&&wantWake()&&!wakeLock)requestWake();});
 
 /* ================= TIMER STATE MACHINE ================= */
-var hooks={now:function(){return performance.now();},onSay:function(){},onSound:function(){}};
-var T={phase:"idle",round:0,phaseEnd:0,phaseLen:0,paused:false,pauseLeft:0,pauseNext:0,nextCall:0,warned10:false,said30:false,lastBeep:-1,timerId:null};
+var hooks={now:function(){return performance.now();},onSay:function(){},onSound:function(){},skipSpeech:false,deferSpeech:false,pendingEnd:null};
+var T={phase:"idle",round:0,phaseEnd:0,phaseLen:0,paused:false,pauseLeft:0,pauseNext:0,nextCall:0,speaking:false,warned10:false,said30:false,lastBeep:-1,timerId:null};
 function now(){return hooks.now();}
 function sound(name){hooks.onSound(name);if(name==="bellStart")bell(1);else if(name==="bellEnd")bell(3);else if(name==="clap")clap10();else if(name==="beep")beep(880,0.15);else if(name==="beepHi")beep(1320,0.35);}
 
 function setPhase(p,lenMs){T.phase=p;T.phaseLen=lenMs;T.phaseEnd=now()+lenMs;T.warned10=false;T.said30=false;T.lastBeep=-1;}
+function armGap(gapMs){
+  T.speaking=true;T.nextCall=Infinity;
+  return function(){
+    T.speaking=false;
+    if(T.paused||T.phase!=="round")return;
+    T.nextCall=now()+gapMs;
+  };
+}
 function start(){
   if(T.phase!=="idle"&&T.phase!=="done")return;
-  recent=[];T.round=0;T.paused=false;
+  recent=[];T.round=0;T.paused=false;T.speaking=false;
   if(S.prepSec>0){
     setPhase("ready",S.prepSec*1000);
     say(S.banter?kru("ready",{s:S.prepSec}):"Get ready! Round one in "+S.prepSec+" seconds.");
@@ -374,10 +481,13 @@ function start(){
 }
 function startRound(n){
   T.round=n;setPhase("round",S.roundSec*1000);sound("bellStart");
-  T.nextCall=now()+1800;
   var fin=n===S.rounds&&S.rounds>1;
   showCombo(fin?"Final round":"Round "+n,"Fight!",true);showPic("guard");
-  if(fin)say(S.banter?kru("final"):"Final round! Fight!");else if(T.phase==="round"&&n>1)say(S.banter?kru("start",{n:n}):"Round "+n+". Fight!");
+  var line="";
+  if(fin)line=S.banter?kru("final"):"Final round! Fight!";
+  else if(n>1)line=S.banter?kru("start",{n:n}):"Round "+n+". Fight!";
+  if(line)say(line,{onend:armGap(400)});
+  else{T.speaking=false;T.nextCall=now()+500;}
 }
 function startRest(){
   setPhase("rest",S.restSec*1000);
@@ -385,18 +495,28 @@ function startRest(){
   say(S.banter?kru("rest",{n:T.round+1}):"Time! Rest. Round "+(T.round+1)+" next.",{queue:false});
 }
 function finish(){
-  T.phase="done";showCombo("Done","Dee mak · great work",true);showPic("guard");
+  T.phase="done";T.speaking=false;showCombo("Done","Dee mak · great work",true);showPic("guard");
   say(S.banter?"Time! "+kru("done"):"Time! Workout complete. Great work!");releaseWake();
   clearInterval(T.timerId);T.timerId=null;render();
 }
 function stop(){
-  clearInterval(T.timerId);T.timerId=null;if(synth)synth.cancel();
+  clearInterval(T.timerId);T.timerId=null;speakToken++;T.speaking=false;
+  if(synth&&!hooks.skipSpeech&&!hooks.deferSpeech)synth.cancel();
   T.phase="idle";T.paused=false;T.round=0;releaseWake();showCombo("Tap start","Volume up · Kru calls the combos out loud");showPic("guard");render();
 }
 function togglePause(){
   if(T.phase==="idle"||T.phase==="done")return;
-  if(!T.paused){T.paused=true;T.pauseLeft=T.phaseEnd-now();T.pauseNext=T.nextCall-now();if(synth)synth.cancel();say(S.banter?kru("pause"):"Paused");}
-  else{T.paused=false;T.phaseEnd=now()+T.pauseLeft;T.nextCall=now()+Math.max(1500,T.pauseNext);say(S.banter?kru("go"):"Go!");if(!wakeLock)requestWake();}
+  if(!T.paused){
+    T.paused=true;T.pauseLeft=T.phaseEnd-now();
+    T.pauseNext=(T.speaking||!isFinite(T.nextCall))?450:Math.max(0,T.nextCall-now());
+    T.speaking=false;speakToken++;
+    if(synth&&!hooks.skipSpeech&&!hooks.deferSpeech)synth.cancel();
+    say(S.banter?kru("pause"):"Paused");
+  }else{
+    T.paused=false;T.speaking=false;T.phaseEnd=now()+T.pauseLeft;
+    T.nextCall=now()+Math.max(400,T.pauseNext);
+    say(S.banter?kru("go"):"Go!");if(!wakeLock)requestWake();
+  }
   render();
 }
 function tick(){
@@ -406,9 +526,9 @@ function tick(){
     if(secs<=3&&secs>=1&&T.lastBeep!==secs){T.lastBeep=secs;sound("beep");}
     if(rem<=0){startRound(1);}
   }else if(T.phase==="round"){
-    if(!T.said30&&S.roundSec>=60&&rem<=30000&&rem>25000){T.said30=true;say(S.banter?kru("last30"):"Last thirty, push!");showCombo("Last 30","Push!",true,true);T.nextCall=t+2500;}
-    if(!T.warned10&&rem<=10000){T.warned10=true;sound("clap");T.nextCall=Math.max(T.nextCall,t+1200);}
-    if(t>=T.nextCall&&rem>2500){callNext(rem);}
+    if(!T.said30&&S.roundSec>=60&&rem<=30000&&rem>25000){T.said30=true;say(S.banter?kru("last30"):"Last thirty, push!",{onend:armGap(nextGapMs(rem))});showCombo("Last 30","Push!",true,true);}
+    if(!T.warned10&&rem<=10000){T.warned10=true;sound("clap");if(isFinite(T.nextCall))T.nextCall=Math.max(T.nextCall,t+1200);}
+    if(!T.speaking&&t>=T.nextCall&&rem>2500){callNext(rem);}
     if(rem<=0){sound("bellEnd");if(T.round>=S.rounds)finish();else if(S.restSec>0)startRest();else startRound(T.round+1);}
   }else if(T.phase==="rest"){
     if(!T.warned10&&rem<=10000&&S.restSec>10){T.warned10=true;sound("clap");say(S.banter?kru("ten"):"Ten seconds. Get ready!");showCombo("Get ready","Round "+(T.round+1)+" in 10",true);}
@@ -418,15 +538,20 @@ function tick(){
   render();
 }
 function callNext(rem){
-  var t=now(),r=Math.random(),txt;
-  if(S.banter&&r<0.15){txt=rnd(BANTER);say(txt);showKru(txt);T.nextCall=t+3200;return;}
-  if(S.motivation&&r>=0.15&&r<0.25){txt=rnd(MOTIVATION);say(txt);showCombo(txt,"",false,true);T.nextCall=t+2500;return;}
-  txt=pickCombo(S.level,S.stance,S.defence);
+  var push=!!(S.ramp&&rem<=30000),r=Math.random(),txt;
+  var done=armGap(nextGapMs(rem));
+  if(push&&(S.banter||S.motivation)&&PUSH_LINES.length&&r<0.42){
+    txt=rnd(PUSH_LINES);say(txt,{onend:done});
+    if(BANTER.indexOf(txt)>=0)showKru(txt);else showCombo(txt,"",false,true);
+    return;
+  }
+  if(!push&&S.banter&&r<0.15){txt=rnd(BANTER);say(txt,{onend:done});showKru(txt);return;}
+  if(!push&&S.motivation&&r>=0.15&&r<0.25){txt=rnd(MOTIVATION);say(txt,{onend:done});showCombo(txt,"",false,true);return;}
+  txt=push?pickPushCombo(S.stance,S.defence):pickCombo(S.level,S.stance,S.defence);
   var st=strikes(txt),tag="";
-  if(S.banter&&Math.random()<0.25){tag=THAI_TAG[st[st.length-1].k]||"";}
-  say(tag?txt+"! "+tag:txt);
-  showStrikes(txt,st,tag?THAI_MEAN[tag]:LEVEL[S.level].label);
-  T.nextCall=t+nextInterval(txt)+(tag?500:0);
+  if(!push&&S.banter&&st.length&&Math.random()<0.25){tag=THAI_TAG[st[st.length-1].k]||"";}
+  say(tag?txt+"! "+tag:txt,{onend:done});
+  showStrikes(txt,st,tag?THAI_MEAN[tag]:(push?"Push":LEVEL[S.level].label));
 }
 
 /* ================= UI ================= */
@@ -473,6 +598,7 @@ function render(){
   $("pauseBtn").disabled=!running;$("pauseBtn").textContent=T.paused?"Resume":"Pause";
   $("stopBtn").disabled=ph==="idle";
   $("lvlTag").textContent=LEVEL[S.level].label;
+  if($("paceHelp"))$("paceHelp").textContent=paceCaption();
 }
 function buildSettings(){
   Array.prototype.forEach.call(document.querySelectorAll(".stepper"),function(box){
@@ -493,6 +619,11 @@ function buildSettings(){
     t.onclick=function(){S[k]=!S[k];save();upd();if(k==="pics")showPic(curPic||"guard");};upd();
   });
   $("voiceSel").onchange=function(){S.voiceURI=this.value;save();say("Jab, cross, "+resolve("{R} kick",S.stance)+"! Tae! Dee mak!");};
+  var ps=$("paceSlider");
+  if(ps){
+    var i=PACE_ORDER.indexOf(S.pace);ps.value=String(i<0?1:i);
+    ps.oninput=function(){S.pace=PACE_ORDER[+ps.value]||"normal";save();render();};
+  }
 }
 
 $("startBtn").addEventListener("click",function(){unlockAudio();start();});
@@ -518,13 +649,43 @@ if(/[?&]demo/.test(location.search)){
 /* ================= SELF TEST (?selftest) ================= */
 if(/[?&]selftest/.test(location.search)){
   var log=[],errs=[],vt=0,said=[],sounds=[];
-  hooks.now=function(){return vt;};hooks.onSay=function(x){said.push(Math.round(vt/1000)+"s "+T.phase+": "+x);};hooks.onSound=function(n){sounds.push(Math.round(vt/1000)+"s "+n);};
+  var saved=JSON.parse(JSON.stringify(S));
+  hooks.now=function(){return vt;};
+  hooks.onSay=function(x){said.push(vt+"ms "+T.phase+": "+x);};
+  hooks.onSound=function(n){sounds.push(vt+"ms "+n);};
+  hooks.skipSpeech=true;hooks.deferSpeech=false;
+  function near(got,exp,name){if(Math.abs(got-exp)>1)errs.push(name+" "+Math.round(got)+" expected "+exp);}
+  function runRound(level,roundSec,ramp,pace){
+    said.length=0;sounds.length=0;vt=0;recent.length=0;
+    S.level=level;S.pace=pace||"normal";S.ramp=!!ramp;S.roundSec=roundSec;
+    S.rounds=1;S.restSec=0;S.prepSec=0;S.banter=false;S.motivation=false;S.defence=false;
+    T.phase="idle";T.paused=false;T.speaking=false;T.round=0;
+    hooks.skipSpeech=true;hooks.deferSpeech=false;
+    start();clearInterval(T.timerId);T.timerId=null;
+    var n=0;while(T.phase!=="done"&&n<60000){vt+=50;tick();n++;}
+    var times=[];
+    said.forEach(function(s){var m=/^(\d+)ms round: (.*)$/.exec(s);if(m)times.push({t:+m[1],txt:m[2]});});
+    return {times:times,phase:T.phase};
+  }
+  function checkSchedule(label,level,pace,ramp,roundSec){
+    var res=runRound(level,roundSec,ramp,pace);
+    if(res.phase!=="done"){errs.push(label+" did not finish");return;}
+    var times=res.times,roundMs=roundSec*1000;
+    if(times.length<4){errs.push(label+" too few calls "+times.length);return;}
+    if(times[0].t>900)errs.push(label+" first call late "+times[0].t);
+    for(var i=0;i<times.length-1;i++){
+      var dt=times[i+1].t-times[i].t, rem=roundMs-times[i].t, exp=nextGapMs(rem);
+      var clapHold=rem>10000&&(roundMs-times[i+1].t)<=10000;
+      if(clapHold){if(dt+60<exp||dt>exp+1250){errs.push(label+" clap hold "+dt+" vs "+Math.round(exp));break;}}
+      else if(Math.abs(dt-exp)>60){errs.push(label+" @"+times[i].t+"ms dt "+dt+" expected "+Math.round(exp));break;}
+    }
+    if(ramp)times.forEach(function(c){if(c.t>=roundMs-30000&&strikes(c.txt).length>2)errs.push(label+" long push combo: "+c.txt);});
+    log.push(label+": "+times.length+" calls, first gap "+(times[1].t-times[0].t)+"ms");
+  }
   try{
-    // library checks
     ["beginner","intermediate","advanced"].forEach(function(l){log.push(l+": "+COMBOS[l].length+" combos");if(COMBOS[l].length<40)errs.push(l+" < 40 combos");
       COMBOS[l].forEach(function(c){if(/\{(?!L\}|R\})/.test(c))errs.push("bad token "+c);});});
     if(resolve("{L} kick, {R} kick","southpaw")!=="right kick, left kick")errs.push("stance resolve");
-    // every combo part maps to a technique picture
     var unk=[],used={};["beginner","intermediate","advanced"].forEach(function(l){COMBOS[l].forEach(function(c){
       c=resolve(c,"orthodox");c.split(/[,!]/).map(function(x){return x.trim();}).filter(Boolean).forEach(function(p){
         if(!/^one two/i.test(p)&&!/^double /i.test(p)&&!moveKey(p))unk.push(p);});
@@ -534,8 +695,62 @@ if(/[?&]selftest/.test(location.search)){
     if(JSON.stringify(strikes("One two three, right kick").map(function(x){return x.k;}))!=='["jab","cross","hook","kick"]')errs.push("strike parse");
     log.push("banter lines: "+BANTER.length);if(BANTER.length<40)errs.push("banter < 40");
     BANTER.forEach(function(b){if(DEFENCE_RE.test(b))errs.push("banter has defence word: "+b);});
-    var saved=JSON.parse(JSON.stringify(S));
-    S.rounds=3;S.roundSec=60;S.restSec=30;S.prepSec=10;S.interval=5;S.level="advanced";S.defence=false;S.banter=true;S.motivation=true;
+    if(PUSH_LINES.length<8)errs.push("push lines "+PUSH_LINES.length);
+    if(DEFAULTS.rate<1.2||DEFAULTS.rate>1.3)errs.push("rate default "+DEFAULTS.rate);
+    if(!$("paceSlider")||document.querySelector("[data-key=interval]"))errs.push("pace slider missing or interval control remains");
+    var note=$("voiceNote").textContent;
+    if(note!=="For the Thai coach voice on iPhone: Settings > Accessibility > Spoken Content > Voices > Thai > Kanya (download).")errs.push("voice note: "+note);
+    if(paceFromInterval(5)!=="normal"||paceFromInterval(9)!=="slow"||paceFromInterval(3)!=="fast"||paceFromInterval(2)!=="savage")errs.push("interval migration");
+    var mig=applyLegacy({interval:5,rate:1.1,rounds:8,level:"advanced"});
+    if(mig.pace!=="normal"||mig.rounds!==8||mig.level!=="advanced"||mig.ramp!==true||Math.abs(mig.rate-1.25)>0.001)errs.push("legacy settings "+JSON.stringify(mig));
+    var kept=applyLegacy({pace:"savage",rate:1.1,ramp:false,rounds:2});
+    if(kept.pace!=="savage"||kept.ramp!==false||Math.abs(kept.rate-1.1)>0.001)errs.push("saved pace overwritten");
+    S.level="beginner";S.pace="normal";S.ramp=false;S.roundSec=180;
+    near(nextGapMs(180000),3000,"beginner");
+    S.level="intermediate";near(nextGapMs(180000),2200,"intermediate");
+    S.level="advanced";near(nextGapMs(180000),1500,"advanced");
+    S.level="beginner";S.pace="slow";near(nextGapMs(180000),4050,"slow");
+    S.pace="fast";near(nextGapMs(180000),2100,"fast");
+    S.pace="savage";near(nextGapMs(180000),1500,"savage");
+    S.pace="normal";S.ramp=true;S.roundSec=180;
+    near(nextGapMs(180000-75000),2400,"ramp mid");
+    near(nextGapMs(15000),1500,"push");
+    S.ramp=false;near(nextGapMs(15000),3000,"ramp off");
+    hooks.deferSpeech=true;hooks.skipSpeech=false;
+    S.level="beginner";S.pace="normal";S.ramp=false;S.banter=false;S.motivation=false;S.defence=false;S.roundSec=180;
+    vt=1000;T.phase="round";T.paused=false;T.phaseEnd=vt+120000;T.speaking=false;
+    callNext(100000);
+    if(isFinite(T.nextCall))errs.push("next call armed before speech ended");
+    vt=9000;if(hooks.pendingEnd)hooks.pendingEnd();else errs.push("speech end not captured");
+    near(T.nextCall,12000,"gap measured from speech end");
+    hooks.deferSpeech=false;hooks.skipSpeech=true;hooks.pendingEnd=null;T.phase="idle";T.speaking=false;
+    function fv(name,lang){return {name:name,lang:lang,voiceURI:name+"|"+lang,localService:true};}
+    S.voiceURI="";
+    voices=[fv("Samantha","en-US"),fv("Daniel","en-AU"),fv("Kanya","th-TH"),fv("Google Thai","th-TH")];
+    var chosen=pickVoice();
+    if(!chosen||!/^th/i.test(chosen.lang)||!/kanya/i.test(chosen.name))errs.push("thai voice not preferred: "+(chosen&&chosen.name));
+    voices=[fv("Kanya","th_TH"),fv("Daniel","en-AU")];
+    chosen=pickVoice();if(!chosen||!isThai(chosen))errs.push("th_TH not recognised");
+    voices=[fv("Samantha","en-US"),fv("George","en-GB"),fv("Daniel","en-AU")];
+    chosen=pickVoice();
+    if(!chosen||chosen.name!=="Daniel"||String(chosen.lang).toLowerCase()!=="en-au")errs.push("english fallback "+(chosen&&chosen.name)+" "+(chosen&&chosen.lang));
+    S.voiceURI="Daniel|en-AU";
+    voices=[fv("Kanya","th-TH"),fv("Daniel","en-AU")];
+    chosen=pickVoice();if(!chosen||chosen.name!=="Daniel")errs.push("explicit voice ignored");
+    S.voiceURI="";voices=[fv("Daniel","en-AU"),fv("Kanya","th-TH")];fillVoiceList();
+    var optText=[];Array.prototype.forEach.call($("voiceSel").options,function(o){optText.push(o.textContent);});
+    if(optText[0]!=="Auto (Thai coach)")errs.push("auto label "+optText[0]);
+    if(!/\(Thai\)$/.test(optText[1]||""))errs.push("thai not first: "+optText.join(" | "));
+    checkSchedule("beginner normal", "beginner", "normal", false, 50);
+    checkSchedule("intermediate normal", "intermediate", "normal", false, 50);
+    checkSchedule("advanced normal", "advanced", "normal", false, 50);
+    checkSchedule("beginner slow", "beginner", "slow", false, 50);
+    checkSchedule("beginner savage", "beginner", "savage", false, 50);
+    checkSchedule("beginner ramp", "beginner", "normal", true, 50);
+    checkSchedule("advanced ramp", "advanced", "normal", true, 50);
+    said.length=0;sounds.length=0;vt=0;recent.length=0;
+    S.rounds=3;S.roundSec=60;S.restSec=30;S.prepSec=10;S.pace="normal";S.ramp=true;S.level="advanced";S.defence=false;S.banter=true;S.motivation=true;
+    T.phase="idle";T.paused=false;T.speaking=false;
     start();clearInterval(T.timerId);T.timerId=null;
     var phases=[],lastP="";
     for(var i=0;i<4000&&T.phase!=="done";i++){vt+=100;tick();if(T.phase!==lastP){phases.push(Math.round(vt/1000)+"s→"+T.phase+(T.phase==="round"?T.round:""));lastP=T.phase;}
@@ -544,16 +759,20 @@ if(/[?&]selftest/.test(location.search)){
     log.push("phases: "+phases.join(", "));
     log.push("total spoken: "+said.length+", in-round calls: "+calls.length);
     log.push("sounds: "+sounds.join(", "));
-    log.push("sample: "+said.slice(0,14).join(" | "));
+    log.push("sample: "+said.slice(0,8).join(" | "));
     if(T.phase!=="done")errs.push("did not finish");
-    var exp=10+60*3+30*2+60; // incl 60s pause
+    var exp=10+60*3+30*2+60;
     if(Math.abs(vt/1000-exp)>2)errs.push("duration "+vt/1000+" expected ~"+exp);
-    if(said.some(function(s){return / round: /.test(s)&&DEFENCE_RE.test(s.split(": ")[1]);}))errs.push("defence call leaked when disabled");
+    if(said.some(function(s){return / round: /.test(s)&&DEFENCE_RE.test(s.split(": ").slice(1).join(": "));}))errs.push("defence call leaked when disabled");
     if(sounds.filter(function(s){return /clap/.test(s);}).length<5)errs.push("missing 10s claps");
-    if(calls.length<15)errs.push("too few calls");
-    for(var k in saved)S[k]=saved[k];
-  }catch(e){errs.push("EXCEPTION "+e.message+" "+e.stack);}
-  T.phase="idle";clearSteps();hooks.now=function(){return performance.now();};
+    if(calls.length<80)errs.push("too few calls "+calls.length);
+  }catch(e){errs.push("EXCEPTION "+e.message+" "+(e.stack||""));}
+  for(var k in saved)S[k]=saved[k];
+  hooks.skipSpeech=false;hooks.deferSpeech=false;hooks.pendingEnd=null;
+  T.phase="idle";T.paused=false;T.speaking=false;clearSteps();
+  hooks.now=function(){return performance.now();};
+  if(synth)loadVoices();
+  buildSettings();render();
   $("selftest").textContent=(errs.length?"SELFTEST FAIL\n"+errs.join("\n"):"SELFTEST PASS")+"\n"+log.join("\n");
 }
 })();
