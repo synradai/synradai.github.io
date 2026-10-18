@@ -17,11 +17,14 @@ export default defineConfig({
       manifest: false,
       workbox: {
         globPatterns: ['**/*.{js,css,html,png,svg,webmanifest}'],
-        // /tracker/ (SwingTrack) is a separate standalone PWA with its own
-        // service worker — keep it out of this app's precache and never serve
-        // the Safe Intelligence shell for its navigations.
-        globIgnores: ['tracker/**'],
-        navigateFallbackDenylist: [/^\/tracker\//],
+        // Standalone apps live under public/ and must stay out of this
+        // service worker. /tracker/ (SwingTrack) has its own worker.
+        // /muay-thai/ (Muay Thai Kru) is a static page with no worker.
+        // globPatterns would otherwise precache muay-thai/index.html, and the
+        // navigation fallback would serve this app's shell for those URLs
+        // (including /muay-thai with no slash, and with a query string).
+        globIgnores: ['tracker/**', 'muay-thai/**'],
+        navigateFallbackDenylist: [/^\/tracker\//, /^\/muay-thai(?:\/|\?|$)/],
         cleanupOutdatedCaches: true,
         // App data/API calls (Supabase, AI proxy) always go to the network —
         // never cache them. Only same-origin static assets are precached, plus
