@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<title>Kru · Muay Thai Combo Caller</title>
+<style>
+:root{--bg:#000;--txt:#fff;--mut:#8a8a8f;--dim:#3a3a3e;--line:#1c1c1f;--acc:#ff2d3a}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:#000;color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Inter","Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+body{min-height:100vh;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+.wrap{max-width:520px;margin:0 auto;padding:18px 22px 48px}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+h1{font-size:15px;margin:0;letter-spacing:4px;text-transform:uppercase;font-weight:800}
+h1 span{color:var(--acc)}
+.lvl-tag{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--mut)}
+.stage{text-align:center;position:relative}
+.top{display:flex;align-items:baseline;justify-content:space-between}
+.phase{font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--mut);transition:color .3s}
+.stage.round .phase{color:var(--acc)} .stage.rest .phase{color:#fff}
+.roundinfo{font-size:12px;color:var(--mut);font-weight:600;letter-spacing:2px;text-transform:uppercase}
+.roundinfo b{color:#fff;font-weight:700}
+.timer{font-size:min(24vw,112px);font-weight:200;line-height:1;margin:10px 0 14px;font-variant-numeric:tabular-nums;letter-spacing:-3px;transition:color .3s}
+.timer.warn{color:var(--acc);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.45}}
+.bar{height:2px;background:var(--line);overflow:hidden;margin-bottom:6px}
+.bar i{display:block;height:100%;width:0;background:var(--acc);transition:width .25s linear}
+.pic{position:relative;width:min(72vw,300px);aspect-ratio:1/1;margin:8px auto 4px}
+.pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;transform:scale(.97);transition:opacity .22s ease,transform .3s ease}
+.pic img.on{opacity:1;transform:scale(1)}
+.pic .mv{position:absolute;left:0;right:0;bottom:-2px;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--mut);font-weight:600}
+.combo{min-height:120px;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:6px 0}
+.combo .txt{font-size:clamp(28px,9vw,46px);font-weight:800;line-height:1.1;letter-spacing:-.5px;word-break:break-word}
+.combo .txt .s{color:var(--dim);transition:color .2s;display:inline-block;white-space:nowrap}
+.combo .txt .s.done{color:#77777c}
+.combo .txt .s.cur{color:#fff}
+.combo .txt .s.cur:after{content:"";display:block;height:3px;background:var(--acc);border-radius:2px;margin:4px 8% 0;animation:grow .25s ease-out}
+.combo .txt .sep{color:var(--dim)}
+@keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.combo .txt.kru{color:#fff;font-weight:700;font-size:clamp(22px,6.6vw,32px);font-style:italic}
+.combo .txt.kru:before{content:"KRU";display:block;font-style:normal;font-size:11px;letter-spacing:4px;color:var(--acc);margin-bottom:8px;font-weight:800}
+.combo .txt.motiv{color:var(--acc)}
+.combo .txt.flash{animation:pop .3s ease-out}
+@keyframes pop{0%{transform:translateY(6px);opacity:0}100%{transform:none;opacity:1}}
+.combo .sub{font-size:12px;color:var(--mut);margin-top:10px;font-weight:500;letter-spacing:1px}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:22px 0 12px}
+button{font:inherit;border:0;color:#fff;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none;background:none;transition:transform .1s,opacity .2s,background .2s}
+button:active{transform:scale(.97)}
+.big{min-height:60px;font-size:14px;border-radius:99px}
+#startBtn{grid-column:1/-1;background:var(--acc);min-height:68px;font-size:16px;letter-spacing:4px}
+#pauseBtn,#stopBtn{border:1px solid #2e2e32}
+button:disabled{opacity:.25;transform:none}
+.testrow{display:flex;gap:10px;margin-bottom:26px}
+.testrow button{flex:1;min-height:46px;font-size:11px;color:var(--mut);border:1px solid var(--line);border-radius:99px}
+details{border-top:1px solid var(--line)}
+summary{font-weight:700;text-transform:uppercase;letter-spacing:3px;padding:18px 0;cursor:pointer;color:#fff;list-style:none;font-size:12px}
+summary::-webkit-details-marker{display:none}
+summary:after{content:"+";float:right;color:var(--mut);font-weight:300;font-size:18px;line-height:12px}
+details[open] summary:after{content:"–"}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;border-top:1px solid var(--line)}
+.row label{font-weight:600;font-size:15px}
+.row small{display:block;color:var(--mut);font-weight:400;font-size:12px;margin-top:2px}
+.stepper{display:flex;align-items:center;gap:4px}
+.stepper button{width:40px;height:40px;font-size:20px;font-weight:300;border:1px solid #2e2e32;border-radius:50%;padding:0;letter-spacing:0}
+.stepper output{min-width:62px;text-align:center;font-weight:600;font-size:16px;font-variant-numeric:tabular-nums}
+.seg{display:flex;border:1px solid #2e2e32;border-radius:99px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{min-height:38px;padding:0 12px;font-size:11px;color:var(--mut);border-radius:99px;letter-spacing:1px}
+.seg button.on{background:#fff;color:#000}
+.seg.full{width:100%} .seg.full button{flex:1}
+.toggle{width:50px;height:30px;border-radius:99px;background:#2a2a2e;position:relative;flex:none;padding:0}
+.toggle:after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:left .2s}
+.toggle.on{background:var(--acc)} .toggle.on:after{left:23px}
+select{font:inherit;font-size:13px;background:#000;color:#fff;border:1px solid #2e2e32;border-radius:12px;padding:10px;max-width:56vw;min-height:42px}
+.col{flex-direction:column;align-items:stretch}
+.note{color:#5d5d62;font-size:11px;line-height:1.6;margin-top:24px;text-align:center}
+.wl{font-size:10px;color:#4a4a4f;margin-top:6px;letter-spacing:1px}
+#selftest{white-space:pre-wrap;font:11px monospace;color:#9f9}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Muay Thai <span>Kru</span></h1>
+    <div class="lvl-tag" id="lvlTag">Beginner</div>
+  </header>
+
+  <section class="stage" id="stage">
+    <div class="top"><div class="phase" id="phase">Ready to train</div><div class="roundinfo" id="roundInfo">Round <b>0</b> / 5</div></div>
+    <div class="timer" id="timer">3:00</div>
+    <div class="bar"><i id="bar"></i></div>
+    <div class="pic" id="pic"><img id="imgA" alt=""><img id="imgB" alt=""><div class="mv" id="mvName"></div></div>
+    <div class="combo">
+      <div class="txt" id="comboTxt">Tap start</div>
+      <div class="sub" id="comboSub">Volume up · Kru calls the combos out loud</div>
+    </div>
+    <div class="wl" id="wlInfo"></div>
+  </section>
+
+  <div class="controls">
+    <button class="big" id="startBtn">Start</button>
+    <button class="big" id="pauseBtn" disabled>Pause</button>
+    <button class="big" id="stopBtn" disabled>Stop</button>
+  </div>
+  <div class="testrow">
+    <button id="voiceTestBtn">Test voice</button>
+    <button id="bellTestBtn">Test bell</button>
+  </div>
+
+  <details id="settings">
+    <summary>Settings</summary>
+    <div class="row col"><label>Level <small>Changes combo complexity and pace</small></label>
+      <div class="seg full" data-seg="level">
+        <button data-v="beginner">Beginner</button><button data-v="intermediate">Intermediate</button><button data-v="advanced">Advanced</button>
+      </div></div>
+    <div class="row"><label>Rounds</label><div class="stepper" data-key="rounds"></div></div>
+    <div class="row"><label>Round length</label><div class="stepper" data-key="roundSec"></div></div>
+    <div class="row"><label>Rest</label><div class="stepper" data-key="restSec"></div></div>
+    <div class="row"><label>Get-ready time</label><div class="stepper" data-key="prepSec"></div></div>
+    <div class="row"><label>Call every <small>Average secs, randomised ±1s, adjusted by level &amp; combo length</small></label><div class="stepper" data-key="interval"></div></div>
+    <div class="row"><label>Voice speed</label><div class="stepper" data-key="rate"></div></div>
+    <div class="row"><label>Stance <small>Sets which side "left / right" means</small></label>
+      <div class="seg" data-seg="stance"><button data-v="orthodox">Orthodox</button><button data-v="southpaw">Southpaw</button></div></div>
+    <div class="row"><label>Defence calls <small>Check, block, slip, roll, catch…</small></label><button class="toggle" data-toggle="defence" aria-label="Defence calls"></button></div>
+    <div class="row"><label>Kru banter <small>Cheeky coach lines &amp; Thai gym words: "Tae!", "Dee mak!"</small></label><button class="toggle" data-toggle="banter" aria-label="Kru banter"></button></div>
+    <div class="row"><label>Motivation shouts <small>"Hands up!", "Breathe!"…</small></label><button class="toggle" data-toggle="motivation" aria-label="Motivation"></button></div>
+    <div class="row"><label>Show technique pictures</label><button class="toggle" data-toggle="pics" aria-label="Pictures"></button></div>
+    <div class="row"><label>Voice <small>Deeper voices are picked first</small></label><select id="voiceSel"><option value="">Auto (deep voice)</option></select></div>
+  </details>
+
+  <p class="note">Orthodox: lead = left, rear = right. "Kick" = roundhouse. Thai words: Mat = punch · Tae = kick · Kao = knee · Sok = elbow · Dee mak = very good · Chai yo = let's go! Keep this screen open while training. On iPhone, turn off silent mode for the bell.</p>
+  <div id="selftest"></div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ================= COMBO LIBRARY =================
+   {R} = rear side, {L} = lead side (resolved by stance).
+   Orthodox: lead=left, rear=right. */
+var COMBOS = {
+  beginner: [
+    "Jab","Jab, cross","One two","Teep!","{R} kick","Jab, {R} kick","Jab, cross, hook","One two, {R} kick",
+    "Double jab","Jab, teep","{R} knee","Cross, hook","Jab, cross, {R} knee","Check!","Check, {R} kick",
+    "Block, cross","Jab, step back","Teep, {R} kick","{L} teep","{R} teep","Jab, cross, hook, cross",
+    "One two three","Hook, cross","Jab, body cross","Jab, {R} low kick","{R} low kick","Cross, {L} kick",
+    "Slip, cross","Jab, cross, step back","Jab, uppercut","Body jab, head jab","One two, teep",
+    "Catch, {R} kick","{R} body kick","Jab, {R} body kick","Double teep","Knee, knee","Jab, {R} knee",
+    "Check, jab, cross","Roll, hook","Jab, hook","Teep, jab, cross","One two, roll","Hook, {R} kick",
+    "Block, {R} kick","Step back, teep"
+  ],
+  intermediate: [
+    "One two, switch kick","Jab, cross, hook, {R} kick","One two three, {R} kick","Jab, cross, {L} kick",
+    "Teep, one two, {R} kick","Check, {L} hook, cross","Check, check, {R} kick","Slip, cross, hook",
+    "Roll, hook, cross","Jab, {R} elbow","Cross, {L} elbow","One two, switch knee","Hook, {R} uppercut, hook",
+    "Jab, {R} uppercut, hook","Double jab, cross, {R} kick","Jab, {R} low kick, cross","{R} low kick, cross, hook",
+    "Teep, {R} kick, cross","Catch, cross, {R} kick","Block, hook, {R} kick","One two, body hook, head hook",
+    "One two, {R} knee","Clinch! {R} knee, {L} knee","Switch kick, cross, hook","Jab, switch knee",
+    "One two, step back, {R} kick","Cross, hook, {R} low kick","Slip, slip, cross","Jab, cross, {L} uppercut, cross",
+    "Hook, cross, {L} kick","{R} teep, {R} kick","Jab, cross, {L} elbow","Fake teep, {R} kick",
+    "Jab, {R} uppercut elbow","Body jab, cross, hook","Teep, teep, {R} kick","Catch, sweep!",
+    "Step back, {R} teep","One two three two","Roll, cross, hook, {R} kick","Jab, cross, step back, jab",
+    "Check, switch kick","Block, one two, {R} knee","{R} kick, {R} kick","Slip, {R} body kick"
+  ],
+  advanced: [
+    "Jab, cross, hook, cross, {L} kick","One two, switch kick, cross, {R} kick","Check, hook, cross, hook, {R} kick",
+    "Teep, jab, cross, {L} elbow, {R} elbow","Double jab, cross, switch knee, {R} knee","Slip, cross, hook, {R} low kick",
+    "Roll, hook, cross, hook, {R} kick","One two three, {R} uppercut elbow","Jab, cross, {L} elbow, {R} elbow, {R} knee",
+    "Catch, cross, hook, {R} kick","Block, {R} uppercut, hook, {R} kick","Check, switch kick, cross, {R} kick",
+    "One two, {R} low kick, switch kick","Hook, cross, hook, switch kick","Fake jab, {R} kick, {R} kick",
+    "Jab, cross, {L} kick, {R} kick","Teep, {R} kick, cross, hook, {R} knee","Step back, {R} teep, one two, {R} kick",
+    "One two, body hook, head hook, {R} kick","Jab, {R} uppercut, hook, cross, {L} kick","Slip, slip, cross, hook, cross",
+    "Check, check, one two, {R} kick","{R} low kick, {R} high kick","Switch knee, switch knee, cross",
+    "Clinch! Knee, knee, knee, push off, teep","Jab, cross, spinning back elbow","One two, {R} kick, switch kick, {R} knee",
+    "Double jab, {L} elbow, {R} elbow","Catch, sweep, cross, {R} kick","Roll, roll, hook, cross, {R} kick",
+    "Jab, cross, hook, {R} uppercut, hook, cross","Teep, teep, switch kick","One two three two, {R} low kick",
+    "{L} teep, switch kick, cross","Cross, hook, {R} elbow, {R} knee","Jab, {R} high kick","One two, step back, switch kick",
+    "Check, {R} kick, cross, hook, {R} kick","Jab, cross, {L} uppercut elbow, {R} elbow","Body jab, cross, {L} hook, {R} kick",
+    "Slip, {R} uppercut, hook, {L} elbow","Hook, {R} uppercut, {L} elbow, {R} knee","Superman punch, hook, {R} kick",
+    "Fake kick, cross, hook, {R} kick","Block, cross, hook, switch knee","Jab, switch kick, switch kick"
+  ]
+};
+var MOTIVATION = ["Hands up!","Breathe!","Chin down!","Keep moving!","Stay sharp!","Hands back to guard!","Sit on your kicks!","Turn the hip over!","Exhale on every shot!","Good! Keep it going!","Power!","Faster hands!","Don't drop your hands!","Light on your feet!","Strong teeps!"];
+var DEFENCE_RE = /\b(check|block|slip|roll|catch|step back)\b/i;
+
+/* ================= KRU (coach persona) ================= */
+var BANTER = [
+  "Why you stop? Your mum kick harder!","Hands up, or you sleep!","Kick like you owe me money!","Tired? Tired is for after.",
+  "Dee mak! ...okay, not dee mak. Again.","Chai yo! Chai yo!","You dance or you fight? Fight!","My grandmother teep harder. She is ninety.",
+  "Chin down! Your chin is not for showing.","Breathe! Sleeping fighter no pay gym fee.","Again! Same same, but better.","Sabai sabai is for the beach. Not here!",
+  "Tae! Kick the bag, not the air!","Turn the hip! The hip is free, use it!","You smile? Then I go too easy.","Mai pen rai? No. Mai pen rai later. Now, work!",
+  "Hands down? You want a new nose?","Good! ...I lie. Again!","Kao! Knee like you mean it!","Sok! Elbow sharp, like a knife!",
+  "This is warm-up? Warm-up finish long time ago!","Pain is temporary. Kru is forever.","You punch like you say sorry. No sorry!","Faster! The bag is falling asleep.",
+  "Look at you! Almost a fighter. Almost.","Keep going! Mango sticky rice after. Maybe.","Water break? Hmm. No.","Hit the bag. It never did anything nice for you.",
+  "Light feet! You are not a buffalo.","Ooh, dee mak! Do it again so I believe.","That kick is a love tap. I want a divorce kick!","Don't look at me, look at the target!",
+  "Mat! Punch through it, not to it!","Who told you to rest? Not Kru.","Strong! Like elephant. Small elephant.","Lean back on the kick, not on the excuses!",
+  "You think you are Buakaw now? Ha! Again.","Exhale! Make the noise! Ssst! Ssst!","Your shin is tough? Prove it!","More power! I cannot hear the bag cry.",
+  "Eyes up! The floor is not your enemy.","Yes! Like that! Now a thousand more.","You are the boss? No. Kru is the boss. Kick!","Sweat now, look good at the beach later.",
+  "Slow like grandma on Sunday. Faster!","Tae tae tae! Kick, kick, kick!"
+];
+var KRU = {
+  ready:["Get ready! Kru is waiting. Round one in {s} seconds.","Wai khru, then hands up. Round one in {s} seconds.","Stretch finish? Good. Round one in {s} seconds."],
+  start:["Round {n}. Chai yo! Fight!","Round {n}. Hands up, we go!","Round {n}. Show Kru something!","Round {n}! No walking, only fighting!"],
+  final:["Final round! Leave everything here. Chai yo!","Last round! After this, you can cry.","Final round! Kru is watching. No pressure."],
+  rest:["Time! Rest. Drink water, not excuses. Round {n} next.","Time! Breathe. You did okay. Only okay. Round {n} next.","Time! Sit if you must. Kru is watching. Round {n} next.","Time! Dee mak. Rest now, round {n} coming, ready or not."],
+  ten:["Ten seconds! Get up, get up!","Ten seconds. Rest is almost finish!","Ten seconds! Mouthguard in, chin down!"],
+  last30:["Last thirty! Empty the tank!","Thirty seconds! Now we see who is a fighter!","Last thirty! Kick like you owe me money!"],
+  done:["Finish! Dee mak! ...Really, this time. Dee mak!","Workout done! Good job. Same time tomorrow, yes?","Done! You survive Kru. Very impressive."],
+  pause:["Paused. Kru is drinking tea.","Paused. Okay, quick. Very quick."],
+  go:["Go! Chai yo!","Back to work!"]
+};
+var THAI_TAG={kick:"Tae!",switch_kick:"Tae!",high_kick:"Tae!",low_kick:"Tae!",knee:"Kao!",elbow:"Sok!",jab:"Mat!",cross:"Mat!",hook:"Mat!",uppercut:"Mat!",teep:"Teep!"};
+var THAI_MEAN={"Tae!":"Tae · kick","Kao!":"Kao · knee","Sok!":"Sok · elbow","Mat!":"Mat · punch","Teep!":"Teep · push kick"};
+function rnd(a){return a[Math.floor(Math.random()*a.length)];}
+function kru(kind,vars){var t=rnd(KRU[kind]);vars=vars||{};return t.replace("{n}",vars.n).replace("{s}",vars.s);}
+
+/* ================= STRIKES -> PICTURES ================= */
+var IMG_DIR="img/";
+var MOVES={guard:"Guard",jab:"Jab",cross:"Cross",hook:"Hook",uppercut:"Uppercut",elbow:"Elbow",teep:"Teep",kick:"Roundhouse kick",low_kick:"Low kick",high_kick:"High kick",switch_kick:"Switch kick",knee:"Knee",clinch:"Clinch",check:"Check",block:"Block",slip:"Slip",roll:"Roll",catch:"Catch",step_back:"Step back"};
+var MOVE_RULES=[[/elbow/,"elbow"],[/switch knee/,"knee"],[/switch kick/,"switch_kick"],[/high kick/,"high_kick"],[/low kick/,"low_kick"],[/teep/,"teep"],[/knee/,"knee"],[/kick/,"kick"],
+  [/uppercut/,"uppercut"],[/hook|\bthree\b/,"hook"],[/cross|\btwo\b|superman/,"cross"],[/jab|\bone\b/,"jab"],[/clinch|push off/,"clinch"],[/check/,"check"],[/block/,"block"],
+  [/slip/,"slip"],[/roll/,"roll"],[/catch|sweep/,"catch"],[/step back/,"step_back"]];
+function moveKey(part){var l=part.toLowerCase();for(var i=0;i<MOVE_RULES.length;i++)if(MOVE_RULES[i][0].test(l))return MOVE_RULES[i][1];return null;}
+function cap(x){return x.charAt(0).toUpperCase()+x.slice(1);}
+/* split a called combo into steps [{t:label,k:imageKey}] */
+function strikes(text){
+  var out=[];
+  text.split(/[,!]/).map(function(x){return x.trim();}).filter(Boolean).forEach(function(p){
+    var l=p.toLowerCase(),m;
+    if(/^one two( three)?( two)?$/.test(l)){l.split(" ").forEach(function(w){out.push({t:cap(w),k:w==="one"?"jab":w==="two"?"cross":"hook"});});return;}
+    if((m=l.match(/^double (.*)$/))){var k2=moveKey(m[1])||"guard";out.push({t:cap(m[1]),k:k2},{t:cap(m[1]),k:k2});return;}
+    out.push({t:p,k:moveKey(p)||"guard"});
+  });
+  return out;
+}
+var LEVEL = {
+  beginner:{pace:1.25,label:"Beginner"},
+  intermediate:{pace:1.0,label:"Intermediate"},
+  advanced:{pace:0.8,label:"Advanced",mix:"intermediate",mixChance:0.25}
+};
+
+/* ================= SETTINGS ================= */
+var DEFAULTS = {rounds:5,roundSec:180,restSec:60,prepSec:10,interval:5,rate:1.1,level:"beginner",stance:"orthodox",defence:true,motivation:true,banter:true,pics:true,voiceURI:""};
+var STEP = {
+  rounds:{min:1,max:20,step:1,fmt:function(v){return v;}},
+  roundSec:{min:30,max:600,step:30,fmt:mmss},
+  restSec:{min:0,max:300,step:15,fmt:mmss},
+  prepSec:{min:0,max:30,step:5,fmt:function(v){return v+"s";}},
+  interval:{min:2,max:12,step:0.5,fmt:function(v){return v+"s";}},
+  rate:{min:0.8,max:1.6,step:0.05,fmt:function(v){return v.toFixed(2)+"×";}}
+};
+var KEY="mtcaller.settings.v1";
+var S = load();
+function load(){var o={};try{o=JSON.parse(localStorage.getItem(KEY))||{};}catch(e){}var s={};for(var k in DEFAULTS)s[k]=(k in o)?o[k]:DEFAULTS[k];return s;}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+
+function mmss(sec){sec=Math.max(0,Math.ceil(sec));var m=Math.floor(sec/60),s=sec%60;return m+":"+(s<10?"0":"")+s;}
+
+/* ================= COMBO ENGINE ================= */
+var recent=[];
+function resolve(str,stance){var L=stance==="southpaw"?"right":"left",R=stance==="southpaw"?"left":"right";return str.replace(/\{L\}/g,L).replace(/\{R\}/g,R);}
+function pool(level,defence){
+  var lv=LEVEL[level]||LEVEL.beginner,p=COMBOS[level]||COMBOS.beginner;
+  if(lv.mix&&Math.random()<lv.mixChance)p=COMBOS[lv.mix];
+  if(!defence)p=p.filter(function(c){return !DEFENCE_RE.test(c);});
+  return p;
+}
+function pickCombo(level,stance,defence){
+  var p=pool(level,defence),c,tries=0;
+  do{c=p[Math.floor(Math.random()*p.length)];tries++;}while(recent.indexOf(c)>=0&&tries<20);
+  recent.push(c);if(recent.length>4)recent.shift();
+  return resolve(c,stance);
+}
+function strikeCount(text){return text.split(/[,!]/).filter(function(x){return x.trim();}).length;}
+function nextInterval(text){
+  var lv=LEVEL[S.level]||LEVEL.beginner;
+  var base=S.interval+(Math.random()*2-1);
+  var extra=Math.max(0,strikeCount(text)-2)*0.45;
+  return Math.max(2,(base*lv.pace)+extra)*1000;
+}
+
+/* ================= AUDIO (WebAudio) ================= */
+var actx=null,master=null;
+function audio(){
+  if(!actx){var AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;actx=new AC();
+    var comp=actx.createDynamicsCompressor();comp.threshold.value=-10;comp.ratio.value=4;comp.connect(actx.destination);
+    master=actx.createGain();master.gain.value=1.0;master.connect(comp);}
+  if(actx.state==="suspended")actx.resume();
+  return actx;
+}
+function unlockAudio(){var a=audio();if(!a)return;var b=a.createBuffer(1,1,22050),s=a.createBufferSource();s.buffer=b;s.connect(master);s.start(0);}
+function ding(t0){
+  var a=actx,parts=[[700,1],[1407,.55],[1960,.35],[2690,.22],[3500,.12]];
+  parts.forEach(function(p){var o=a.createOscillator(),g=a.createGain();o.type="sine";o.frequency.value=p[0];
+    g.gain.setValueAtTime(0.0001,t0);g.gain.exponentialRampToValueAtTime(0.5*p[1],t0+0.005);g.gain.exponentialRampToValueAtTime(0.0001,t0+1.6);
+    o.connect(g);g.connect(master);o.start(t0);o.stop(t0+1.7);});
+}
+function bell(times){var a=audio();if(!a)return;var t=a.currentTime+0.02;for(var i=0;i<times;i++)ding(t+i*0.42);}
+function clack(t0){
+  var a=actx,len=Math.floor(a.sampleRate*0.06),buf=a.createBuffer(1,len,a.sampleRate),d=buf.getChannelData(0);
+  for(var i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3);
+  var s=a.createBufferSource(),f=a.createBiquadFilter(),g=a.createGain();s.buffer=buf;f.type="bandpass";f.frequency.value=1800;f.Q.value=1.2;g.gain.value=1.6;
+  s.connect(f);f.connect(g);g.connect(master);s.start(t0);
+}
+function clap10(){var a=audio();if(!a)return;var t=a.currentTime+0.02;for(var i=0;i<3;i++){clack(t+i*0.32);clack(t+i*0.32+0.11);}}
+function beep(freq,dur){var a=audio();if(!a)return;var t=a.currentTime+0.01,o=a.createOscillator(),g=a.createGain();o.type="square";o.frequency.value=freq;
+  g.gain.setValueAtTime(0.25,t);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);o.connect(g);g.connect(master);o.start(t);o.stop(t+dur+0.02);}
+
+/* ================= SPEECH ================= */
+var synth=window.speechSynthesis||null,voices=[];
+function loadVoices(){
+  if(!synth)return;voices=synth.getVoices()||[];
+  var sel=document.getElementById("voiceSel"),cur=S.voiceURI;
+  while(sel.options.length>1)sel.remove(1);
+  voices.filter(function(v){return /^en/i.test(v.lang);}).sort(function(a,b){return rankVoice(b)-rankVoice(a);}).forEach(function(v){
+    var o=document.createElement("option");o.value=v.voiceURI;o.textContent=v.name+" ("+v.lang+")";if(v.voiceURI===cur)o.selected=true;sel.appendChild(o);});
+}
+var MALE_RE=/\b(male|man|lee|daniel|arthur|gordon|aaron|fred|alex|tom|oliver|james|rishi|thomas|george|ryan|william|guy|reed|ralph|eddy|rocko|grandpa|liam|noah|brian|russell|david|mark|richard)\b/i;
+var FEMALE_RE=/\b(female|woman|karen|catherine|samantha|moira|tessa|serena|martha|kate|susan|victoria|allison|ava|zoe|nicky|fiona|veena|libby|sonia|natasha|hazel|zira|aria|jenny|emma|sara|amy|olivia|grandma|shelley|sandy|flo|kathy)\b/i;
+function rankVoice(v){var r=0,l=(v.lang||"").replace("_","-").toLowerCase(),n=v.name||"";
+  if(l==="en-au")r+=30;else if(l==="en-gb")r+=26;else if(l==="en-nz"||l==="en-ie")r+=22;else if(l.indexOf("en")===0)r+=10;
+  if(MALE_RE.test(n))r+=25;else if(FEMALE_RE.test(n))r-=6;
+  if(/google|natural|neural|enhanced|premium|siri/i.test(n))r+=8;if(v.localService)r+=1;return r;}
+function pickVoice(){
+  if(S.voiceURI){for(var i=0;i<voices.length;i++)if(voices[i].voiceURI===S.voiceURI)return voices[i];}
+  var best=null,br=-1;voices.forEach(function(v){var r=rankVoice(v);if(r>br){br=r;best=v;}});return br>=10?best:null;
+}
+function isMale(v){return !!(v&&MALE_RE.test(v.name||""));}
+function say(text,opts){
+  opts=opts||{};hooks.onSay(text);
+  if(!synth)return;
+  if(!opts.queue)synth.cancel();
+  var u=new SpeechSynthesisUtterance(text.replace(/!/g,"!").replace(/\{|\}/g,""));
+  var v=pickVoice();if(v){u.voice=v;u.lang=v.lang;}else u.lang="en-AU";
+  u.rate=opts.rate||S.rate;u.pitch=opts.pitch||(isMale(v)?0.95:0.8);u.volume=1;
+  synth.speak(u);
+  if(synth.paused)synth.resume();
+}
+
+/* ================= WAKE LOCK ================= */
+var wakeLock=null;
+function wantWake(){return T.phase!=="idle"&&T.phase!=="done";}
+function requestWake(){
+  var el=document.getElementById("wlInfo");
+  if(!("wakeLock" in navigator)){el.textContent="Screen-awake not supported here – set auto-lock to Never while training.";return;}
+  navigator.wakeLock.request("screen").then(function(l){wakeLock=l;el.textContent="🔒 Screen will stay awake";l.addEventListener("release",function(){wakeLock=null;});})
+    .catch(function(){el.textContent="Couldn't lock screen awake – keep it on manually.";});
+}
+function releaseWake(){if(wakeLock){wakeLock.release().catch(function(){});wakeLock=null;}document.getElementById("wlInfo").textContent="";}
+document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible"&&wantWake()&&!wakeLock)requestWake();});
+
+/* ================= TIMER STATE MACHINE ================= */
+var hooks={now:function(){return performance.now();},onSay:function(){},onSound:function(){}};
+var T={phase:"idle",round:0,phaseEnd:0,phaseLen:0,paused:false,pauseLeft:0,pauseNext:0,nextCall:0,warned10:false,said30:false,lastBeep:-1,timerId:null};
+function now(){return hooks.now();}
+function sound(name){hooks.onSound(name);if(name==="bellStart")bell(1);else if(name==="bellEnd")bell(3);else if(name==="clap")clap10();else if(name==="beep")beep(880,0.15);else if(name==="beepHi")beep(1320,0.35);}
+
+function setPhase(p,lenMs){T.phase=p;T.phaseLen=lenMs;T.phaseEnd=now()+lenMs;T.warned10=false;T.said30=false;T.lastBeep=-1;}
+function start(){
+  if(T.phase!=="idle"&&T.phase!=="done")return;
+  recent=[];T.round=0;T.paused=false;
+  if(S.prepSec>0){
+    setPhase("ready",S.prepSec*1000);
+    say(S.banter?kru("ready",{s:S.prepSec}):"Get ready! Round one in "+S.prepSec+" seconds.");
+  }else{
+    say("Let's go!");startRound(1);
+  }
+  requestWake();
+  if(!T.timerId)T.timerId=setInterval(tick,200);
+  render();
+}
+function startRound(n){
+  T.round=n;setPhase("round",S.roundSec*1000);sound("bellStart");
+  T.nextCall=now()+1800;
+  var fin=n===S.rounds&&S.rounds>1;
+  showCombo(fin?"Final round":"Round "+n,"Fight!",true);showPic("guard");
+  if(fin)say(S.banter?kru("final"):"Final round! Fight!");else if(T.phase==="round"&&n>1)say(S.banter?kru("start",{n:n}):"Round "+n+". Fight!");
+}
+function startRest(){
+  setPhase("rest",S.restSec*1000);
+  showCombo("Rest","Round "+(T.round+1)+" next",true);showPic("guard");
+  say(S.banter?kru("rest",{n:T.round+1}):"Time! Rest. Round "+(T.round+1)+" next.",{queue:false});
+}
+function finish(){
+  T.phase="done";showCombo("Done","Dee mak · great work",true);showPic("guard");
+  say(S.banter?"Time! "+kru("done"):"Time! Workout complete. Great work!");releaseWake();
+  clearInterval(T.timerId);T.timerId=null;render();
+}
+function stop(){
+  clearInterval(T.timerId);T.timerId=null;if(synth)synth.cancel();
+  T.phase="idle";T.paused=false;T.round=0;releaseWake();showCombo("Tap start","Volume up · Kru calls the combos out loud");showPic("guard");render();
+}
+function togglePause(){
+  if(T.phase==="idle"||T.phase==="done")return;
+  if(!T.paused){T.paused=true;T.pauseLeft=T.phaseEnd-now();T.pauseNext=T.nextCall-now();if(synth)synth.cancel();say(S.banter?kru("pause"):"Paused");}
+  else{T.paused=false;T.phaseEnd=now()+T.pauseLeft;T.nextCall=now()+Math.max(1500,T.pauseNext);say(S.banter?kru("go"):"Go!");if(!wakeLock)requestWake();}
+  render();
+}
+function tick(){
+  if(T.paused||T.phase==="idle"||T.phase==="done")return;
+  var t=now(),rem=T.phaseEnd-t,secs=Math.ceil(rem/1000);
+  if(T.phase==="ready"){
+    if(secs<=3&&secs>=1&&T.lastBeep!==secs){T.lastBeep=secs;sound("beep");}
+    if(rem<=0){startRound(1);}
+  }else if(T.phase==="round"){
+    if(!T.said30&&S.roundSec>=60&&rem<=30000&&rem>25000){T.said30=true;say(S.banter?kru("last30"):"Last thirty, push!");showCombo("Last 30","Push!",true,true);T.nextCall=t+2500;}
+    if(!T.warned10&&rem<=10000){T.warned10=true;sound("clap");T.nextCall=Math.max(T.nextCall,t+1200);}
+    if(t>=T.nextCall&&rem>2500){callNext(rem);}
+    if(rem<=0){sound("bellEnd");if(T.round>=S.rounds)finish();else if(S.restSec>0)startRest();else startRound(T.round+1);}
+  }else if(T.phase==="rest"){
+    if(!T.warned10&&rem<=10000&&S.restSec>10){T.warned10=true;sound("clap");say(S.banter?kru("ten"):"Ten seconds. Get ready!");showCombo("Get ready","Round "+(T.round+1)+" in 10",true);}
+    if(secs<=3&&secs>=1&&T.lastBeep!==secs){T.lastBeep=secs;sound("beep");}
+    if(rem<=0)startRound(T.round+1);
+  }
+  render();
+}
+function callNext(rem){
+  var t=now(),r=Math.random(),txt;
+  if(S.banter&&r<0.15){txt=rnd(BANTER);say(txt);showKru(txt);T.nextCall=t+3200;return;}
+  if(S.motivation&&r>=0.15&&r<0.25){txt=rnd(MOTIVATION);say(txt);showCombo(txt,"",false,true);T.nextCall=t+2500;return;}
+  txt=pickCombo(S.level,S.stance,S.defence);
+  var st=strikes(txt),tag="";
+  if(S.banter&&Math.random()<0.25){tag=THAI_TAG[st[st.length-1].k]||"";}
+  say(tag?txt+"! "+tag:txt);
+  showStrikes(txt,st,tag?THAI_MEAN[tag]:LEVEL[S.level].label);
+  T.nextCall=t+nextInterval(txt)+(tag?500:0);
+}
+
+/* ================= UI ================= */
+var $=function(id){return document.getElementById(id);};
+var stepTimer=null,curPic="",picFlip=false;
+function clearSteps(){if(stepTimer){clearTimeout(stepTimer);stepTimer=null;}}
+function flash(el){el.classList.remove("flash");void el.offsetWidth;el.classList.add("flash");}
+function showCombo(txt,sub,big,motiv){clearSteps();var el=$("comboTxt");el.textContent=txt;el.className="txt"+(motiv?" motiv":"");flash(el);$("comboSub").textContent=sub||"";}
+function showKru(txt){clearSteps();var el=$("comboTxt");el.textContent=txt;el.className="txt kru";flash(el);$("comboSub").textContent="";}
+function showPic(k){
+  $("pic").style.display=S.pics?"":"none";if(!S.pics||!MOVES[k])return;
+  $("mvName").textContent=k==="guard"?"":MOVES[k];
+  if(k===curPic)return;curPic=k;picFlip=!picFlip;
+  var on=picFlip?$("imgA"):$("imgB"),off=picFlip?$("imgB"):$("imgA");
+  on.src=IMG_DIR+k+".webp";on.alt=MOVES[k];on.classList.add("on");off.classList.remove("on");
+}
+/* show combo with each strike lit up in turn, picture following along */
+function showStrikes(txt,st,sub,freezeAt){
+  clearSteps();var el=$("comboTxt");el.className="txt";el.innerHTML="";
+  st.forEach(function(x,i){if(i){var c=document.createElement("span");c.className="sep";c.textContent=", ";el.appendChild(c);}
+    var s=document.createElement("span");s.className="s";s.textContent=x.t;el.appendChild(s);});
+  flash(el);$("comboSub").textContent=sub||"";
+  var spans=el.querySelectorAll(".s"),gap=Math.max(380,560/S.rate);
+  function step(i){
+    for(var j=0;j<spans.length;j++)spans[j].className="s"+(j<i?" done":j===i?" cur":"");
+    showPic(st[i].k);
+    if(freezeAt==null&&i<st.length-1)stepTimer=setTimeout(function(){step(i+1);},gap);
+    else if(freezeAt==null)stepTimer=setTimeout(function(){for(var j=0;j<spans.length;j++)spans[j].className="s cur";},gap+250);
+  }
+  step(freezeAt==null?0:freezeAt);
+}
+function render(){
+  var st=$("stage"),ph=T.phase,rem,len;
+  st.className="stage "+ph;
+  if(ph==="idle"){rem=S.roundSec*1000;len=rem;}else if(ph==="done"){rem=0;len=1;}else{rem=T.paused?T.pauseLeft:T.phaseEnd-now();len=T.phaseLen;}
+  var labels={idle:"Ready to train",ready:"Get ready",round:"Fight",rest:"Rest",done:"Complete"};
+  $("phase").textContent=(T.paused?"Paused · ":"")+labels[ph];
+  $("timer").textContent=mmss(rem/1000);
+  $("timer").className="timer"+((ph==="round"||ph==="rest"||ph==="ready")&&rem<=10000&&!T.paused?" warn":"");
+  $("roundInfo").innerHTML="Round <b>"+T.round+"</b> / "+S.rounds;
+  $("bar").style.width=(ph==="idle"?0:Math.min(100,100*(1-rem/len)))+"%";
+  var running=ph!=="idle"&&ph!=="done";
+  $("startBtn").disabled=running;$("startBtn").textContent=ph==="done"?"Again":"Start";
+  $("pauseBtn").disabled=!running;$("pauseBtn").textContent=T.paused?"Resume":"Pause";
+  $("stopBtn").disabled=ph==="idle";
+  $("lvlTag").textContent=LEVEL[S.level].label;
+}
+function buildSettings(){
+  Array.prototype.forEach.call(document.querySelectorAll(".stepper"),function(box){
+    var k=box.getAttribute("data-key"),c=STEP[k];
+    box.innerHTML='<button aria-label="decrease">−</button><output></output><button aria-label="increase">+</button>';
+    var out=box.querySelector("output"),b=box.querySelectorAll("button");
+    function upd(){out.textContent=c.fmt(S[k]);}
+    function chg(d){var v=Math.round((S[k]+d*c.step)*100)/100;S[k]=Math.min(c.max,Math.max(c.min,v));save();upd();render();}
+    b[0].onclick=function(){chg(-1);};b[1].onclick=function(){chg(1);};upd();
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-seg]"),function(seg){
+    var k=seg.getAttribute("data-seg");
+    function upd(){Array.prototype.forEach.call(seg.children,function(b){b.classList.toggle("on",b.getAttribute("data-v")===S[k]);});}
+    Array.prototype.forEach.call(seg.children,function(b){b.onclick=function(){S[k]=b.getAttribute("data-v");save();upd();render();};});upd();
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-toggle]"),function(t){
+    var k=t.getAttribute("data-toggle");function upd(){t.classList.toggle("on",!!S[k]);}
+    t.onclick=function(){S[k]=!S[k];save();upd();if(k==="pics")showPic(curPic||"guard");};upd();
+  });
+  $("voiceSel").onchange=function(){S.voiceURI=this.value;save();say("Jab, cross, "+resolve("{R} kick",S.stance)+"! Tae! Dee mak!");};
+}
+
+$("startBtn").addEventListener("click",function(){unlockAudio();start();});
+$("pauseBtn").addEventListener("click",function(){unlockAudio();togglePause();});
+$("stopBtn").addEventListener("click",function(){stop();});
+$("voiceTestBtn").addEventListener("click",function(){unlockAudio();var c=pickCombo(S.level,S.stance,S.defence);showStrikes(c,strikes(c),"Voice test");say((S.banter?"Sawasdee! Hands up! ":"Hands up! ")+c);});
+$("bellTestBtn").addEventListener("click",function(){unlockAudio();bell(1);});
+
+buildSettings();
+Object.keys(MOVES).forEach(function(k){var im=new Image();im.src=IMG_DIR+k+".webp";});
+showPic("guard");
+if(synth){loadVoices();if("onvoiceschanged" in synth)synth.onvoiceschanged=loadVoices;setTimeout(loadVoices,700);}
+else{$("comboSub").textContent="⚠️ This browser has no speech – combos will show on screen only";}
+render();
+
+/* ================= DEMO (?demo) – frozen mid-round state for screenshots ================= */
+if(/[?&]demo/.test(location.search)){
+  T.phase="round";T.round=2;T.phaseLen=S.roundSec*1000;T.phaseEnd=now()+107000;T.paused=false;render();
+  var dc=resolve("Jab, cross, {R} kick",S.stance);showStrikes(dc,strikes(dc),LEVEL[S.level].label,2);
+  T.phaseEnd=now()+107000;render();T.phase="idle";$("startBtn").disabled=true;$("pauseBtn").disabled=false;$("stopBtn").disabled=false;
+}
+
+/* ================= SELF TEST (?selftest) ================= */
+if(/[?&]selftest/.test(location.search)){
+  var log=[],errs=[],vt=0,said=[],sounds=[];
+  hooks.now=function(){return vt;};hooks.onSay=function(x){said.push(Math.round(vt/1000)+"s "+T.phase+": "+x);};hooks.onSound=function(n){sounds.push(Math.round(vt/1000)+"s "+n);};
+  try{
+    // library checks
+    ["beginner","intermediate","advanced"].forEach(function(l){log.push(l+": "+COMBOS[l].length+" combos");if(COMBOS[l].length<40)errs.push(l+" < 40 combos");
+      COMBOS[l].forEach(function(c){if(/\{(?!L\}|R\})/.test(c))errs.push("bad token "+c);});});
+    if(resolve("{L} kick, {R} kick","southpaw")!=="right kick, left kick")errs.push("stance resolve");
+    // every combo part maps to a technique picture
+    var unk=[],used={};["beginner","intermediate","advanced"].forEach(function(l){COMBOS[l].forEach(function(c){
+      c=resolve(c,"orthodox");c.split(/[,!]/).map(function(x){return x.trim();}).filter(Boolean).forEach(function(p){
+        if(!/^one two/i.test(p)&&!/^double /i.test(p)&&!moveKey(p))unk.push(p);});
+      strikes(c).forEach(function(x){used[x.k]=1;if(!MOVES[x.k])unk.push(x.k);});});});
+    if(unk.length)errs.push("unmapped strikes: "+unk.join("; "));
+    log.push("pictures used: "+Object.keys(used).length+"/"+Object.keys(MOVES).length+" ("+Object.keys(MOVES).filter(function(k){return !used[k];}).join(",")+" unused)");
+    if(JSON.stringify(strikes("One two three, right kick").map(function(x){return x.k;}))!=='["jab","cross","hook","kick"]')errs.push("strike parse");
+    log.push("banter lines: "+BANTER.length);if(BANTER.length<40)errs.push("banter < 40");
+    BANTER.forEach(function(b){if(DEFENCE_RE.test(b))errs.push("banter has defence word: "+b);});
+    var saved=JSON.parse(JSON.stringify(S));
+    S.rounds=3;S.roundSec=60;S.restSec=30;S.prepSec=10;S.interval=5;S.level="advanced";S.defence=false;S.banter=true;S.motivation=true;
+    start();clearInterval(T.timerId);T.timerId=null;
+    var phases=[],lastP="";
+    for(var i=0;i<4000&&T.phase!=="done";i++){vt+=100;tick();if(T.phase!==lastP){phases.push(Math.round(vt/1000)+"s→"+T.phase+(T.phase==="round"?T.round:""));lastP=T.phase;}
+      if(i===400){togglePause();vt+=60000;tick();togglePause();}}
+    var calls=said.filter(function(s){return / round: /.test(s);});
+    log.push("phases: "+phases.join(", "));
+    log.push("total spoken: "+said.length+", in-round calls: "+calls.length);
+    log.push("sounds: "+sounds.join(", "));
+    log.push("sample: "+said.slice(0,14).join(" | "));
+    if(T.phase!=="done")errs.push("did not finish");
+    var exp=10+60*3+30*2+60; // incl 60s pause
+    if(Math.abs(vt/1000-exp)>2)errs.push("duration "+vt/1000+" expected ~"+exp);
+    if(said.some(function(s){return / round: /.test(s)&&DEFENCE_RE.test(s.split(": ")[1]);}))errs.push("defence call leaked when disabled");
+    if(sounds.filter(function(s){return /clap/.test(s);}).length<5)errs.push("missing 10s claps");
+    if(calls.length<15)errs.push("too few calls");
+    for(var k in saved)S[k]=saved[k];
+  }catch(e){errs.push("EXCEPTION "+e.message+" "+e.stack);}
+  T.phase="idle";clearSteps();hooks.now=function(){return performance.now();};
+  $("selftest").textContent=(errs.length?"SELFTEST FAIL\n"+errs.join("\n"):"SELFTEST PASS")+"\n"+log.join("\n");
+}
+})();
+</script>
+</body>
+</html>
