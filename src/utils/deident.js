@@ -1,4 +1,5 @@
 import { STORAGE_KEYS } from '../constants'
+import { cachedItem, safeSetItem } from './storage'
 
 // Client-side de-identification (SafeIntel data strategy): strip who/where from
 // text before it leaves the device, keeping the safety content. Images already
@@ -13,7 +14,7 @@ const DEFAULT_TERMS = { company: '', sites: [], people: [] }
 
 export function loadTerms() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.DEIDENT_TERMS)
+    const raw = cachedItem(STORAGE_KEYS.DEIDENT_TERMS)
     return raw ? { ...DEFAULT_TERMS, ...JSON.parse(raw) } : { ...DEFAULT_TERMS }
   } catch (_) {
     return { ...DEFAULT_TERMS }
@@ -21,7 +22,7 @@ export function loadTerms() {
 }
 
 export function saveTerms(terms) {
-  try { localStorage.setItem(STORAGE_KEYS.DEIDENT_TERMS, JSON.stringify(terms)) } catch (_) {}
+  safeSetItem(STORAGE_KEYS.DEIDENT_TERMS, JSON.stringify(terms)).catch(() => {})
 }
 
 function escapeRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') }

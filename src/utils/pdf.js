@@ -15,7 +15,7 @@ const imgFormat = (dataUrl) => {
   return 'JPEG'
 }
 
-export async function exportReportPdf({ filename = 'report.pdf', title = 'Report', dateLabel = '', advisor = '', blocks = [] }) {
+export function buildReportPdf({ title = 'Report', dateLabel = '', advisor = '', blocks = [] } = {}) {
   const doc = new jsPDF({ unit: 'pt', format: 'a4' })
   const pageW = doc.internal.pageSize.getWidth()
   const pageH = doc.internal.pageSize.getHeight()
@@ -84,6 +84,11 @@ export async function exportReportPdf({ filename = 'report.pdf', title = 'Report
     doc.text(`Page ${i} of ${total}`, pageW - M, pageH - 24, { align: 'right' })
   }
 
+  return doc
+}
+
+export async function exportReportPdf({ filename = 'report.pdf', title = 'Report', ...report }) {
+  const doc = buildReportPdf({ title, ...report })
   // --- Share, or download as fallback ---
   const blob = doc.output('blob')
   const file = new File([blob], filename, { type: 'application/pdf' })

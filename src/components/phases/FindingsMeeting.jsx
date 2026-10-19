@@ -74,7 +74,7 @@ export default function FindingsMeeting({ shift, updateShift, apiKey }) {
             {loading ? 'Generating Report...' : report ? 'Regenerate (AI)' : 'Generate Findings Report (AI)'}
           </button>
 
-          {!apiKey && <p style={{ fontSize: '0.7rem', color: 'var(--text-faint)', textAlign: 'center', marginBottom: '0.5rem', fontWeight: 600 }}>No API key — go to Settings</p>}
+          {!apiKey && <p style={{ fontSize: '0.7rem', color: 'var(--text-faint)', textAlign: 'center', marginBottom: '0.5rem', fontWeight: 600 }}>AI isn’t available in this build</p>}
           {!rounds.length && <p style={{ fontSize: '0.75rem', color: 'var(--text-faint)', textAlign: 'center', marginBottom: '0.5rem', fontWeight: 600 }}>No rounds entries yet — go to Site Rounds to log observations first.</p>}
 
           <ErrorBox style={{ marginBottom: '0.75rem' }}>{error}</ErrorBox>

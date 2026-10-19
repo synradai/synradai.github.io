@@ -13,6 +13,7 @@
 
 import Stripe from "npm:stripe@17.7.0";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { requireAal2 } from "../_shared/aal.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -41,6 +42,7 @@ Deno.serve(async (req) => {
     const userClient = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: authHeader } } });
     const { data: { user }, error: authErr } = await userClient.auth.getUser();
     if (authErr || !user) return json({ error: "Not authenticated" }, 401);
+    if (!requireAal2(authHeader)) return json({ error: "Two-factor authentication required." }, 401);
 
     const body = await req.json().catch(() => ({}));
     const action = body.action === "portal" ? "portal" : "checkout";

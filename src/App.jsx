@@ -1,13 +1,14 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { STORAGE_KEYS, PHASE_NAMES, createNewShift } from './constants'
-import { safeSetItem } from './utils/storage'
+import { discardRetiredSecrets, forgetItem, safeGetItem, safeSetItem } from './utils/storage'
 import { seedCompanies } from './utils/companies'
 import { isProxyMode } from './utils/api'
 import { supabase, isBackendEnabled } from './utils/supabase'
 import { pushItems, pullItems, mergeById, clearOwner } from './utils/sync'
 import { getSubscription, computeAccess, isBillingEnabled, startCheckout } from './utils/billing'
-import { needsMfaChallenge } from './utils/mfa'
+import { getMfaGate } from './utils/mfa'
 import { needsAiAck } from './utils/disclaimer'
+import { openVault, pauseWrites, sealVault } from './utils/secureStore'
 import { buzz } from './utils/haptics'
 import AuthScreen from './components/AuthScreen'
 import ResetPassword from './components/ResetPassword'
@@ -17,6 +18,7 @@ import SaveTick from './components/SaveTick'
 import ShiftComplete from './components/ShiftComplete'
 import Paywall from './components/Paywall'
 import TwoFactorChallenge from './components/TwoFactorChallenge'
+import TwoFactorEnroll from './components/TwoFactorEnroll'
 import DailyLog from './components/DailyLog'
 import HomeScreen from './components/HomeScreen'
 import Navigation from './components/Navigation'
@@ -35,17 +37,28 @@ import SiteRounds from './components/phases/SiteRounds'
 import FindingsMeeting from './components/phases/FindingsMeeting'
 import DebriefHandover from './components/phases/DebriefHandover'
 
+// Sample otpauth mark so the enrol layout can be opened with ?mfa=enroll in dev.
+const PREVIEW_QR = 'data:image/svg+xml,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 29 29">' +
+  '<rect width="29" height="29" fill="#fff"/>' +
+  '<g fill="#111">' +
+  '<path d="M2 2h7v7H2zm2 2v3h3V4zM20 2h7v7h-7zm2 2v3h3V4zM2 20h7v7H2zm2 2v3h3v-3z"/>' +
+  '<path d="M12 2h2v2h-2zm4 0h2v2h-2zM12 6h5v2h-5zM18 6h1v2h-1zM12 10h2v2h-2zm4 0h3v2h-3zm4 0h2v2h-2zm4 0h3v2h-3z"/>' +
+  '<path d="M2 12h2v2H2zm4 0h3v2H6zm4 0h2v5h-2zm4 0h2v2h-2zm6 0h3v2h-3zm4 0h2v3h-2z"/>' +
+  '<path d="M12 16h7v2h-7zm8 0h3v2h-3zM2 16h2v2H2zm6 2h3v2H8zm12 2h5v2h-5zM12 20h2v3h-2zm4 0h3v2h-3zm4 2h2v3h-2z"/>' +
+  '<path d="M12 24h5v3h-5zm6 0h2v2h-2zm4 0h5v3h-5z"/>' +
+  '</g></svg>'
+)
+
 export default function App() {
   const [view, setView] = useState('home')
   const [currentPhase, setCurrentPhase] = useState(0)
   const [slideDir, setSlideDir] = useState('') // phase-change slide direction
   const [currentShift, setCurrentShift] = useState(null)
   const [shiftHistory, setShiftHistory] = useState([])
-  const [apiKey, setApiKey] = useState('')
-  // In proxy mode the Anthropic key lives server-side, so the user has no local
-  // key — but AI is still available. Pass a truthy value so feature buttons
-  // don't gate themselves off (callAnthropicAPI ignores it in proxy mode).
-  const aiKey = apiKey || (isProxyMode ? 'proxy' : '')
+  // The model key stays on the server. A truthy stand-in keeps the AI buttons
+  // enabled when this build has a proxy; the value is never sent anywhere.
+  const aiKey = isProxyMode ? 'proxy' : ''
   const [showIncident, setShowIncident] = useState(false)
   const [showAskSafety, setShowAskSafety] = useState(false)
   const [theme, setTheme] = useState('dark')
@@ -64,8 +77,13 @@ export default function App() {
   const [authReady, setAuthReady] = useState(!isBackendEnabled)
   const [restored, setRestored] = useState(false) // cloud backup pulled this session?
   const [access, setAccess] = useState({ allowed: true, trial: false, daysLeft: 0, status: 'unknown' })
-  const [mfaNeeded, setMfaNeeded] = useState(false)
-  const [mfaChecked, setMfaChecked] = useState(false)
+  // pending | enroll | challenge | ready | error. Records stay closed until ready.
+  const [mfaGate, setMfaGate] = useState(isBackendEnabled ? 'pending' : 'ready')
+  const [mfaError, setMfaError] = useState('')
+  const [vaultReady, setVaultReady] = useState(false)
+  const [sealTick, setSealTick] = useState(0)
+  const seenUser = useRef(null)
+  const sealing = useRef(false)
   const [ackNeeded, setAckNeeded] = useState(false)
   const [ackChecked, setAckChecked] = useState(false)
   // First-run walkthrough — remembered per device, shown once.
@@ -80,35 +98,32 @@ export default function App() {
   // Persist to localStorage and surface a warning if it fails (usually the
   // device is out of space). Never silently drop a save.
   const persist = useCallback((key, serialized) => {
-    const res = safeSetItem(key, serialized)
-    if (!res.ok) {
+    safeSetItem(key, serialized).then((res) => {
+      if (!res || res.ok || res.locked) return
       setStorageWarning(res.quota
         ? "This device is out of storage. Recent photos or changes may not have saved — remove some photos, or clear old shifts, to free space."
         : "Couldn't save changes to this device.")
-    }
+    })
   }, [])
 
   useEffect(() => {
     try {
-      const s = localStorage.getItem(STORAGE_KEYS.CURRENT_SHIFT)
-      const h = localStorage.getItem(STORAGE_KEYS.HISTORY)
-      const k = localStorage.getItem(STORAGE_KEYS.API_KEY)
-      const l = localStorage.getItem(STORAGE_KEYS.LEARNINGS)
-      const ac = localStorage.getItem(STORAGE_KEYS.ASK_CHATS)
       const t = localStorage.getItem(STORAGE_KEYS.THEME)
-      const f = localStorage.getItem(STORAGE_KEYS.FIELD_REPORTS)
-      const inc = localStorage.getItem(STORAGE_KEYS.INCIDENTS)
-      const dl = localStorage.getItem(STORAGE_KEYS.DAILY_LOG)
-      if (s) { const shift = JSON.parse(s); setCurrentShift(shift); setCurrentPhase(shift.phase || 0) }
-      if (h) setShiftHistory(JSON.parse(h))
-      if (k) setApiKey(k)
-      if (l) setLearnings(JSON.parse(l))
-      if (ac) setAskChats(JSON.parse(ac))
       if (t) setTheme(t)
-      if (f) setFieldReports(JSON.parse(f))
-      if (inc) setIncidents(JSON.parse(inc))
-      if (dl) setDailyLog(JSON.parse(dl))
     } catch (_) {}
+  }, [])
+
+  const clearRecords = useCallback(() => {
+    setCurrentShift(null)
+    setCurrentPhase(0)
+    setShiftHistory([])
+    setLearnings([])
+    setAskChats([])
+    setFieldReports([])
+    setIncidents([])
+    setDailyLog([])
+    setVaultReady(false)
+    setRestored(false)
   }, [])
 
   // Load the current session and keep it in sync (only when backend is on).
@@ -126,35 +141,115 @@ export default function App() {
   }, [])
 
   const signOut = useCallback(async () => {
-    if (isBackendEnabled) await supabase.auth.signOut()
-    clearOwner()
-    setRestored(false)
-    setAccess({ allowed: true, trial: false, daysLeft: 0, status: 'unknown' })
-    setMfaNeeded(false)
-    setMfaChecked(false)
+    pauseWrites()
+    clearRecords()
+    setMfaGate('pending')
     setAckNeeded(false)
-    setAckChecked(false)
+    setAckChecked(!isBackendEnabled)
+    seenUser.current = null
+    try { await sealVault() } catch (_) {}
+    clearOwner()
+    if (isBackendEnabled) {
+      try { await supabase.auth.signOut() } catch (_) {}
+    }
+    setAccess({ allowed: true, trial: false, daysLeft: 0, status: 'unknown' })
     setView('home')
-  }, [])
+  }, [clearRecords])
 
-  // On login, check whether this session still needs a 2FA code.
+  // A different account on this device wipes the previous person's records
+  // before anything of theirs can be read.
+  const userId = session?.user?.id || null
+
   useEffect(() => {
-    if (!isBackendEnabled || !session) { setMfaNeeded(false); setMfaChecked(true); return }
-    setMfaChecked(false)
+    const prev = seenUser.current
+    if (userId) seenUser.current = userId
+    if (!prev || !userId || prev === userId) return
     let cancelled = false
-    needsMfaChallenge().then(n => { if (!cancelled) { setMfaNeeded(n); setMfaChecked(true) } })
+    sealing.current = true
+    pauseWrites()
+    clearRecords()
+    setMfaGate('pending')
+    sealVault().finally(() => {
+      sealing.current = false
+      if (!cancelled) setSealTick((n) => n + 1)
+    })
     return () => { cancelled = true }
-  }, [session])
+  }, [userId, clearRecords])
+
+  // After sign-in, require aal2 before any record is read or synced.
+  // Depends on the user id, not the session object, so a token refresh does
+  // not tear the vault down and reload every record.
+  useEffect(() => {
+    if (!isBackendEnabled) { setMfaGate('ready'); return }
+    if (!session || passwordRecovery) { setMfaGate('pending'); setVaultReady(false); return }
+    let cancelled = false
+    setMfaGate('pending')
+    setVaultReady(false)
+    getMfaGate().then(gate => {
+      if (cancelled) return
+      setMfaGate(gate)
+      setMfaError(gate === 'error' ? 'Could not check two-factor status. Try again, or sign out.' : '')
+    })
+    return () => { cancelled = true }
+  }, [userId, passwordRecovery]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Open the session vault, migrate any plaintext, then let the screens render.
+  useEffect(() => {
+    if (mfaGate !== 'ready') return
+    if (isBackendEnabled && (!session || passwordRecovery)) return
+    if (sealing.current) return
+    const userId = session?.user?.id || 'local'
+    let cancelled = false
+    ;(async () => {
+      try {
+        await openVault(userId)
+        discardRetiredSecrets()
+        const [s, h, l, ac, f, inc, dl] = await Promise.all([
+          safeGetItem(STORAGE_KEYS.CURRENT_SHIFT),
+          safeGetItem(STORAGE_KEYS.HISTORY),
+          safeGetItem(STORAGE_KEYS.LEARNINGS),
+          safeGetItem(STORAGE_KEYS.ASK_CHATS),
+          safeGetItem(STORAGE_KEYS.FIELD_REPORTS),
+          safeGetItem(STORAGE_KEYS.INCIDENTS),
+          safeGetItem(STORAGE_KEYS.DAILY_LOG),
+        ])
+        await Promise.all([
+          safeGetItem(STORAGE_KEYS.KNOWN_PEOPLE),
+          safeGetItem(STORAGE_KEYS.KNOWN_COMPANIES),
+          safeGetItem(STORAGE_KEYS.DEIDENT_TERMS),
+          safeGetItem(STORAGE_KEYS.FIELD_REPORT_COMPANY),
+          safeGetItem(STORAGE_KEYS.INCIDENT_COMPANY),
+        ])
+        if (cancelled) return
+        if (s) { const shift = JSON.parse(s); setCurrentShift(shift); setCurrentPhase(shift.phase || 0) }
+        if (h) setShiftHistory(JSON.parse(h))
+        if (l) setLearnings(JSON.parse(l))
+        if (ac) setAskChats(JSON.parse(ac))
+        if (f) setFieldReports(JSON.parse(f))
+        if (inc) setIncidents(JSON.parse(inc))
+        if (dl) setDailyLog(JSON.parse(dl))
+      } catch (_) {
+        // Unreadable local data is dropped inside safeGetItem. Sync refills it.
+      } finally {
+        if (!cancelled) setVaultReady(true)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [mfaGate, userId, passwordRecovery, sealTick]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // On login, check whether the AI disclaimer still needs acknowledging
   // (named + logged — required before anyone uses the AI features).
+  // This reads disclaimer_acks, so it waits until the session is aal2.
   useEffect(() => {
-    if (!isBackendEnabled || !session) { setAckNeeded(false); setAckChecked(true); return }
+    if (!isBackendEnabled || !session || !vaultReady) {
+      if (!session) { setAckNeeded(false); setAckChecked(true) }
+      return
+    }
     setAckChecked(false)
     let cancelled = false
     needsAiAck().then(n => { if (!cancelled) { setAckNeeded(n); setAckChecked(true) } })
     return () => { cancelled = true }
-  }, [session])
+  }, [session, vaultReady])
 
   const refreshAccess = useCallback(async () => {
     if (!isBillingEnabled) return
@@ -164,14 +259,14 @@ export default function App() {
   // Check subscription on login. If we've just returned from Stripe checkout,
   // give the webhook a moment then re-check, and tidy the URL.
   useEffect(() => {
-    if (!isBillingEnabled || !session) return
+    if (!isBillingEnabled || !session || !vaultReady) return
     refreshAccess()
     if (typeof window !== 'undefined' && window.location.search.includes('billing=success')) {
       const t = setTimeout(refreshAccess, 2500)
       window.history.replaceState({}, '', window.location.pathname)
       return () => clearTimeout(t)
     }
-  }, [session, refreshAccess])
+  }, [session, refreshAccess, vaultReady])
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -179,50 +274,58 @@ export default function App() {
   }, [theme, persist])
 
   useEffect(() => {
-    if (currentShift) persist(STORAGE_KEYS.CURRENT_SHIFT, JSON.stringify(currentShift))
-  }, [currentShift, persist])
+    if (!vaultReady || !currentShift) return
+    persist(STORAGE_KEYS.CURRENT_SHIFT, JSON.stringify(currentShift))
+  }, [currentShift, persist, vaultReady])
 
   useEffect(() => {
+    if (!vaultReady) return
     persist(STORAGE_KEYS.HISTORY, JSON.stringify(shiftHistory))
-  }, [shiftHistory, persist])
+  }, [shiftHistory, persist, vaultReady])
 
   useEffect(() => {
+    if (!vaultReady) return
     persist(STORAGE_KEYS.LEARNINGS, JSON.stringify(learnings))
-  }, [learnings, persist])
+  }, [learnings, persist, vaultReady])
 
   useEffect(() => {
+    if (!vaultReady) return
     persist(STORAGE_KEYS.ASK_CHATS, JSON.stringify(askChats))
-  }, [askChats, persist])
+  }, [askChats, persist, vaultReady])
 
   useEffect(() => {
+    if (!vaultReady) return
     persist(STORAGE_KEYS.FIELD_REPORTS, JSON.stringify(fieldReports))
-  }, [fieldReports, persist])
+  }, [fieldReports, persist, vaultReady])
 
   useEffect(() => {
+    if (!vaultReady) return
     persist(STORAGE_KEYS.INCIDENTS, JSON.stringify(incidents))
-  }, [incidents, persist])
+  }, [incidents, persist, vaultReady])
 
   useEffect(() => {
+    if (!vaultReady) return
     persist(STORAGE_KEYS.DAILY_LOG, JSON.stringify(dailyLog))
-  }, [dailyLog, persist])
+  }, [dailyLog, persist, vaultReady])
 
   // Backfill company memory from reports saved before it existed — no-op once
   // anything is stored, so counts never inflate on reload.
   useEffect(() => {
+    if (!vaultReady) return
     seedCompanies([
       ...incidents.map(i => i.companyName),
       ...(currentShift?.incidents || []).map(i => i.companyName),
       ...shiftHistory.flatMap(s => (s.incidents || []).map(i => i.companyName)),
       ...fieldReports.flatMap(r => [r.companyAssessed, r.yourCompany]),
     ])
-  }, [incidents, fieldReports, currentShift, shiftHistory])
+  }, [incidents, fieldReports, currentShift, shiftHistory, vaultReady])
 
   // --- Cloud sync (only when a backend is configured + signed in) ---------
 
   // Restore once per login: pull cloud records and merge in any not held
   // locally (new device → full restore; same device → no-op / fills gaps).
   useEffect(() => {
-    if (!isBackendEnabled || !session || restored) return
+    if (!isBackendEnabled || !session || !vaultReady || restored) return
     let cancelled = false
     ;(async () => {
       const [cShifts, cIncidents, cLearnings, cFieldReports, cDailyLog, cAskChats] = await Promise.all([
@@ -241,44 +344,44 @@ export default function App() {
       setRestored(true)
     })()
     return () => { cancelled = true }
-  }, [session, restored, currentShift])
+  }, [session, restored, currentShift, vaultReady])
 
   // Push on change (debounced for the live shift, immediate for finished sets).
   useEffect(() => {
-    if (!isBackendEnabled || !session || !currentShift) return
+    if (!isBackendEnabled || !session || !vaultReady || !currentShift) return
     const t = setTimeout(() => pushItems('shifts', [currentShift], s => ({ shift_date: s.date })), 1500)
     return () => clearTimeout(t)
-  }, [currentShift, session])
+  }, [currentShift, session, vaultReady])
 
   useEffect(() => {
-    if (!isBackendEnabled || !session) return
+    if (!isBackendEnabled || !session || !vaultReady) return
     pushItems('shifts', shiftHistory, s => ({ shift_date: s.date }))
-  }, [shiftHistory, session])
+  }, [shiftHistory, session, vaultReady])
 
   useEffect(() => {
-    if (!isBackendEnabled || !session) return
+    if (!isBackendEnabled || !session || !vaultReady) return
     pushItems('incidents', incidents, i => ({ occurred_at: i.time, incident_type: i.incidentType }))
-  }, [incidents, session])
+  }, [incidents, session, vaultReady])
 
   useEffect(() => {
-    if (!isBackendEnabled || !session) return
+    if (!isBackendEnabled || !session || !vaultReady) return
     pushItems('learnings', learnings)
-  }, [learnings, session])
+  }, [learnings, session, vaultReady])
 
   useEffect(() => {
-    if (!isBackendEnabled || !session) return
+    if (!isBackendEnabled || !session || !vaultReady) return
     pushItems('field_reports', fieldReports)
-  }, [fieldReports, session])
+  }, [fieldReports, session, vaultReady])
 
   useEffect(() => {
-    if (!isBackendEnabled || !session) return
+    if (!isBackendEnabled || !session || !vaultReady) return
     pushItems('daily_log', dailyLog)
-  }, [dailyLog, session])
+  }, [dailyLog, session, vaultReady])
 
   useEffect(() => {
-    if (!isBackendEnabled || !session) return
+    if (!isBackendEnabled || !session || !vaultReady) return
     pushItems('ask_chats', askChats)
-  }, [askChats, session])
+  }, [askChats, session, vaultReady])
 
   const updateShift = useCallback((updates) => {
     setCurrentShift(prev => ({ ...prev, ...updates }))
@@ -309,7 +412,7 @@ export default function App() {
     setCelebrating(done) // show the completion celebration over home
     setCurrentShift(null)
     setCurrentPhase(0)
-    try { localStorage.removeItem(STORAGE_KEYS.CURRENT_SHIFT) } catch (_) {}
+    forgetItem(STORAGE_KEYS.CURRENT_SHIFT)
     setView('home')
   }, [currentShift, archiveShift])
 
@@ -318,11 +421,6 @@ export default function App() {
     setCurrentPhase(phase)
     updateShift({ phase })
     buzz(15) // tactile phase click
-  }
-
-  const saveApiKey = (key) => {
-    setApiKey(key)
-    persist(STORAGE_KEYS.API_KEY, key)
   }
 
   const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark')
@@ -390,6 +488,27 @@ export default function App() {
     )
   }
 
+  // Local-only look at the 2FA screens. Stripped from production builds.
+  if (import.meta.env.DEV && typeof window !== 'undefined') {
+    const preview = new URLSearchParams(window.location.search).get('mfa')
+    if (preview === 'enroll') {
+      return (
+        <TwoFactorEnroll
+          preview={{
+            factorId: 'preview',
+            secret: 'JBSWY3DPEHPK3PXP',
+            qrCode: PREVIEW_QR,
+          }}
+          onVerified={() => {}}
+          onSignOut={() => {}}
+        />
+      )
+    }
+    if (preview === 'challenge') {
+      return <TwoFactorChallenge onVerified={() => {}} onSignOut={() => {}} />
+    }
+  }
+
   // Wait for the session check before first paint (avoids a login-screen flash).
   if (!authReady) {
     return <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-page)' }} />
@@ -406,12 +525,29 @@ export default function App() {
     return <ResetPassword onDone={() => setPasswordRecovery(false)} />
   }
 
-  // Signed in but 2FA code still required this session → hold here.
-  if (isBackendEnabled && session && !mfaChecked) {
-    return <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-page)' }} />
+  // Password-only sessions stay on enrol or the code challenge. No records yet.
+  if (isBackendEnabled && session && (mfaGate === 'pending' || mfaGate === 'error')) {
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-page)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
+        {mfaGate === 'error' && (
+          <div style={{ maxWidth: 340, textAlign: 'center' }}>
+            <p style={{ color: 'var(--text-muted)', fontWeight: 700, lineHeight: 1.5 }}>{mfaError}</p>
+            <button onClick={() => { setMfaGate('pending'); getMfaGate().then(setMfaGate) }} style={{ marginTop: '1rem', padding: '0.75rem 1.25rem', background: 'var(--accent)', color: 'var(--on-accent)', border: 'none', borderRadius: '0.5rem', fontWeight: 800, cursor: 'pointer' }}>Try again</button>
+            <button onClick={signOut} style={{ display: 'block', width: '100%', marginTop: '0.75rem', background: 'none', border: 'none', color: 'var(--text-faint)', fontWeight: 700, cursor: 'pointer' }}>Sign out</button>
+          </div>
+        )}
+      </div>
+    )
   }
-  if (isBackendEnabled && session && mfaNeeded) {
-    return <TwoFactorChallenge onVerified={() => setMfaNeeded(false)} onSignOut={signOut} />
+  if (isBackendEnabled && session && mfaGate === 'enroll') {
+    return <TwoFactorEnroll onVerified={() => getMfaGate().then(setMfaGate)} onSignOut={signOut} />
+  }
+  if (isBackendEnabled && session && mfaGate === 'challenge') {
+    return <TwoFactorChallenge onVerified={() => getMfaGate().then(setMfaGate)} onSignOut={signOut} />
+  }
+
+  if (!vaultReady) {
+    return <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-page)' }} />
   }
 
   // AI disclaimer: named + logged acknowledgment before first use.
@@ -552,8 +688,6 @@ export default function App() {
 
       {view === 'settings' && (
         <Settings
-          apiKey={aiKey}
-          onSave={saveApiKey}
           onBack={() => setView(currentShift ? 'shift' : 'home')}
           userEmail={session?.user?.email}
           onSignOut={signOut}

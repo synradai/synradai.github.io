@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { generateId, compressPhoto } from '../utils/storage'
+import { cachedItem, compressPhoto, generateId, safeSetItem } from '../utils/storage'
 import { formatDateTime } from '../utils/format'
 import { STORAGE_KEYS, INCIDENT_TYPES } from '../constants'
 import { callAnthropicAPI, buildIncidentPrompt, buildImageBlocks, buildJsaScanPrompt } from '../utils/api'
@@ -74,7 +74,7 @@ function PhotoPicker({ photos, onAdd, onRemove, onScan }) {
 
 export default function IncidentReport({ apiKey, onClose, onSave }) {
   const [companyName, setCompanyName] = useState(() => {
-    try { return localStorage.getItem(STORAGE_KEYS.INCIDENT_COMPANY) || '' } catch (_) { return '' }
+    return cachedItem(STORAGE_KEYS.INCIDENT_COMPANY) || ''
   })
   const [location, setLocation] = useState('')
   const [incidentType, setIncidentType] = useState('')
@@ -174,7 +174,7 @@ export default function IncidentReport({ apiKey, onClose, onSave }) {
   const save = () => {
     if (leaving) return
     walk.stop()
-    try { localStorage.setItem(STORAGE_KEYS.INCIDENT_COMPANY, companyName) } catch (_) {}
+    safeSetItem(STORAGE_KEYS.INCIDENT_COMPANY, companyName).catch(() => {})
     rememberCompanies(companyName)
     setLeaving(true)
     setTimeout(() => onSave({
