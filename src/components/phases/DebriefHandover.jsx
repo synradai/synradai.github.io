@@ -79,7 +79,7 @@ export default function DebriefHandover({ shift, updateShift, apiKey, onFinish }
             {loading ? 'Drafting...' : deb.handoverNotes ? 'Redraft (AI)' : 'Draft Handover Notes (AI)'}
           </button>
 
-          {!apiKey && <p style={{ fontSize: '0.7rem', color: 'var(--text-faint)', textAlign: 'center', marginBottom: '0.5rem', fontWeight: 600 }}>No API key — go to Settings</p>}
+          {!apiKey && <p style={{ fontSize: '0.7rem', color: 'var(--text-faint)', textAlign: 'center', marginBottom: '0.5rem', fontWeight: 600 }}>AI isn’t available in this build</p>}
 
           <ErrorBox style={{ marginBottom: '0.75rem' }}>{error}</ErrorBox>
 

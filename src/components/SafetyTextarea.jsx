@@ -250,7 +250,7 @@ export default function SafetyTextarea({ value, onChange, placeholder, rows = 3,
               onMouseDown={e => e.preventDefault()}
               onClick={runAI}
               disabled={!apiKey || !value?.trim() || polishing || listening}
-              title={!apiKey ? 'Add an API key in Settings to use AI fixes' : 'Rewrite professionally: concise, formal tone, correct safety terminology'}
+              title={!apiKey ? 'AI isn’t available in this build' : 'Rewrite professionally: concise, formal tone, correct safety terminology'}
               style={{
                 width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
                 cursor: (!apiKey || !value?.trim() || polishing || listening) ? 'not-allowed' : 'pointer',

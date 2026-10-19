@@ -1,17 +1,27 @@
+import { STORAGE_KEYS } from '../constants'
+import {
+  cachedItem,
+  forgetMemory,
+  hydrateStored,
+  protectForStorage,
+} from './secureStore'
+
+export { cachedItem }
+
 export function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 5)
 }
 
-// Save to localStorage and report what happened instead of swallowing errors.
-// The common failure on a real device is the ~5-10MB quota being exceeded
-// (photos are stored as base64, which inflates their size ~33%). Returns
-// { ok: true } on success, or { ok: false, quota } so the caller can warn the
-// user rather than silently losing a shift or incident.
-export function safeSetItem(key, value) {
+// Save a value. User-data keys are encrypted with the open session vault.
+// Returns { ok: true } or { ok: false, quota } when the device is out of space
+// (photos are stored as base64, which inflates their size ~33%).
+export async function safeSetItem(key, value) {
   try {
-    localStorage.setItem(key, value)
+    const stored = await protectForStorage(key, value)
+    localStorage.setItem(key, stored)
     return { ok: true }
   } catch (e) {
+    if (e?.code === 'LOCKED') return { ok: false, locked: true, error: e }
     const quota = !!e && (
       e.name === 'QuotaExceededError' ||
       e.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
@@ -19,6 +29,35 @@ export function safeSetItem(key, value) {
     )
     return { ok: false, quota, error: e }
   }
+}
+
+// Decrypt a user-data value. Existing plaintext is rewritten encrypted.
+// A value that cannot be decrypted is removed so the caller re-syncs.
+export async function safeGetItem(key) {
+  let raw = null
+  try { raw = localStorage.getItem(key) } catch { return null }
+  const result = await hydrateStored(key, raw)
+  if (result.locked) return null
+  if (result.unreadable) {
+    try { localStorage.removeItem(key) } catch { /* already unreadable */ }
+    return null
+  }
+  if (result.migrate && result.value != null) {
+    const rewritten = await safeSetItem(key, result.value)
+    if (!rewritten.ok) return result.value
+  }
+  return result.value
+}
+
+export function forgetItem(key) {
+  forgetMemory(key)
+  try { localStorage.removeItem(key) } catch { /* private mode */ }
+}
+
+// The bring-your-own Anthropic key is gone. Drop any copy still on the device
+// instead of migrating it into the vault.
+export function discardRetiredSecrets() {
+  forgetItem(STORAGE_KEYS.API_KEY)
 }
 
 export function compressPhoto(file) {

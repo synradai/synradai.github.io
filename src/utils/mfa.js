@@ -7,16 +7,25 @@ import { supabase, isBackendEnabled } from './supabase'
 export async function getVerifiedTotpFactor() {
   if (!isBackendEnabled) return null
   const { data, error } = await supabase.auth.mfa.listFactors()
-  if (error || !data) return null
+  if (error) throw error
+  if (!data) return null
   return (data.totp || []).find(f => f.status === 'verified') || null
 }
 
-// True when this session has a verified factor but hasn't satisfied it yet.
-export async function needsMfaChallenge() {
-  if (!isBackendEnabled) return false
+// 'ready' once this session is aal2. Otherwise 'enroll' (no verified factor),
+// 'challenge' (factor exists, code still required), or 'error' (fail closed —
+// no records load until the check succeeds).
+export async function getMfaGate() {
+  if (!isBackendEnabled) return 'ready'
   const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
-  if (error || !data) return false
-  return data.currentLevel === 'aal1' && data.nextLevel === 'aal2'
+  if (error || !data) return 'error'
+  if (data.currentLevel === 'aal2') return 'ready'
+  try {
+    const factor = await getVerifiedTotpFactor()
+    return factor ? 'challenge' : 'enroll'
+  } catch {
+    return 'error'
+  }
 }
 
 export async function enrollTotp() {

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { generateId } from '../../utils/storage'
+import { cachedItem, generateId, safeSetItem } from '../../utils/storage'
 import { STORAGE_KEYS } from '../../constants'
 import { callAnthropicAPI, buildTalkingPointsPrompt } from '../../utils/api'
 import SectionBlock from '../SectionBlock'
@@ -16,7 +16,7 @@ export default function MorningMeeting({ shift, updateShift, apiKey }) {
   const [pRole, setPRole] = useState('')
   const [known, setKnown] = useState([])
   useEffect(() => {
-    try { const k = localStorage.getItem(STORAGE_KEYS.KNOWN_PEOPLE); if (k) setKnown(JSON.parse(k)) } catch (_) {}
+    try { const k = cachedItem(STORAGE_KEYS.KNOWN_PEOPLE); if (k) setKnown(JSON.parse(k)) } catch (_) {}
   }, [])
 
   const mtg = shift.meeting || { topics: [], agendaNotes: '', attendees: '' }
@@ -29,7 +29,7 @@ export default function MorningMeeting({ shift, updateShift, apiKey }) {
   const rememberPerson = (name, role) => setKnown(prev => {
     if (prev.some(p => samePerson(p, { name, role }))) return prev
     const next = [...prev, { name, role }].slice(-40)
-    try { localStorage.setItem(STORAGE_KEYS.KNOWN_PEOPLE, JSON.stringify(next)) } catch (_) {}
+    safeSetItem(STORAGE_KEYS.KNOWN_PEOPLE, JSON.stringify(next)).catch(() => {})
     return next
   })
   const addAttendee = (name, role) => {
@@ -180,7 +180,7 @@ export default function MorningMeeting({ shift, updateShift, apiKey }) {
             </div>
           ))}
           {!apiKey && topics.length > 0 && (
-            <p style={{ fontSize: '0.7rem', color: 'var(--text-faint)', marginTop: '0.4rem', fontWeight: 600 }}>No API key — go to Settings to enable AI talking points.</p>
+            <p style={{ fontSize: '0.7rem', color: 'var(--text-faint)', marginTop: '0.4rem', fontWeight: 600 }}>AI isn’t available in this build.</p>
           )}
         </SectionBlock>
       </div>
