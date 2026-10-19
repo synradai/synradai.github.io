@@ -10,14 +10,15 @@ import { assessReport, humanErrorGuard, SEVERITY_SCALE } from '../config/severit
 import { filterRecords, toCsv } from './csv.js'
 import { matchFlags, withSeverityFlag } from './flags.js'
 import { extractJson } from './parse.js'
-import { buildRecord } from './record.js'
+import { buildNoteRecord, buildRecord } from './record.js'
 import { nameWarning } from './roles.js'
+import { recordDay, recordsForDay } from './day.js'
 import { initialDraft, moduleRows, prepareConfig, resolveForm, resolveMatrix, resolveTemplates, resolveWording, visibleModules } from './config.js'
 import { routeFromHash } from './routes.js'
 import { redact } from './redact.js'
 import { ENC_PREFIX, openVault, sealVault } from '../../src/utils/secureStore.js'
 import { LOCAL_KEY, loadRows, mergeRows, saveRows, slimForCloud } from './store.js'
-import { perthDateTimeLocal } from './time.js'
+import { perthDateTimeLocal, shiftDate } from './time.js'
 import { triagePath, triageSummary } from './triage.js'
 import { scanPrompt } from './prompts.js'
 
@@ -222,6 +223,7 @@ test('json, csv, filters, and cloud merge', () => {
 test('routes, roles, redaction, and modules', () => {
   assert.equal(routeFromHash('#/hse/capture/take5').kind, 'take5')
   assert.equal(routeFromHash('#/admin').screen, 'admin')
+  assert.equal(routeFromHash('#/hse/day').screen, 'day')
   assert.equal(routeFromHash('#/hse/investigate/abc').id, 'abc')
   assert.equal(routeFromHash('#/stores').screen, 'stores')
   assert.equal(routeFromHash('#/join').screen, 'join')
@@ -364,6 +366,20 @@ test('admin config falls back to code and keeps locked fields', () => {
   assert.equal(resolveMatrix({ columns: ['First aid'] }).columns[0], 'First aid')
   assert.throws(() => prepareConfig('training_matrix', { columns: ['  '] }), /column/)
   assert.equal(prepareConfig('inspection_templates', initialDraft('inspection_templates', null)).length, 2)
+})
+
+test('a day timeline keeps the selected date and short notes', () => {
+  assert.equal(shiftDate('2026-10-19', 1), '2026-10-20')
+  assert.equal(shiftDate('2026-10-01', -1), '2026-09-30')
+  const incident = buildRecord({ id: 'day-1', kind: 'incident', fields: { severity: 1, description: 'Oil', occurredAt: '2026-10-19T09:15', siteArea: 'Workshop', peopleRoles: 'Fitter' } })
+  const other = buildRecord({ id: 'day-2', kind: 'hazard', fields: { severity: 2, description: 'Next day', occurredAt: '2026-10-20T07:00', siteArea: 'Yard', peopleRoles: 'Crew' } })
+  const meeting = buildNoteRecord({ id: 'day-3', kind: 'meeting', fields: { title: 'Prestart meeting', note: 'Heat', occurredAt: '2026-10-19T06:30' } })
+  assert.equal(meeting.kind, 'meeting')
+  assert.equal(meeting.status, 'filed')
+  assert.equal(recordDay(incident), '2026-10-19')
+  assert.equal(recordDay({ createdAt: '2026-10-18T16:30:00.000Z', fields: {} }), '2026-10-19')
+  const day = recordsForDay([other, incident, meeting], '2026-10-19')
+  assert.deepEqual(day.map((row) => row.id), ['day-3', 'day-1'])
 })
 
 test('beta records round-trip through the device vault', async () => {

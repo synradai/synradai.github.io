@@ -16,6 +16,11 @@ export default function HseHome({ app }) {
         {app.wording?.hseIntro || 'Voice or typed.'} This site uses the {ruleset.label} ruleset ({ruleset.instrument}).
       </p>
       <div className="grid cards">
+        <a className="card" href="#/hse/day">
+          <span className="tag live">Today</span>
+          <strong>Daily record</strong>
+          <span>One timeline for incidents, hazards, Take 5s, meetings, prestarts and toolbox talks.</span>
+        </a>
         {FORM_KINDS.map((kind) => {
           const form = resolveForm(kind.id, app.formsConfig)
           return (

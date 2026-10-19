@@ -58,6 +58,28 @@ function buildTake5({ fields, source, id, ruleset, now }) {
   }
 }
 
+export function buildNoteRecord({ kind, fields, id, ruleset = 'general' }) {
+  const now = new Date().toISOString()
+  return {
+    id: id || generateId(),
+    kind,
+    source: fields?.source || 'typed',
+    createdAt: now,
+    updatedAt: now,
+    ruleset,
+    severity: null,
+    path: null,
+    status: 'filed',
+    fields: { ...fields },
+    flags: [],
+    correctiveActions: [],
+    closeOut: null,
+    fiveWhys: null,
+    icam: false,
+    icamReasons: [],
+  }
+}
+
 export function buildSceneRecord({ fields, result, flags, id, ruleset = 'general' }) {
   const now = new Date().toISOString()
   return {
