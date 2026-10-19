@@ -1,46 +1,26 @@
-/* SwingTrack service worker — precache the shell so the app opens with no signal.
-   Bump VERSION whenever any shell file changes. */
+/* Replaces SwingTrack's /tracker/sw.js. The next visit updates that
+   registration, drops only the swingtrack caches, and unregisters.
+   Other caches on this origin (the Safe Intelligence shell) stay. */
+self.addEventListener('install', function () {
+  self.skipWaiting()
+})
 
-const VERSION = 'swingtrack-v3';
-const SHELL = [
-  './',
-  './index.html',
-  './style.css',
-  './app.js',
-  './manifest.webmanifest',
-  './vendor/zxing.min.js',
-  './icon-192.png',
-  './icon-512.png',
-  './apple-touch-icon.png',
-];
-
-self.addEventListener('install', (e) => {
-  e.waitUntil(
-    caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())
-  );
-});
-
-self.addEventListener('activate', (e) => {
-  e.waitUntil(
-    caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== VERSION).map((k) => caches.delete(k))))
-      .then(() => self.clients.claim())
-  );
-});
-
-self.addEventListener('fetch', (e) => {
-  const url = new URL(e.request.url);
-  // Product lookups and anything cross-origin go straight to the network.
-  if (url.origin !== location.origin) return;
-  if (e.request.method !== 'GET') return;
-
-  e.respondWith(
-    caches.match(e.request, { ignoreSearch: true }).then((hit) => {
-      if (hit) return hit;
-      if (e.request.mode === 'navigate') {
-        return caches.match('./index.html').then((page) => page || fetch(e.request));
-      }
-      return fetch(e.request);
+self.addEventListener('activate', function (event) {
+  event.waitUntil(
+    caches.keys().then(function (keys) {
+      return Promise.all(keys.filter(function (key) {
+        return key.indexOf('swingtrack') === 0
+      }).map(function (key) {
+        return caches.delete(key)
+      }))
+    }).then(function () {
+      return self.clients.matchAll({ type: 'window' })
+    }).then(function (windows) {
+      return self.registration.unregister().then(function () {
+        return Promise.all(windows.map(function (client) {
+          return client.navigate(client.url)
+        }))
+      })
     })
-  );
-});
+  )
+})
