@@ -381,6 +381,21 @@ export function AppState({ children }) {
       const { data } = await supabase.from('app_config').select('key,value,version,updated_at').eq('key', key).maybeSingle()
       if (data) setRemoteConfig((prev) => ({ ...prev, [key]: data }))
     },
+    async logExport({ entity, entityId, summary, detail }) {
+      if (!supabase || !user || user.local || mfaGate !== 'ready') return
+      const orgId = await orgIdForUser()
+      if (!orgId) return
+      const { error } = await supabase.from('audit_events').insert({
+        org_id: orgId,
+        actor_id: user.id,
+        action: 'export',
+        entity,
+        entity_id: entityId || '',
+        summary: summary || 'Exported',
+        after: detail || null,
+      })
+      if (error) throw new Error(error.message || 'Could not record the export.')
+    },
     async resetConfig(key) {
       if (!supabase || !user || user.local) throw new Error('Sign in to the beta project to edit configuration.')
       if (mfaGate !== 'ready') throw new Error('Finish two-factor authentication before editing.')

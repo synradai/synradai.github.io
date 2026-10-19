@@ -12,6 +12,7 @@ import { matchFlags, withSeverityFlag } from './flags.js'
 import { extractJson } from './parse.js'
 import { buildNoteRecord, buildRecord } from './record.js'
 import { nameWarning } from './roles.js'
+import { auditToCsv, filterAudit } from './audit.js'
 import { recordDay, recordsForDay } from './day.js'
 import { initialDraft, moduleRows, prepareConfig, resolveForm, resolveMatrix, resolveTemplates, resolveWording, visibleModules } from './config.js'
 import { routeFromHash } from './routes.js'
@@ -224,6 +225,7 @@ test('routes, roles, redaction, and modules', () => {
   assert.equal(routeFromHash('#/hse/capture/take5').kind, 'take5')
   assert.equal(routeFromHash('#/admin').screen, 'admin')
   assert.equal(routeFromHash('#/hse/day').screen, 'day')
+  assert.equal(routeFromHash('#/hse/audit').screen, 'audit')
   assert.equal(routeFromHash('#/hse/investigate/abc').id, 'abc')
   assert.equal(routeFromHash('#/stores').screen, 'stores')
   assert.equal(routeFromHash('#/join').screen, 'join')
@@ -380,6 +382,26 @@ test('a day timeline keeps the selected date and short notes', () => {
   assert.equal(recordDay({ createdAt: '2026-10-18T16:30:00.000Z', fields: {} }), '2026-10-19')
   const day = recordsForDay([other, incident, meeting], '2026-10-19')
   assert.deepEqual(day.map((row) => row.id), ['day-3', 'day-1'])
+})
+
+test('audit filters by day and action and the csv stays a summary', () => {
+  const events = [
+    { id: 1, created_at: '2026-10-18T16:30:00.000Z', action: 'create', entity: 'hse_records', entity_id: 'a', summary: 'Created incident · Workshop', actor_id: 'u1', before: null, after: { kind: 'incident', label: 'Workshop' } },
+    { id: 2, created_at: '2026-10-19T02:00:00.000Z', action: 'delete', entity: 'hse_records', entity_id: 'b', summary: 'Deleted hazard', actor_id: 'u1' },
+  ]
+  assert.equal(filterAudit(events, { day: '2026-10-19', action: 'create' }).length, 1)
+  assert.equal(filterAudit(events, { action: 'delete' })[0].id, 2)
+  const csv = auditToCsv(filterAudit(events, { action: 'create' }))
+  assert.match(csv, /Created incident/)
+  assert.equal(csv.includes('Deleted hazard'), false)
+  assert.equal(csv.includes('description'), false)
+
+  const sql = readFileSync(new URL('../../supabase/migrations/20261020001000_hse_record_audit.sql', import.meta.url), 'utf8')
+  assert.match(sql, /after insert or update or delete on public\.hse_records/)
+  assert.match(sql, /action = 'export'/)
+  assert.match(sql, /hse_record_brief/)
+  assert.equal(sql.includes('fields,description'), false)
+  assert.equal(sql.includes('rgkiagqexoafmtxhrlqo'), false)
 })
 
 test('beta records round-trip through the device vault', async () => {

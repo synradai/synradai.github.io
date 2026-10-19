@@ -57,6 +57,10 @@ Apply these on the beta project, in order:
 2. `supabase/migrations/20261019073248_hse_records_unique_per_org.sql` — primary key becomes `(org_id, id)`.
 3. `supabase/migrations/20261019235000_beta_admin_config.sql` — `beta_admins`, versioned `app_config`, and append-only `audit_events`. Apply on the beta project only.
 
+## Audit
+
+`#/hse/audit` lists append-only events. A database trigger writes one when an `hse_records` row is created, edited, or deleted. The before and after values are a short summary (kind, status, severity, label), not the record body. Exporting the list writes an export event. Configuration saves are audited the same way.
+
 ## Daily record
 
 `#/hse/day` is one day at a time, defaulting to today in Western Australia. Incidents, hazards and Take 5s open the full capture form. Meetings, prestarts and toolbox talks are a short note on that day. All of them save as `hse_records` rows, using `kind` as the type.
