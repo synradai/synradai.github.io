@@ -7,7 +7,8 @@ import { exportRecordPdf } from '../lib/pdfExport.js'
 import Reporting from './Reporting.jsx'
 import { Button, FlagList, OfflineBanner } from './ui.jsx'
 
-const LABELS = { incident: 'Incident', hazard: 'Hazard', take5: 'Take 5', 'scene-check': 'Scene check' }
+const LABELS = { incident: 'Incident', hazard: 'Hazard', take5: 'Take 5', 'scene-check': 'Scene check', meeting: 'Meeting', prestart: 'Prestart', toolbox: 'Toolbox talk' }
+const NOTE_KINDS = new Set(['meeting', 'prestart', 'toolbox'])
 
 export default function RecordView({ app, id }) {
   const record = app.rows.find((row) => row.id === id)
@@ -79,7 +80,13 @@ export default function RecordView({ app, id }) {
       {(record.notifiable || record.path === 'escalate') && <Reporting ruleset={record.ruleset} forced={record.notifiable || record.path === 'escalate'} />}
 
       <div className="panel">
-        {form && form.fields.filter((field) => field.type !== 'photos' && field.type !== 'severity' && field.type !== 'note' && (fields[field.key] || field.required)).map((field) => (
+        {NOTE_KINDS.has(record.kind) && (
+          <>
+            <p><strong>{fields.title || fields.topic || fields.task || 'Note'}. </strong></p>
+            <p>{fields.note || fields.description || '—'}</p>
+          </>
+        )}
+        {form && !NOTE_KINDS.has(record.kind) && form.fields.filter((field) => field.type !== 'photos' && field.type !== 'severity' && field.type !== 'note' && (fields[field.key] || field.required)).map((field) => (
           <p key={field.key}><strong>{field.label}. </strong>{fields[field.key] || '—'}</p>
         ))}
         {record.kind === 'scene-check' && (
@@ -114,7 +121,7 @@ export default function RecordView({ app, id }) {
         </div>
       )}
 
-      {record.kind !== 'scene-check' && (
+      {record.kind !== 'scene-check' && !NOTE_KINDS.has(record.kind) && (
         <div className="panel" style={{ marginTop: 12 }}>
           <h2>Close-out</h2>
           {record.status === 'closed' ? (

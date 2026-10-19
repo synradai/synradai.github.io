@@ -10,6 +10,9 @@ const KINDS = [
   ['hazard', 'Hazard'],
   ['take5', 'Take 5'],
   ['scene-check', 'Scene check'],
+  ['meeting', 'Meeting'],
+  ['prestart', 'Prestart'],
+  ['toolbox', 'Toolbox talk'],
 ]
 
 function download(filename, text, type) {
