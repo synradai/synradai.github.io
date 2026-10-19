@@ -2,9 +2,9 @@ import { MODULES } from '../config/modules.js'
 import { go } from '../lib/routes.js'
 
 export default function Shell({ app, route, children }) {
-  const { modules, user, signOut, cloudNote, storageWarning } = app
-  const enabled = MODULES.filter((mod) => modules[mod.id])
-  const active = route.screen === 'home' || route.screen === 'setup'
+  const { user, signOut, cloudNote, storageWarning, isAdmin } = app
+  const enabled = app.navModules || MODULES.filter((mod) => app.modules[mod.id])
+  const active = route.screen === 'home' || route.screen === 'setup' || route.screen === 'admin'
     ? route.screen
     : (['capture', 'scan', 'scene', 'register', 'record', 'investigate', 'hse'].includes(route.screen) ? 'hse' : route.screen)
 
@@ -36,6 +36,7 @@ export default function Shell({ app, route, children }) {
             {mod.label}
           </button>
         ))}
+        {isAdmin && <button className={`chip${active === 'admin' ? ' active' : ''}`} onClick={() => go('#/admin')}>Admin</button>}
       </nav>
       <div className="body">
         <aside className="rail">
@@ -46,6 +47,7 @@ export default function Shell({ app, route, children }) {
           {enabled.filter((mod) => mod.group === 'register').map(link)}
           <div className="group">Site</div>
           <a href="#/setup" className={active === 'setup' ? 'active' : ''}>Site setup</a>
+          {isAdmin && <a href="#/admin" className={active === 'admin' ? 'active' : ''}>Admin</a>}
           <button className="linkish" onClick={signOut}>Sign out</button>
         </aside>
         <main className="page">

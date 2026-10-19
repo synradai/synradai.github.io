@@ -10,6 +10,7 @@ export function routeFromHash(hash) {
   if (!parts.length) return { screen: 'home' }
   if (parts[0] === 'join') return { screen: 'join' }
   if (parts[0] === 'setup') return { screen: 'setup' }
+  if (parts[0] === 'admin') return { screen: 'admin' }
   if (parts[0] === 'hse') {
     if (parts[1] === 'capture') return { screen: 'capture', kind: parts[2] || 'incident' }
     if (parts[1] === 'scan') return { screen: 'scan' }

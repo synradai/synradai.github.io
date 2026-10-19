@@ -8,8 +8,9 @@ The regulator is WorkSafe, within LGIRS.
 WHS (General) Regulations r.154–r.162 are not used in WA. Energised electrical work is under the Electricity (Licensing) Regulations 1991.
 Call every legal point a possible breach to verify. If a pinpoint is not in the adviser pack, say it is UNVERIFIED.`
 
-export function scanPrompt(kind) {
-  const fields = getForm(kind).fields.filter((field) => !['photos', 'severity', 'datetime'].includes(field.type) && field.key !== 'occurredAt')
+export function scanPrompt(kind, form) {
+  const resolved = form || getForm(kind)
+  const fields = resolved.fields.filter((field) => !['photos', 'severity', 'datetime'].includes(field.type) && field.key !== 'occurredAt')
   const shape = Object.fromEntries(fields.map((field) => {
     if (field.type === 'select' || field.type === 'yesno') {
       return [field.key, (field.options || []).map((opt) => opt.value).join(' | ')]
@@ -17,7 +18,7 @@ export function scanPrompt(kind) {
     return [field.key, '']
   }))
   return `${LAW}
-You are reading a photo of a paper ${getForm(kind).label} from a Western Australian worksite.
+You are reading a photo of a paper ${resolved.label} from a Western Australian worksite.
 Extract the fields into JSON matching this shape (values are hints, replace them):
 ${JSON.stringify(shape, null, 2)}
 People must be roles, not names. If a name is written, replace it with the role or leave the field empty. If you cannot read a field, use an empty string. Do not guess severity. Return JSON only.`

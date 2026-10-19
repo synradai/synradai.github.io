@@ -1,5 +1,6 @@
-import { useMemo, useRef, useState } from 'react'
-import { getForm, matchOption, missingRequired, take5Blocked, voiceSteps } from '../config/forms.js'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { getForm, matchOption, missingRequired, take5Blocked } from '../config/forms.js'
+import { resolveForm } from '../lib/config.js'
 import { assessReport, severityMeta, SEVERITY_SCALE, triageSummary } from '../config/severity.js'
 import { useVoiceWalkthrough } from '../../src/hooks/useVoiceWalkthrough.js'
 import { compressPhoto } from '../../src/utils/storage.js'
@@ -12,9 +13,9 @@ import { Button, Field, OfflineBanner } from './ui.jsx'
 
 const SEV_COLOR = ['#3ee0a8', '#8fd98a', '#ffb15a', '#ff8a4a', '#ff6b7a']
 
-function blankValues(kind, siteName, reporter) {
+function blankValues(form, siteName, reporter) {
   const values = {}
-  for (const field of getForm(kind).fields) {
+  for (const field of form.fields) {
     if (field.type === 'datetime') values[field.key] = perthDateTimeLocal()
     else if (field.type === 'photos') values[field.key] = []
     else if (field.key === 'reporter') values[field.key] = reporter || 'HSE adviser'
@@ -25,8 +26,13 @@ function blankValues(kind, siteName, reporter) {
 }
 
 export default function CaptureForm({ app, kind, initial, source = 'typed', banner }) {
-  const form = getForm(kind)
-  const steps = useMemo(() => voiceSteps(kind), [kind])
+  const form = useMemo(() => resolveForm(kind, app.formsConfig) || getForm(kind), [kind, app.formsConfig])
+  const steps = useMemo(() => form.fields.filter((field) => field.voice).map((field) => ({
+    key: field.key,
+    label: field.label,
+    auto: Boolean(field.auto),
+    hint: field.hint || field.label,
+  })), [form])
   const refs = useRef({})
   const offlineSample = Boolean(initial?.offline)
   const [values, setValues] = useState(() => {
@@ -43,12 +49,27 @@ export default function CaptureForm({ app, kind, initial, source = 'typed', bann
         }
       }
     } catch { /* ignore bad prefill */ }
-    return { ...blankValues(kind, app.site.siteName, 'HSE adviser'), ...rest, ...staged }
+    return { ...blankValues(form, app.site.siteName, 'HSE adviser'), ...rest, ...staged }
   })
   const [error, setError] = useState('')
   const [usedVoice, setUsedVoice] = useState(false)
 
   const set = (key, value) => setValues((prev) => ({ ...prev, [key]: value }))
+
+  useEffect(() => {
+    setValues((prev) => {
+      let changed = false
+      const next = { ...prev }
+      for (const field of form.fields) {
+        if (next[field.key] !== undefined) continue
+        changed = true
+        if (field.type === 'datetime') next[field.key] = perthDateTimeLocal()
+        else if (field.type === 'photos') next[field.key] = []
+        else next[field.key] = ''
+      }
+      return changed ? next : prev
+    })
+  }, [form])
 
   const walk = useVoiceWalkthrough({
     steps,
@@ -90,7 +111,7 @@ export default function CaptureForm({ app, kind, initial, source = 'typed', bann
 
   const save = (event) => {
     event?.preventDefault()
-    const missing = missingRequired(kind, values)
+    const missing = missingRequired(kind, values, form)
     if (missing.length) { setError(`Still needed: ${missing.join(', ')}.`); return }
     walk.stop()
     const record = buildRecord({
@@ -111,7 +132,7 @@ export default function CaptureForm({ app, kind, initial, source = 'typed', bann
     <form onSubmit={save}>
       <p className="eyebrow">HSE · {form.label}</p>
       <h1>{source === 'scan' ? `Review ${form.label}` : form.label}</h1>
-      <p className="lede">Talk it through, or type. Say “done” to finish the long answers. People by role, not name.</p>
+      <p className="lede">{app.wording?.captureHint || 'Talk it through, or type. Say “done” to finish the long answers. People by role, not name.'}</p>
       {banner}
       <OfflineBanner show={offlineSample} />
       {stopped.length > 0 && (

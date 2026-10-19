@@ -445,8 +445,9 @@ function requiredNow(field, values) {
   return Boolean(field.required)
 }
 
-export function missingRequired(kind, values) {
-  return getForm(kind).fields.filter((field) => {
+export function missingRequired(kind, values, form) {
+  const fields = form?.fields || getForm(kind).fields
+  return fields.filter((field) => {
     if (!requiredNow(field, values)) return false
     if (field.type === 'severity') return !(Number(values?.[field.key]) >= 1)
     if (field.type === 'note' || field.type === 'photos') return false

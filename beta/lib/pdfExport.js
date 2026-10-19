@@ -1,5 +1,5 @@
 import { exportReportPdf } from '../../src/utils/pdf.js'
-import { getForm } from '../config/forms.js'
+import { resolveForm } from './config.js'
 import { formatWhen } from './time.js'
 
 function titleFor(record) {
@@ -7,15 +7,15 @@ function titleFor(record) {
   return `Safe Intelligence — ${names[record.kind] || 'HSE record'}`
 }
 
-export async function exportRecordPdf(record) {
+export async function exportRecordPdf(record, formsConfig) {
   const fields = record.fields || {}
   let rows = []
-  try {
-    const form = getForm(record.kind)
+  const form = resolveForm(record.kind, formsConfig)
+  if (form) {
     rows = form.fields
       .filter((field) => field.type !== 'photos' && fields[field.key])
       .map((field) => ({ label: field.label, value: String(fields[field.key]) }))
-  } catch {
+  } else {
     rows = Object.entries(fields).filter(([, value]) => value).map(([key, value]) => ({ label: key, value: String(value) }))
   }
   const blocks = [

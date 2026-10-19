@@ -1,4 +1,5 @@
 import { FORM_KINDS } from '../config/forms.js'
+import { resolveForm } from '../lib/config.js'
 import { rulesetMeta } from '../config/regulations.js'
 
 export default function HseHome({ app }) {
@@ -6,22 +7,25 @@ export default function HseHome({ app }) {
     acc[row.kind] = (acc[row.kind] || 0) + 1
     return acc
   }, {})
+  const ruleset = rulesetMeta(app.site.ruleset)
   return (
     <>
       <p className="eyebrow">HSE · working</p>
-      <h1>Capture</h1>
+      <h1>{app.wording?.hseTitle || 'Capture'}</h1>
       <p className="lede">
-        Voice or typed. This site uses the {rulesetMeta(app.site.ruleset).label} ruleset ({rulesetMeta(app.site.ruleset).instrument}).
-        {' '}Fields live in beta/config/forms.js. Breach areas live in beta/config/breaches.js.
+        {app.wording?.hseIntro || 'Voice or typed.'} This site uses the {ruleset.label} ruleset ({ruleset.instrument}).
       </p>
       <div className="grid cards">
-        {FORM_KINDS.map((kind) => (
+        {FORM_KINDS.map((kind) => {
+          const form = resolveForm(kind.id, app.formsConfig)
+          return (
           <a className="card" href={`#/hse/capture/${kind.id}`} key={kind.id}>
             <span className="tag live">Capture</span>
-            <strong>{kind.label}</strong>
+            <strong>{form?.label || kind.label}</strong>
             <span>{kind.blurb}</span>
           </a>
-        ))}
+          )
+        })}
         <a className="card" href="#/hse/scan">
           <span className="tag live">Vision</span>
           <strong>Scan a paper form</strong>
@@ -34,7 +38,7 @@ export default function HseHome({ app }) {
         </a>
         <a className="card" href="#/hse/register">
           <span className="tag live">Register</span>
-          <strong>All HSE records</strong>
+          <strong>{app.wording?.registerTitle || 'All HSE records'}</strong>
           <span>{app.rows.length} on this device · {counts.incident || 0} incidents · {counts.hazard || 0} hazards · {counts.take5 || 0} Take 5s</span>
         </a>
       </div>

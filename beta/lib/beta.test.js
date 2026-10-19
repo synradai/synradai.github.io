@@ -12,6 +12,7 @@ import { matchFlags, withSeverityFlag } from './flags.js'
 import { extractJson } from './parse.js'
 import { buildRecord } from './record.js'
 import { nameWarning } from './roles.js'
+import { initialDraft, moduleRows, prepareConfig, resolveForm, resolveMatrix, resolveTemplates, resolveWording, visibleModules } from './config.js'
 import { routeFromHash } from './routes.js'
 import { redact } from './redact.js'
 import { ENC_PREFIX, openVault, sealVault } from '../../src/utils/secureStore.js'
@@ -220,6 +221,7 @@ test('json, csv, filters, and cloud merge', () => {
 
 test('routes, roles, redaction, and modules', () => {
   assert.equal(routeFromHash('#/hse/capture/take5').kind, 'take5')
+  assert.equal(routeFromHash('#/admin').screen, 'admin')
   assert.equal(routeFromHash('#/hse/investigate/abc').id, 'abc')
   assert.equal(routeFromHash('#/stores').screen, 'stores')
   assert.equal(routeFromHash('#/join').screen, 'join')
@@ -278,6 +280,29 @@ test('beta build is separate from the live app', () => {
   assert.match(state, /onConflict: 'org_id,id'/)
   assert.match(state, /await openVault\([\s\S]*from\('hse_records'\)/)
   assert.match(state, /mfaGate !== 'ready'/)
+  assert.match(state, /from\('app_config'\)/)
+  assert.match(state, /from\('beta_admins'\)/)
+  assert.match(state, /postgres_changes/)
+  assert.match(state, /visibilitychange/)
+
+  const admin = readFileSync(new URL('../components/Admin.jsx', import.meta.url), 'utf8')
+  assert.match(admin, /TwoFactorEnroll/)
+  assert.match(admin, /TwoFactorChallenge/)
+  assert.match(admin, /mfaGate/)
+  assert.match(admin, /Reset to default/)
+  assert.equal(admin.includes('Airtable'), false)
+  assert.equal(admin.includes('MyOSH'), false)
+
+  const adminSql = readFileSync(new URL('../../supabase/migrations/20261019235000_beta_admin_config.sql', import.meta.url), 'utf8')
+  assert.match(adminSql, /create table if not exists public\.beta_admins/)
+  assert.match(adminSql, /create table if not exists public\.app_config/)
+  assert.match(adminSql, /trentrwood@outlook\.com/)
+  assert.match(adminSql, /nextlevelaccess@outlook\.com/)
+  assert.match(adminSql, /auth\.jwt\(\)->>'aal'\) = 'aal2'/)
+  assert.match(adminSql, /audit_events/)
+  assert.match(adminSql, /beta_private\.audit_app_config/)
+  assert.doesNotMatch(adminSql, /create policy require_aal2/)
+  assert.equal(adminSql.includes('rgkiagqexoafmtxhrlqo'), false)
 
   const deploy = readFileSync(new URL('../../.github/workflows/deploy.yml', import.meta.url), 'utf8')
   assert.ok(deploy.indexOf('npm run build') < deploy.indexOf('npm run build:beta'))
@@ -294,6 +319,51 @@ test('beta build is separate from the live app', () => {
 
   const liveEnv = readFileSync(new URL('../../.env.production', import.meta.url), 'utf8')
   assert.equal(liveEnv.includes('rocobdfuvaecrkzsxqub'), false)
+})
+
+test('admin config falls back to code and keeps locked fields', () => {
+  const wording = resolveWording(null)
+  assert.equal(wording.homeTitle, 'Safe Intelligence')
+  assert.equal(resolveWording({ homeTitle: 'Night board' }).homeTitle, 'Night board')
+  assert.equal(resolveWording({ homeTitle: '' }).homeTitle, '')
+
+  const rows = moduleRows([{ id: 'stores', enabled: false, order: 0, label: 'Cage' }, { id: 'hse', enabled: false, order: 5, label: 'Events' }])
+  const hse = rows.find((row) => row.id === 'hse')
+  assert.equal(hse.adminEnabled, true)
+  assert.equal(hse.label, 'Events')
+  const stores = rows.find((row) => row.id === 'stores')
+  assert.equal(stores.adminEnabled, false)
+  assert.equal(stores.label, 'Cage')
+  assert.equal(visibleModules(rows, { stores: true }).some((row) => row.id === 'stores'), false)
+  assert.equal(visibleModules(moduleRows(null), { scaffold: false }).some((row) => row.id === 'scaffold'), false)
+  assert.equal(rows[0].id, 'stores')
+
+  const saved = {
+    incident: {
+      label: 'Event',
+      fields: [
+        { key: 'incidentType', label: 'Type', options: ['Near miss', 'Spill'] },
+        { key: 'witnesses', hidden: true },
+        { key: 'x_shift', label: 'Shift', type: 'text', custom: true },
+      ],
+    },
+  }
+  const form = resolveForm('incident', saved)
+  assert.equal(form.label, 'Event')
+  assert.ok(form.fields.some((field) => field.key === 'actualSeverity'))
+  assert.ok(form.fields.some((field) => field.key === 'notifiable'))
+  assert.equal(form.fields.some((field) => field.key === 'witnesses'), false)
+  assert.equal(form.fields.find((field) => field.key === 'incidentType').options.map((option) => option.value).join(','), 'Near miss,Spill')
+  assert.ok(form.fields.some((field) => field.key === 'x_shift'))
+
+  const round = prepareConfig('forms', initialDraft('forms', null))
+  assert.deepEqual(resolveForm('hazard', round).fields.map((field) => field.key), getForm('hazard').fields.map((field) => field.key))
+  const modules = prepareConfig('modules', initialDraft('modules', [{ id: 'hse', label: 'Events', enabled: false, order: 3 }]))
+  assert.equal(modules.find((row) => row.id === 'hse').enabled, true)
+  assert.equal(resolveTemplates(null)[0].name, 'Workplace walk')
+  assert.equal(resolveMatrix({ columns: ['First aid'] }).columns[0], 'First aid')
+  assert.throws(() => prepareConfig('training_matrix', { columns: ['  '] }), /column/)
+  assert.equal(prepareConfig('inspection_templates', initialDraft('inspection_templates', null)).length, 2)
 })
 
 test('beta records round-trip through the device vault', async () => {

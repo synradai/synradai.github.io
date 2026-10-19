@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import DocScanner from '../../src/components/DocScanner.jsx'
 import { FORM_KINDS } from '../config/forms.js'
+import { resolveForm } from '../lib/config.js'
 import { compressPhoto } from '../../src/utils/storage.js'
 import { extractForm } from '../lib/ai.js'
 import CaptureForm from './CaptureForm.jsx'
@@ -28,7 +29,7 @@ export default function PaperScan({ app }) {
     setBusy(true)
     setError('')
     try {
-      const result = await extractForm(kind, photo)
+      const result = await extractForm(kind, photo, resolveForm(kind, app.formsConfig))
       setDraft({ ...result.fields, photos: [photo], offline: result.offline })
     } catch (err) {
       setError(err.message || 'Could not read the form.')
@@ -63,7 +64,7 @@ export default function PaperScan({ app }) {
         <div className="field">
           <span className="field-label">Which form is this?</span>
           <select value={kind} onChange={(event) => setKind(event.target.value)}>
-            {FORM_KINDS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+            {FORM_KINDS.map((item) => <option key={item.id} value={item.id}>{resolveForm(item.id, app.formsConfig)?.label || item.label}</option>)}
           </select>
         </div>
         <div className="actions">
