@@ -4,8 +4,8 @@ import test from 'node:test'
 import { ACTION_TEMPLATES, templateActions } from '../config/actions.js'
 import { FORMS, getForm, matchOption, missingRequired, take5Blocked, voiceSteps } from '../config/forms.js'
 import { MODULES, defaultModulePrefs } from '../config/modules.js'
-import { BREACHES, LEGAL_NOTICE, NOT_USED_IN_WA } from '../config/breaches.js'
-import { breachesFor, LEVY_LAW, REPEALED_LAW, reportingFor } from '../config/regulations.js'
+import { BREACHES, LEGAL_NOTICE, NOT_USED_IN_WA, SOURCE_URL, VERIFIED_ON } from '../config/breaches.js'
+import { breachesFor, LEVY_LAW, MINES_VERIFY_NOTE, REPEALED_LAW, reportingFor } from '../config/regulations.js'
 import { assessReport, humanErrorGuard, SEVERITY_SCALE } from '../config/severity.js'
 import { filterRecords, toCsv } from './csv.js'
 import { matchFlags, withSeverityFlag } from './flags.js'
@@ -92,6 +92,26 @@ test('regulatory config cites current WA law only', () => {
     assert.equal(/occupational safety and health/i.test(reg.instrument), false)
     assert.equal(reg.notice, LEGAL_NOTICE)
   }
+  const section3 = [
+    'Primary duty', 'Officers', 'Workers', 'Consultation', 'Cease unsafe work',
+    'Risk management', 'Information and training', 'Falls', 'Falling objects',
+    'Scaffolding', 'Scaffolding licences', 'Confined spaces', 'Isolation / LOTO',
+    'Lifting and rigging', 'Dogging and rigging licences', 'Electrical',
+    'Energised electrical work', 'Hazardous chemicals', 'Noise', 'Manual tasks',
+    'PPE', 'Mobile plant', 'Hot work / fire', 'First aid and emergency',
+    'High-risk construction work', 'Licences',
+  ]
+  for (const area of section3) {
+    assert.ok(BREACHES.some((item) => item.area === area), area)
+  }
+  for (const item of BREACHES) {
+    assert.equal(typeof item.area, 'string')
+    assert.equal(typeof item.instrument, 'string')
+    assert.equal(typeof item.reg, 'string')
+    assert.equal(typeof item.title, 'string')
+    assert.equal(item.verified_on, VERIFIED_ON)
+    assert.equal(item.source_url, SOURCE_URL)
+  }
   const electrical = BREACHES.find((item) => item.id === 'whs-gen-electrical')
   assert.equal(electrical.reg.includes('r.154'), false)
   assert.match(NOT_USED_IN_WA.map((item) => item.reg).join(' '), /r\.154/)
@@ -99,9 +119,23 @@ test('regulatory config cites current WA law only', () => {
   assert.deepEqual(quiet, [])
   const fall = matchFlags('The operator fell from the tray and was not tied off.')
   assert.ok(fall.some((flag) => flag.pinpoint.includes('r.78')))
+  const storedFall = BREACHES.find((item) => item.id === 'whs-gen-r78')
+  assert.equal(storedFall.verified_on, VERIFIED_ON)
+  assert.equal(storedFall.source_url, SOURCE_URL)
+  assert.match(storedFall.reg, /r\.78/)
   const minesFall = matchFlags('The operator fell from the tray and was not tied off.', { ruleset: 'mines' })
-  assert.match(minesFall.find((flag) => flag.id === 'whs-gen-r78').instrument, /Mines/)
-  assert.equal(minesFall.find((flag) => flag.id === 'whs-gen-r78').unverified, 'UNVERIFIED — needs verification')
+  const minesFlag = minesFall.find((flag) => flag.id === 'whs-gen-r78')
+  assert.match(minesFlag.instrument, /Mines/)
+  assert.equal(minesFlag.unverified, MINES_VERIFY_NOTE)
+  assert.equal(minesFlag.reg, '')
+  assert.equal(`${minesFlag.pinpoint} ${minesFlag.label || ''} ${minesFlag.title}`.includes('r.78'), false)
+  assert.equal(`${minesFlag.pinpoint} ${minesFlag.label || ''} ${minesFlag.title}`.includes(storedFall.reg), false)
+  for (const flag of breachesFor('mines')) {
+    if (!flag.instrument.includes('(Mines)')) continue
+    assert.equal(flag.reg, '')
+    assert.equal(flag.unverified, MINES_VERIFY_NOTE)
+    assert.equal(/\br\.\d/.test(`${flag.pinpoint} ${flag.label || ''} ${flag.title}`), false)
+  }
   const hot = BREACHES.find((item) => item.id === 'whs-gen-hot-work')
   assert.equal(hot.verified, false)
   assert.match(matchFlags('hot work with no fire watch')[0].unverified, /UNVERIFIED/)

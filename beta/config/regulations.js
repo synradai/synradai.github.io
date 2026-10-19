@@ -111,6 +111,13 @@ function applies(entry, ruleset) {
   return list.includes(ruleset)
 }
 
+// Shown on a Mines site in place of a General Regulations number.
+export const MINES_VERIFY_NOTE = 'verify'
+
+function generalRegNumber(entry) {
+  return entry.instrument.includes('(General)')
+}
+
 export function presentBreach(entry, ruleset = 'general') {
   const notice = LEGAL_NOTICE
   const needsVerify = entry.verified === false || (entry.unverifiedParts || []).length > 0
@@ -119,28 +126,33 @@ export function presentBreach(entry, ruleset = 'general') {
     pinpoint: entry.reg ? `${entry.reg} — ${entry.title}` : entry.title,
     label: entry.title,
     notice,
-    unverified: needsVerify ? UNVERIFIED_NOTE : '',
+    unverified: needsVerify ? [UNVERIFIED_NOTE, ...(entry.unverifiedParts || [])].join(' ') : '',
   }
-  if (ruleset === 'general' || (entry.rulesets || []).includes(ruleset) && !entry.instrument.includes('(General)')) {
+  if (ruleset === 'general' || ((entry.rulesets || []).includes(ruleset) && !generalRegNumber(entry))) {
     return base
   }
-  if (ruleset === 'mines' && entry.instrument.includes('(General)')) {
+  if (ruleset === 'mines' && generalRegNumber(entry)) {
     return {
       ...base,
       instrument: 'WHS (Mines) Regulations 2022 (WA)',
-      pinpoint: `${entry.area}. Mines numbering is UNVERIFIED. Do not reuse General Regulations ${entry.reg}.`,
+      reg: '',
+      title: entry.area,
+      label: '',
+      pinpoint: `${entry.area}. ${MINES_VERIFY_NOTE}`,
       verified: false,
-      unverified: UNVERIFIED_NOTE,
+      unverified: MINES_VERIFY_NOTE,
     }
   }
-  if (ruleset === 'pageo' && entry.instrument.includes('(General)')) {
+  if (ruleset === 'pageo' && generalRegNumber(entry)) {
     return {
       ...base,
       instrument: 'WHS (Petroleum and Geothermal Energy Operations) Regulations 2022 (WA)',
       reg: '',
-      pinpoint: `${entry.area}. PAGEO regulation numbers are not in the adviser pack yet.`,
+      title: entry.area,
+      label: '',
+      pinpoint: `${entry.area}. PAGEO regulation numbers are not in the adviser pack yet. verify`,
       verified: false,
-      unverified: UNVERIFIED_NOTE,
+      unverified: 'verify',
     }
   }
   return base

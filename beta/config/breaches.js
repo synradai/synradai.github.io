@@ -1,19 +1,21 @@
-// Breach areas from the WA adviser pack (19 Oct 2026).
-// Section 3 is incomplete. Append new objects to BREACHES. Do not renumber
-// the ones already here. Every flag is shown as "Possible breach, verify".
+// Breach areas from section 3 of the WA adviser pack (19 Oct 2026).
+// Append new objects to BREACHES. Do not renumber the ones already here.
+// Stored shape: {area, instrument, reg, title, verified_on, source_url}.
+// Every flag is shown as "Possible breach, verify".
 // Items with verified: false also show "UNVERIFIED — needs verification".
+// Mines presentation lives in regulations.js: it does not reuse these
+// General Regulations numbers.
 
 export const VERIFIED_ON = '2026-10-19'
 export const LEGAL_NOTICE = 'Possible breach, verify'
 export const UNVERIFIED_NOTE = 'UNVERIFIED — needs verification'
-
-const LAW_URL = 'https://www.legislation.wa.gov.au/'
+export const SOURCE_URL = 'https://www.legislation.wa.gov.au/'
 
 function breach(entry) {
   return {
     verified: true,
-    verifiedOn: VERIFIED_ON,
-    sourceUrl: LAW_URL,
+    verified_on: VERIFIED_ON,
+    source_url: SOURCE_URL,
     rulesets: ['general', 'mines', 'pageo'],
     keywords: [],
     unverifiedParts: [],
