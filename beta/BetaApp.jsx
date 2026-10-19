@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import Admin from './components/Admin.jsx'
+import Audit from './components/Audit.jsx'
 import CaptureForm from './components/CaptureForm.jsx'
 import DailyRecord from './components/DailyRecord.jsx'
 import Home from './components/Home.jsx'
@@ -95,6 +96,7 @@ function Screen({ route }) {
   if (route.screen === 'setup') body = <SiteSetup app={app} />
   else if (route.screen === 'hse') body = <HseHome app={app} />
   else if (route.screen === 'day') body = <DailyRecord app={app} />
+  else if (route.screen === 'audit') body = <Audit app={app} />
   else if (route.screen === 'capture' && FORMS[route.kind]) body = <CaptureForm key={route.kind} app={app} kind={route.kind} />
   else if (route.screen === 'scan') body = <PaperScan app={app} />
   else if (route.screen === 'scene') body = <SceneCheck app={app} />
