@@ -127,6 +127,7 @@ test('routes, roles, redaction, and modules', () => {
   assert.equal(routeFromHash('#/hse/capture/take5').kind, 'take5')
   assert.equal(routeFromHash('#/hse/investigate/abc').id, 'abc')
   assert.equal(routeFromHash('#/stores').screen, 'stores')
+  assert.equal(routeFromHash('#/join').screen, 'join')
   assert.equal(routeFromHash('#access_token=abc&type=recovery').screen, 'auth-callback')
   assert.equal(routeFromHash('').screen, 'home')
   assert.match(nameWarning('John Smith'), /role/)
@@ -152,4 +153,21 @@ test('beta build is separate from the live app', () => {
   const liveApp = readFileSync(new URL('../../src/App.jsx', import.meta.url), 'utf8')
   assert.equal(liveApp.includes('generate-grok'), false)
   assert.equal(liveApp.includes('beta/config'), false)
+
+  const login = readFileSync(new URL('../components/Login.jsx', import.meta.url), 'utf8')
+  assert.equal(login.includes('#/join'), false)
+  assert.equal(login.includes('Create one'), false)
+
+  const migration = readFileSync(new URL('../../supabase/migrations/20261019060723_beta_hse_records.sql', import.meta.url), 'utf8')
+  assert.match(migration, /org_id = public\.current_org_id\(\)/)
+  assert.match(migration, /create table if not exists public\.hse_records/)
+  assert.equal(migration.includes('trial_ends_at'), false)
+
+  const grok = readFileSync(new URL('../../supabase/functions/generate-grok/index.ts', import.meta.url), 'utf8')
+  assert.equal(grok.includes('trial_ends_at'), false)
+  assert.equal(grok.includes('subscription_status'), false)
+  assert.match(grok, /AI_PROVIDER/)
+
+  const liveEnv = readFileSync(new URL('../../.env.production', import.meta.url), 'utf8')
+  assert.equal(liveEnv.includes('rocobdfuvaecrkzsxqub'), false)
 })

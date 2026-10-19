@@ -1,6 +1,6 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { defaultModulePrefs } from './config/modules.js'
-import { isBackendEnabled, liveProjectBlocked, supabase } from './lib/supabase.js'
+import { authReturnUrl, isBackendEnabled, liveProjectBlocked, supabase } from './lib/supabase.js'
 import { loadModulePrefs, loadRows, loadSite, mergeRows, saveModulePrefs, saveRows, saveSite, slimForCloud } from './lib/store.js'
 
 const AppContext = createContext(null)
@@ -20,6 +20,8 @@ export function AppState({ children }) {
   const [cloudNote, setCloudNote] = useState('')
   const [storageWarning, setStorageWarning] = useState('')
   const [authError, setAuthError] = useState('')
+  const [authNotice, setAuthNotice] = useState('')
+  const orgIdRef = useRef(null)
 
   useEffect(() => {
     if (!supabase) return
@@ -47,10 +49,13 @@ export function AppState({ children }) {
     setRows(local)
     if (!supabase || user.local) return
     let cancel = false
+    supabase.from('profiles').select('org_id').eq('id', user.id).maybeSingle().then(({ data }) => {
+      if (!cancel) orgIdRef.current = data?.org_id || null
+    })
     supabase.from('hse_records').select('id,kind,payload,updated_at').then(({ data, error }) => {
       if (cancel) return
       if (error) {
-        setCloudNote('Cloud register is not on this project yet. Records stay on this device. Run supabase/beta/hse-records.sql on the beta project when you are ready.')
+        setCloudNote('Cloud register is not on this project yet. Records stay on this device until the beta hse_records migration is applied.')
         return
       }
       const remote = (data || []).map((row) => ({
@@ -83,12 +88,13 @@ export function AppState({ children }) {
     if (!supabase || !user || user.local) return
     const { error } = await supabase.from('hse_records').upsert({
       id: row.id,
+      ...(orgIdRef.current ? { org_id: orgIdRef.current } : {}),
       user_id: user.id,
       kind: row.kind,
       payload: slimForCloud(row),
       updated_at: row.updatedAt,
     })
-    if (error) setCloudNote('Saved on this device. The beta cloud register rejected the sync — check that hse-records.sql has been run.')
+    if (error) setCloudNote('Saved on this device. Cloud sync failed. Apply the beta hse_records migration if that table is not there yet.')
   }
 
   const api = useMemo(() => ({
@@ -101,20 +107,50 @@ export function AppState({ children }) {
     cloudNote,
     storageWarning,
     authError,
+    authNotice,
     liveProjectBlocked,
     backend: isBackendEnabled,
+    clearAuth() {
+      setAuthError('')
+      setAuthNotice('')
+    },
     async signIn(email, password) {
       setAuthError('')
+      setAuthNotice('')
       const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
       if (error) setAuthError(error.message || 'Could not sign in.')
     },
+    async signUp(email, password, fullName) {
+      setAuthError('')
+      setAuthNotice('')
+      if (password.length < 8) {
+        setAuthError('Use at least 8 characters for your password.')
+        return
+      }
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          emailRedirectTo: authReturnUrl(),
+          data: (fullName || '').trim() ? { full_name: fullName.trim() } : undefined,
+        },
+      })
+      if (error) {
+        setAuthError(error.message || 'Could not create the account.')
+        return
+      }
+      if (!data.session) {
+        setAuthNotice('Account created. Check your email to confirm it, then sign in.')
+      }
+    },
     async sendReset(email) {
       setAuthError('')
+      setAuthNotice('')
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/beta/`,
+        redirectTo: authReturnUrl(),
       })
       if (error) setAuthError(error.message || 'Could not send the reset email.')
-      else setAuthError('Check your email for a reset link.')
+      else setAuthNotice('Check your email for a reset link.')
     },
     async setPassword(password) {
       const { error } = await supabase.auth.updateUser({ password })
@@ -159,7 +195,7 @@ export function AppState({ children }) {
       setSite(next)
       saveSite(next)
     },
-  }), [ready, user, recovery, rows, modules, site, cloudNote, storageWarning, authError])
+  }), [ready, user, recovery, rows, modules, site, cloudNote, storageWarning, authError, authNotice])
 
   return <AppContext.Provider value={api}>{children}</AppContext.Provider>
 }

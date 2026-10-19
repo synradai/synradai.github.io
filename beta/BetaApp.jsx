@@ -30,7 +30,7 @@ function Screen({ route }) {
   useEffect(() => { window.scrollTo(0, 0) }, [route.screen, route.id, route.kind])
 
   if (!app.ready) return <div className="login"><p className="muted">Opening beta…</p></div>
-  if (!app.user) return <Login />
+  if (!app.user) return <Login key={route.screen === 'join' ? 'join' : 'signin'} mode={route.screen === 'join' ? 'join' : 'signin'} />
 
   let body = <Home app={app} />
   if (route.screen === 'setup') body = <SiteSetup app={app} />

@@ -3,7 +3,7 @@ import { offlineActions, offlineExtraction, offlineScene, offlineWhys } from './
 import { extractJson } from './parse.js'
 import { actionsPrompt, scenePrompt, scanPrompt, whysPrompt } from './prompts.js'
 import { redact } from './redact.js'
-import { getAccessToken, isBackendEnabled, proxyUrl } from './supabase.js'
+import { getAccessToken, isBackendEnabled, proxyUrl, supabaseKey } from './supabase.js'
 
 export function scrub(text) {
   const redacted = redact(text)
@@ -32,6 +32,7 @@ async function complete({ prompt, images, task, maxTokens }) {
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
+        ...(supabaseKey ? { apikey: supabaseKey } : {}),
       },
       body: JSON.stringify({
         prompt: scrub(prompt),
@@ -46,6 +47,7 @@ async function complete({ prompt, images, task, maxTokens }) {
   let data = null
   try { data = await response.json() } catch { data = null }
   if (response.status === 401) throw new Error('Sign in again to use Grok.')
+  if (response.status === 402) throw new Error('This call hit the billing proxy. Beta uses generate-grok, which does not check the trial.')
   if (response.status === 429) throw new Error('Daily AI limit reached. Try again tomorrow.')
   const text = data?.content?.[0]?.text || ''
   if (!response.ok || !text) {

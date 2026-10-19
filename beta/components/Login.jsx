@@ -1,12 +1,19 @@
-import { useState } from 'react'
+import { useLayoutEffect, useState } from 'react'
+import { go } from '../lib/routes.js'
 import { useApp } from '../state.jsx'
 import { Button, Field } from './ui.jsx'
 
-export default function Login() {
+export default function Login({ mode = 'signin' }) {
   const app = useApp()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [mode, setMode] = useState('signin')
+  const [fullName, setFullName] = useState('')
+  const [reset, setReset] = useState(false)
+  const joining = mode === 'join'
+
+  useLayoutEffect(() => {
+    app.clearAuth()
+  }, [mode])
 
   return (
     <div className="login">
@@ -17,8 +24,12 @@ export default function Login() {
           <span className="pill">beta 1</span>
         </div>
         <p className="eyebrow">Private field test</p>
-        <h1>Welcome back</h1>
-        <p className="lede">Sign in to the beta workspace. There is no public signup — access is issued for this test.</p>
+        <h1>{joining ? 'Create your account' : 'Welcome back'}</h1>
+        <p className="lede">
+          {joining
+            ? 'This page is the direct way to open a beta account. Confirm the email, then sign in.'
+            : 'Sign in to the beta workspace.'}
+        </p>
 
         {app.liveProjectBlocked && (
           <p className="note">This build is pointed at the live Safe Intelligence project. Beta will not connect to it. Put the new project URL and publishable key in .env.beta.</p>
@@ -33,25 +44,46 @@ export default function Login() {
           </form>
         )}
 
-        {app.backend && !app.recovery && (
+        {app.backend && !app.recovery && joining && (
+          <form onSubmit={(event) => { event.preventDefault(); app.signUp(email, password, fullName) }}>
+            <Field label="Name" hint="Optional. Becomes the organisation name on this project.">
+              <input value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" />
+            </Field>
+            <Field label="Email">
+              <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" required />
+            </Field>
+            <Field label="Password" hint="At least 8 characters.">
+              <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" required minLength={8} />
+            </Field>
+            {app.authError && <p className="note">{app.authError}</p>}
+            {app.authNotice && <p className="lede">{app.authNotice}</p>}
+            <Button type="submit">Create account</Button>
+            <div>
+              <button type="button" className="text-btn" onClick={() => go('#/')}>Back to sign in</button>
+            </div>
+          </form>
+        )}
+
+        {app.backend && !app.recovery && !joining && (
           <form onSubmit={(event) => {
             event.preventDefault()
-            if (mode === 'reset') app.sendReset(email)
+            if (reset) app.sendReset(email)
             else app.signIn(email, password)
           }}>
             <Field label="Email">
               <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" required />
             </Field>
-            {mode === 'signin' && (
+            {!reset && (
               <Field label="Password">
                 <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required />
               </Field>
             )}
             {app.authError && <p className="note">{app.authError}</p>}
-            <Button type="submit">{mode === 'reset' ? 'Send reset link' : 'Sign in'}</Button>
+            {app.authNotice && <p className="lede">{app.authNotice}</p>}
+            <Button type="submit">{reset ? 'Send reset link' : 'Sign in'}</Button>
             <div>
-              <button type="button" className="text-btn" onClick={() => setMode(mode === 'reset' ? 'signin' : 'reset')}>
-                {mode === 'reset' ? 'Back to sign in' : 'Forgot password?'}
+              <button type="button" className="text-btn" onClick={() => setReset((value) => !value)}>
+                {reset ? 'Back to sign in' : 'Forgot password?'}
               </button>
             </div>
           </form>

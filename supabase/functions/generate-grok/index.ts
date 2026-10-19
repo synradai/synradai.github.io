@@ -21,6 +21,10 @@
 //   CLAUDE_MODEL         optional, default claude-sonnet-4-6
 //   AI_DAILY_LIMIT       optional, default 80 (in-memory, resets on cold start)
 //
+// This function does not check billing or the free-trial clock, and it does
+// not return 402. The beta field test is not gated on the 14-day trial.
+// Leave quick-worker (Anthropic + billing) deployed as it is.
+//
 // Returns the same { content: [{ type, text }] } shape as the live proxy
 // so callers can read content[0].text. Also returns provider and model.
 // ---------------------------------------------------------------------------
@@ -45,6 +49,8 @@ const usage = new Map<string, { day: string; n: number }>();
 
 const DEFAULT_ORIGINS = [
   "https://synradai.github.io",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
   "http://localhost:5174",
   "http://127.0.0.1:5174",
   "http://localhost:4174",
@@ -64,10 +70,23 @@ function corsHeaders(req: Request) {
   const allowed = allowedOrigins();
   return {
     "Access-Control-Allow-Origin": allowed.includes(origin) ? origin : allowed[0],
-    "Access-Control-Allow-Headers": "authorization, content-type",
+    "Access-Control-Allow-Headers": "authorization, content-type, apikey, x-client-info",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     Vary: "Origin",
   };
+}
+
+function clientApiKey() {
+  const legacy = Deno.env.get("SUPABASE_ANON_KEY") || "";
+  if (legacy) return legacy;
+  const raw = Deno.env.get("SUPABASE_PUBLISHABLE_KEYS") || "";
+  if (!raw) return "";
+  try {
+    const parsed = JSON.parse(raw) as Record<string, string>;
+    return parsed.default || Object.values(parsed).find(Boolean) || "";
+  } catch {
+    return raw.startsWith("sb_publishable_") ? raw : "";
+  }
 }
 
 function bump(uid: string) {
@@ -95,7 +114,7 @@ Deno.serve(async (req) => {
       return json({ error: "Refusing to run on the live Safe Intelligence project." }, 403);
     }
 
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+    const anonKey = clientApiKey();
     if (!supabaseUrl || !anonKey) return json({ error: "Supabase env is not set" }, 500);
 
     const authHeader = req.headers.get("Authorization") ?? "";
