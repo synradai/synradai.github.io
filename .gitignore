@@ -1,7 +1,9 @@
 node_modules/
 dist/
+dist-beta/
 .env
 .env.*
 !.env.example
 !.env.production
+!.env.beta.example
 .netlify
