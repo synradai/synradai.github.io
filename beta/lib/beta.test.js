@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import test from 'node:test'
 import { ACTION_TEMPLATES, templateActions } from '../config/actions.js'
 import { FORMS, getForm, matchOption, missingRequired, take5Blocked, voiceSteps } from '../config/forms.js'
@@ -261,6 +261,32 @@ test('beta build is separate from the live app', () => {
   assert.equal(grok.includes('trial_ends_at'), false)
   assert.equal(grok.includes('subscription_status'), false)
   assert.match(grok, /AI_PROVIDER/)
+  assert.match(grok, /auth\.getUser\(\)/)
+  assert.match(grok, /https:\/\/api\.x\.ai\/v1\/responses/)
+  assert.equal(grok.includes('/v1/chat/completions'), false)
+  assert.match(grok, /bump_ai_usage/)
+  assert.match(grok, /reasoning: \{ effort: REASONING_EFFORT \}/)
+
+  const fnConfig = readFileSync(new URL('../../supabase/config.toml', import.meta.url), 'utf8')
+  assert.match(fnConfig, /\[functions\.generate-grok\]/)
+  assert.match(fnConfig, /verify_jwt = false/)
+
+  const state = readFileSync(new URL('../state.jsx', import.meta.url), 'utf8')
+  assert.match(state, /await query/)
+  assert.match(state, /onConflict: 'org_id,id'/)
+
+  const deploy = readFileSync(new URL('../../.github/workflows/deploy.yml', import.meta.url), 'utf8')
+  assert.ok(deploy.indexOf('npm run build') < deploy.indexOf('npm run build:beta'))
+  assert.match(deploy, /cp -a dist-beta\/\. dist\/beta\//)
+  assert.match(deploy, /VITE_SUPABASE_URL: https:\/\/rocobdfuvaecrkzsxqub\.supabase\.co/)
+  assert.match(deploy, /VITE_AI_PROXY_URL: https:\/\/rocobdfuvaecrkzsxqub\.supabase\.co\/functions\/v1\/generate-grok/)
+  assert.equal(deploy.includes('rgkiagqexoafmtxhrlqo'), false)
+
+  const migrations = readdirSync(new URL('../../supabase/migrations/', import.meta.url))
+  const orgKey = migrations.find((name) => name.endsWith('_hse_records_unique_per_org.sql'))
+  assert.ok(orgKey)
+  const orgSql = readFileSync(new URL(`../../supabase/migrations/${orgKey}`, import.meta.url), 'utf8')
+  assert.match(orgSql, /primary key \(org_id, id\)/)
 
   const liveEnv = readFileSync(new URL('../../.env.production', import.meta.url), 'utf8')
   assert.equal(liveEnv.includes('rocobdfuvaecrkzsxqub'), false)

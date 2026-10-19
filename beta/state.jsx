@@ -84,16 +84,28 @@ export function AppState({ children }) {
     }
   }
 
+  const orgIdForUser = async () => {
+    if (orgIdRef.current) return orgIdRef.current
+    const { data } = await supabase.from('profiles').select('org_id').eq('id', user.id).maybeSingle()
+    orgIdRef.current = data?.org_id || null
+    return orgIdRef.current
+  }
+
   const push = async (row) => {
     if (!supabase || !user || user.local) return
+    const orgId = await orgIdForUser()
+    if (!orgId) {
+      setCloudNote('Saved on this device. Cloud sync is waiting for your organisation.')
+      return
+    }
     const { error } = await supabase.from('hse_records').upsert({
       id: row.id,
-      ...(orgIdRef.current ? { org_id: orgIdRef.current } : {}),
+      org_id: orgId,
       user_id: user.id,
       kind: row.kind,
       payload: slimForCloud(row),
       updated_at: row.updatedAt,
-    })
+    }, { onConflict: 'org_id,id' })
     if (error) setCloudNote('Saved on this device. Cloud sync failed. Apply the beta hse_records migration if that table is not there yet.')
   }
 
@@ -180,9 +192,13 @@ export function AppState({ children }) {
       const saved = next.find((row) => row.id === id)
       if (saved) push(saved)
     },
-    deleteRecord(id) {
+    async deleteRecord(id) {
       persist(rows.filter((row) => row.id !== id))
-      if (supabase && user && !user.local) supabase.from('hse_records').delete().eq('id', id)
+      if (!supabase || !user || user.local) return
+      let query = supabase.from('hse_records').delete().eq('id', id)
+      if (orgIdRef.current) query = query.eq('org_id', orgIdRef.current)
+      const { error } = await query
+      if (error) setCloudNote('Removed on this device. The cloud copy could not be deleted, so it may come back on the next refresh.')
     },
     setModule(id, on) {
       if (id === 'hse') return

@@ -139,7 +139,11 @@ export default function RecordView({ app, id }) {
       <div className="actions" style={{ marginTop: 12 }}>
         <Button type="button" kind="ghost" onClick={() => exportRecordPdf(record)}>Export PDF</Button>
         <Button type="button" kind="ghost" onClick={() => go('#/hse/register')}>Register</Button>
-        <Button type="button" kind="danger" onClick={() => { if (window.confirm('Delete this record from this device?')) { app.deleteRecord(record.id); go('#/hse/register') } }}>Delete</Button>
+        <Button type="button" kind="danger" onClick={async () => {
+          if (!window.confirm('Delete this record?')) return
+          await app.deleteRecord(record.id)
+          go('#/hse/register')
+        }}>Delete</Button>
       </div>
     </>
   )

@@ -10,16 +10,24 @@
 // Secrets:
 //   XAI_API_KEY          required for the default provider
 //   XAI_TEXT_MODEL       optional, default grok-4.7 (text)
-//   XAI_VISION_MODEL     optional, default grok-4.7 (image input; same model
-//                        as of the Oct 2026 docs — image understanding is a
-//                        modality of grok-4.7, not the Imagine image models)
+//   XAI_VISION_MODEL     optional, default grok-4.7 (image input; same model.
+//                        grok-4.7 accepts text and images on the Responses API)
 //   AI_PROVIDER          xai (default) | anthropic
 //   AI_FALLBACK          none (default) | anthropic
 //                        anthropic is used only when this flag is set and
 //                        xAI fails with a network / 429 / 5xx error
 //   ANTHROPIC_API_KEY    required only for the Claude flag
 //   CLAUDE_MODEL         optional, default claude-sonnet-4-6
-//   AI_DAILY_LIMIT       optional, default 80 (in-memory, resets on cold start)
+//   AI_DAILY_LIMIT       optional, default 80 (public.ai_usage via bump_ai_usage)
+//
+// grok-4.7 is documented on POST /v1/responses. Chat completions is the
+// legacy endpoint and does not carry this model's reasoning field, so a
+// high default effort can return an empty answer. This function calls
+// /v1/responses with reasoning.effort "low".
+//
+// Gateway verify_jwt is off for this function (supabase/config.toml).
+// The beta project signs ES256 tokens, which that gateway check rejects.
+// The auth.getUser() check below stays.
 //
 // This function does not check billing or the free-trial clock, and it does
 // not return 402. The beta field test is not gated on the 14-day trial.
@@ -36,16 +44,18 @@ import {
   assertImagesOk,
   resolveProvider,
   selectModel,
+  outputTokenBudget,
+  REASONING_EFFORT,
   textFromAnthropic,
-  textFromOpenAI,
+  textFromResponses,
   toAnthropicMessages,
   toOpenAIMessages,
+  toResponsesInput,
 } from "./convert.js";
 
 const LIVE_PROJECT_REF = "rgkiagqexoafmtxhrlqo";
 const DAILY_LIMIT = Number(Deno.env.get("AI_DAILY_LIMIT")) || 80;
 const MAX_BODY_CHARS = 8_000_000;
-const usage = new Map<string, { day: string; n: number }>();
 
 const DEFAULT_ORIGINS = [
   "https://synradai.github.io",
@@ -89,14 +99,6 @@ function clientApiKey() {
   }
 }
 
-function bump(uid: string) {
-  const day = new Date().toISOString().slice(0, 10);
-  const current = usage.get(uid);
-  const n = !current || current.day !== day ? 1 : current.n + 1;
-  usage.set(uid, { day, n });
-  return n;
-}
-
 Deno.serve(async (req) => {
   const cors = corsHeaders(req);
   const json = (body: unknown, status = 200) =>
@@ -124,9 +126,6 @@ Deno.serve(async (req) => {
     const { data: userData, error: authErr } = await userClient.auth.getUser();
     if (authErr || !userData.user) return json({ error: "Not authenticated" }, 401);
 
-    const count = bump(userData.user.id);
-    if (count > DAILY_LIMIT) return json({ error: "Daily AI limit reached. Try again tomorrow." }, 429);
-
     const raw = await req.text();
     if (raw.length > MAX_BODY_CHARS) return json({ error: "Request too large" }, 413);
     let body: Record<string, unknown>;
@@ -144,6 +143,15 @@ Deno.serve(async (req) => {
       return json({ error: (error as Error).message }, 400);
     }
 
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    if (!serviceKey) return json({ error: "Rate limiter unavailable — try again shortly." }, 503);
+    const admin = createClient(supabaseUrl, serviceKey);
+    const { data: count, error: rlErr } = await admin.rpc("bump_ai_usage", { uid: userData.user.id });
+    if (rlErr || typeof count !== "number") {
+      return json({ error: "Rate limiter unavailable — try again shortly." }, 503);
+    }
+    if (count > DAILY_LIMIT) return json({ error: "Daily AI limit reached. Try again tomorrow." }, 429);
+
     const providerFlag = Deno.env.get("AI_PROVIDER") || "xai";
     const fallbackFlag = Deno.env.get("AI_FALLBACK") || "none";
     const first = resolveProvider({ provider: providerFlag, fallback: fallbackFlag, xaiFailed: false });
@@ -155,10 +163,10 @@ Deno.serve(async (req) => {
         textModel: Deno.env.get("XAI_TEXT_MODEL") || undefined,
         visionModel: Deno.env.get("XAI_VISION_MODEL") || undefined,
       });
-      const max = Math.min(Math.max(Number(body.maxTokens) || 1200, 1), 4000);
+      const max = outputTokenBudget(body.maxTokens);
       let res: Response;
       try {
-        res = await fetch("https://api.x.ai/v1/chat/completions", {
+        res = await fetch("https://api.x.ai/v1/responses", {
           method: "POST",
           headers: {
             "content-type": "application/json",
@@ -166,8 +174,11 @@ Deno.serve(async (req) => {
           },
           body: JSON.stringify({
             model,
-            max_completion_tokens: max,
-            messages: [{ role: "system", content: SYSTEM }, ...messages],
+            instructions: SYSTEM,
+            input: toResponsesInput(messages),
+            reasoning: { effort: REASONING_EFFORT },
+            max_output_tokens: max,
+            store: false,
           }),
           signal: AbortSignal.timeout(90_000),
         });
@@ -175,7 +186,7 @@ Deno.serve(async (req) => {
         return { ok: false, status: 502, error: `xAI network error: ${(error as Error).message}`, model, task };
       }
       const data = await res.json().catch(() => null);
-      const text = textFromOpenAI(data);
+      const text = textFromResponses(data);
       if (!res.ok || !text) {
         return { ok: false, status: res.status, error: "Grok request failed", model, task, retryable: res.status === 429 || res.status >= 500 };
       }

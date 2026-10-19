@@ -7,10 +7,14 @@ import {
   hasImage,
   resolveProvider,
   selectModel,
+  outputTokenBudget,
+  REASONING_EFFORT,
   textFromAnthropic,
   textFromOpenAI,
+  textFromResponses,
   toAnthropicMessages,
   toOpenAIMessages,
+  toResponsesInput,
 } from './convert.js'
 
 test('grok 4.7 is the default text and vision model', () => {
@@ -43,6 +47,21 @@ test('provider flag keeps Claude as an explicit fallback', () => {
 
 test('responses map back to the content shape the app reads', () => {
   assert.equal(textFromOpenAI({ choices: [{ message: { content: 'hello' } }] }), 'hello')
+  assert.equal(textFromResponses({
+    output: [{ type: 'reasoning' }, { type: 'message', content: [{ type: 'output_text', text: 'from grok' }] }],
+  }), 'from grok')
+  assert.equal(textFromResponses({ output_text: 'shortcut' }), 'shortcut')
+  assert.equal(REASONING_EFFORT, 'low')
+  assert.equal(outputTokenBudget(undefined), 4000)
+  assert.equal(outputTokenBudget(100), 4000)
+  assert.equal(outputTokenBudget(9000), 8000)
+  const input = toResponsesInput(toOpenAIMessages({
+    prompt: 'describe',
+    images: ['data:image/jpeg;base64,abc'],
+  }))
+  assert.equal(input[0].content[0].type, 'input_image')
+  assert.equal(input[0].content[0].image_url, 'data:image/jpeg;base64,abc')
+  assert.equal(input[0].content[1].type, 'input_text')
   assert.equal(textFromAnthropic({ content: [{ type: 'text', text: 'from claude' }] }), 'from claude')
   const claude = toAnthropicMessages({
     prompt: 'describe',

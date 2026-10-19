@@ -47,11 +47,14 @@ supabase functions deploy generate-grok --project-ref <beta-ref>
 
 Secrets: `XAI_API_KEY`. Optional: `XAI_TEXT_MODEL` and `XAI_VISION_MODEL` (both default `grok-4.7`), `AI_PROVIDER` (`xai` default, or `anthropic`), `AI_FALLBACK` (`none` default, or `anthropic`), `ANTHROPIC_API_KEY`, `CLAUDE_MODEL`, `AI_DAILY_LIMIT`.
 
-`generate-grok` checks the signed-in user and does not check subscription or trial.
+`generate-grok` calls the xAI Responses API (`grok-4.7`, reasoning effort `low`). It checks the signed-in user with `auth.getUser()` and does not check subscription or trial. `supabase/config.toml` sets `verify_jwt = false` for this function only, because the beta project signs ES256 tokens. The daily cap uses the existing `bump_ai_usage` function. Redeploy `generate-grok` after pulling these changes.
 
 ## Register table
 
-Apply `supabase/migrations/20261019060723_beta_hse_records.sql` on the beta project. It adds `public.hse_records` with org-scoped RLS on top of the existing schema. Photos stay on the device.
+Apply these on the beta project, in order:
+
+1. `supabase/migrations/20261019060723_beta_hse_records.sql` — adds `public.hse_records` with org-scoped RLS. Photos stay on the device.
+2. `supabase/migrations/20261019073248_hse_records_unique_per_org.sql` — primary key becomes `(org_id, id)`.
 
 ## Tests
 

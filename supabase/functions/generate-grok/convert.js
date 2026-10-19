@@ -108,6 +108,47 @@ export function resolveProvider({ provider, fallback, xaiFailed }) {
   return "xai";
 }
 
+// grok-4.7 is called through the Responses API. max_output_tokens counts
+// reasoning tokens as well as the answer, so the budget has a floor.
+export const REASONING_EFFORT = "low";
+
+export function outputTokenBudget(requested) {
+  const asked = Number(requested);
+  const base = Number.isFinite(asked) && asked > 0 ? asked : 4000;
+  return Math.min(Math.max(base, 4000), 8000);
+}
+
+export function toResponsesInput(messages) {
+  return (messages || [])
+    .filter((message) => message && message.role !== "system")
+    .map((message) => {
+      if (typeof message.content === "string") {
+        return { role: message.role || "user", content: message.content };
+      }
+      const content = (Array.isArray(message.content) ? message.content : []).map((part) => {
+        if (part?.type === "text") return { type: "input_text", text: String(part.text || "") };
+        if (part?.type === "image_url" && part.image_url?.url) {
+          return { type: "input_image", image_url: part.image_url.url, detail: part.image_url.detail || "high" };
+        }
+        return null;
+      }).filter(Boolean);
+      return { role: message.role || "user", content };
+    });
+}
+
+export function textFromResponses(data) {
+  if (typeof data?.output_text === "string" && data.output_text) return data.output_text;
+  const output = Array.isArray(data?.output) ? data.output : [];
+  const chunks = [];
+  for (const item of output) {
+    if (item?.type !== "message" || !Array.isArray(item.content)) continue;
+    for (const part of item.content) {
+      if (typeof part?.text === "string" && part.text) chunks.push(part.text);
+    }
+  }
+  return chunks.join("");
+}
+
 export function textFromOpenAI(data) {
   const content = data?.choices?.[0]?.message?.content;
   if (typeof content === "string") return content;
