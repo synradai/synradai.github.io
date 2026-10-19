@@ -1,7 +1,10 @@
 node_modules/
 dist/
+dist-beta/
+supabase/.temp/
 .env
 .env.*
 !.env.example
 !.env.production
+!.env.beta.example
 .netlify

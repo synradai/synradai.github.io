@@ -1,10 +1,10 @@
-import { STORAGE_KEYS } from '../constants'
+import { STORAGE_KEYS } from '../constants.js'
 import {
   cachedItem,
   forgetMemory,
   hydrateStored,
   protectForStorage,
-} from './secureStore'
+} from './secureStore.js'
 
 export { cachedItem }
 

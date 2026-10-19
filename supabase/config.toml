@@ -1,0 +1,6 @@
+# generate-grok only. The beta project signs user JWTs with ES256, and the
+# edge gateway's verify_jwt check rejects those tokens before the function
+# runs. The function still checks the caller with auth.getUser().
+
+[functions.generate-grok]
+verify_jwt = false

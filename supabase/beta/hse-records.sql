@@ -1,0 +1,3 @@
+-- Superseded. Do not run this file.
+-- Apply supabase/migrations/20261019060723_beta_hse_records.sql on the beta
+-- project. That migration is org-scoped and sits on top of the live schema.
