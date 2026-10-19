@@ -55,6 +55,15 @@ Apply these on the beta project, in order:
 
 1. `supabase/migrations/20261019060723_beta_hse_records.sql` — adds `public.hse_records` with org-scoped RLS. Photos stay on the device.
 2. `supabase/migrations/20261019073248_hse_records_unique_per_org.sql` — primary key becomes `(org_id, id)`.
+3. `supabase/migrations/20261019235000_beta_admin_config.sql` — `beta_admins`, versioned `app_config`, and append-only `audit_events`. Apply on the beta project only.
+
+## Admin
+
+https://synradai.github.io/beta/#/admin
+
+Trent opens an account at https://synradai.github.io/beta/#/join with `trentrwood@outlook.com` or `nextlevelaccess@outlook.com`. That address is not linked from the sign-in screen. Confirm the email, sign in, and complete authenticator enrolment when asked. The signup trigger adds that user to `beta_admins`. Configuration saves only after the session is authenticator-verified (aal2). Anyone else sees a closed page.
+
+Labels, form fields, module order, inspection templates, and training-matrix columns are stored per organisation. The app reads them at startup, refreshes when the window regains focus, and listens on Supabase realtime. Reset to default removes that key so the built-in copy is used again. Each save or reset writes an audit event with the before and after values.
 
 ## Tests
 

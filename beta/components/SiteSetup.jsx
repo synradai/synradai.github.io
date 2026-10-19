@@ -1,4 +1,3 @@
-import { MODULES } from '../config/modules.js'
 import { RULESETS } from '../config/regulations.js'
 import { Button, Field } from './ui.jsx'
 
@@ -22,16 +21,17 @@ export default function SiteSetup({ app }) {
             ))}
           </select>
         </Field>
-        {MODULES.filter((mod) => !mod.locked).map((mod) => (
+        {(app.moduleConfig || []).filter((mod) => !mod.locked).map((mod) => (
           <label className="check" key={mod.id}>
             <input
               type="checkbox"
-              checked={Boolean(app.modules[mod.id])}
+              checked={mod.adminEnabled && Boolean(app.modules[mod.id])}
+              disabled={!mod.adminEnabled}
               onChange={(event) => app.setModule(mod.id, event.target.checked)}
             />
             <span>
               <strong>{mod.label}</strong>
-              <div className="muted">{mod.question}</div>
+              <div className="muted">{mod.adminEnabled ? mod.question : 'Off for the organisation. An admin turns it back on.'}</div>
             </span>
           </label>
         ))}

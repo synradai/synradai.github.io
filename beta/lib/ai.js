@@ -56,11 +56,11 @@ async function complete({ prompt, images, task, maxTokens }) {
   return { offline: false, text, provider: data.provider || 'xai', model: data.model || '' }
 }
 
-export async function extractForm(kind, image) {
+export async function extractForm(kind, image, form) {
   if (aiMode() !== 'grok') {
     return { offline: true, fields: offlineExtraction(kind) }
   }
-  const result = await complete({ prompt: scanPrompt(kind), images: [image], task: 'vision', maxTokens: 1400 })
+  const result = await complete({ prompt: scanPrompt(kind, form), images: [image], task: 'vision', maxTokens: 1400 })
   const parsed = extractJson(result.text)
   return { offline: false, fields: parsed && typeof parsed === 'object' ? parsed : {} }
 }

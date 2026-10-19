@@ -32,7 +32,7 @@ export default function Register({ app }) {
   return (
     <>
       <p className="eyebrow">HSE register</p>
-      <h1>All records</h1>
+      <h1>{app.wording?.registerTitle || 'All records'}</h1>
       <p className="lede">{rows.length} shown of {app.rows.length} on this device. Filters apply to the CSV and the PDF.</p>
       <div className="filters">
         <select aria-label="Type" value={query.kind} onChange={set('kind')}>

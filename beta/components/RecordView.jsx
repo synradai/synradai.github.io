@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { getForm } from '../config/forms.js'
+import { resolveForm } from '../lib/config.js'
 import { rewriteActions } from '../lib/ai.js'
 import { formatWhen } from '../lib/time.js'
 import { go } from '../lib/routes.js'
@@ -20,7 +20,7 @@ export default function RecordView({ app, id }) {
   if (!record) return <p className="note">That record is not on this device.</p>
 
   const fields = record.fields || {}
-  const form = record.kind !== 'scene-check' ? getForm(record.kind) : null
+  const form = resolveForm(record.kind, app.formsConfig)
   const needsWhys = record.path === 'review' || record.path === 'escalate' || record.path === 'investigation'
   const whysOpen = needsWhys && !record.fiveWhys?.rootCause?.trim()
   const actionsOpen = (record.correctiveActions || []).some((action) => !action.done)
@@ -137,7 +137,7 @@ export default function RecordView({ app, id }) {
 
       {error && <p className="note">{error}</p>}
       <div className="actions" style={{ marginTop: 12 }}>
-        <Button type="button" kind="ghost" onClick={() => exportRecordPdf(record)}>Export PDF</Button>
+        <Button type="button" kind="ghost" onClick={() => exportRecordPdf(record, app.formsConfig)}>Export PDF</Button>
         <Button type="button" kind="ghost" onClick={() => go('#/hse/register')}>Register</Button>
         <Button type="button" kind="danger" onClick={async () => {
           if (!window.confirm('Delete this record?')) return

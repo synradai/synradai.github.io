@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { STORAGE_KEYS } from '../src/constants.js'
 import { defaultModulePrefs } from './config/modules.js'
+import { moduleRows, resolveMatrix, resolveTemplates, resolveWording, visibleModules } from './lib/config.js'
 import { getMfaGate } from './lib/mfa.js'
 import { LOCAL_KEY, MODULE_KEY, SITE_KEY, loadModulePrefs, loadRows, loadSite, mergeRows, saveModulePrefs, saveRows, saveSite, slimForCloud } from './lib/store.js'
 import { authReturnUrl, isBackendEnabled, liveProjectBlocked, supabase } from './lib/supabase.js'
@@ -29,6 +30,9 @@ export function AppState({ children }) {
   const [vaultReady, setVaultReady] = useState(false)
   const [vaultError, setVaultError] = useState('')
   const [sealTick, setSealTick] = useState(0)
+  const [remoteConfig, setRemoteConfig] = useState({})
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [adminChecked, setAdminChecked] = useState(!isBackendEnabled)
   const orgIdRef = useRef(null)
   const seenUser = useRef(undefined)
   const sealing = useRef(false)
@@ -137,6 +141,48 @@ export function AppState({ children }) {
     })()
     return () => { cancel = true }
   }, [mfaGate, userId, localUser, recovery, sealTick])
+
+  useEffect(() => {
+    if (!userId || !vaultReady) return undefined
+    if (!supabase || localUser || mfaGate !== 'ready') {
+      setIsAdmin(false)
+      setAdminChecked(true)
+      setRemoteConfig({})
+      return undefined
+    }
+    let cancel = false
+    const load = async () => {
+      const [{ data: adminRow, error: adminError }, { data, error }] = await Promise.all([
+        supabase.from('beta_admins').select('user_id').eq('user_id', userId).maybeSingle(),
+        supabase.from('app_config').select('key,value,version,updated_at'),
+      ])
+      if (cancel) return
+      setAdminChecked(true)
+      if (!adminError) setIsAdmin(Boolean(adminRow))
+      if (!error && Array.isArray(data)) {
+        const map = {}
+        for (const row of data) map[row.key] = row
+        setRemoteConfig(map)
+      }
+    }
+    load()
+    const onWake = () => {
+      if (document.visibilityState === 'hidden') return
+      load()
+    }
+    window.addEventListener('focus', onWake)
+    document.addEventListener('visibilitychange', onWake)
+    const channel = supabase
+      .channel(`app-config-${userId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config' }, () => load())
+      .subscribe()
+    return () => {
+      cancel = true
+      window.removeEventListener('focus', onWake)
+      document.removeEventListener('visibilitychange', onWake)
+      supabase.removeChannel(channel)
+    }
+  }, [userId, localUser, mfaGate, vaultReady])
 
   const persist = (next) => {
     setRows(next)
@@ -257,6 +303,9 @@ export function AppState({ children }) {
       setModules(defaultModulePrefs())
       setSite(loadSite())
       setMfaGate(isBackendEnabled ? 'pending' : 'ready')
+      setIsAdmin(false)
+      setAdminChecked(!isBackendEnabled)
+      setRemoteConfig({})
       await sealVault()
       if (supabase) await supabase.auth.signOut()
       setLocalUser(null)
@@ -295,7 +344,58 @@ export function AppState({ children }) {
       setSite(next)
       saveSite(next).catch(() => {})
     },
-  }), [ready, user, recovery, rows, modules, site, cloudNote, storageWarning, authError, authNotice, mfaGate, vaultReady, vaultError])
+    wording: resolveWording(remoteConfig.wording?.value),
+    moduleConfig: moduleRows(remoteConfig.modules?.value),
+    navModules: visibleModules(moduleRows(remoteConfig.modules?.value), modules),
+    formsConfig: remoteConfig.forms?.value || null,
+    inspectionTemplates: resolveTemplates(remoteConfig.inspection_templates?.value),
+    trainingMatrix: resolveMatrix(remoteConfig.training_matrix?.value),
+    configRaw: {
+      wording: remoteConfig.wording?.value ?? null,
+      forms: remoteConfig.forms?.value ?? null,
+      modules: remoteConfig.modules?.value ?? null,
+      inspection_templates: remoteConfig.inspection_templates?.value ?? null,
+      training_matrix: remoteConfig.training_matrix?.value ?? null,
+    },
+    configMeta: Object.fromEntries(['wording', 'forms', 'modules', 'inspection_templates', 'training_matrix'].map((key) => {
+      const row = remoteConfig[key]
+      return [key, {
+        version: row?.version || 0,
+        updatedAt: row?.updated_at || null,
+        customized: Boolean(row),
+      }]
+    })),
+    isAdmin,
+    adminChecked,
+    async saveConfig(key, value) {
+      if (!supabase || !user || user.local) throw new Error('Sign in to the beta project to edit configuration.')
+      if (mfaGate !== 'ready') throw new Error('Finish two-factor authentication before editing.')
+      const orgId = await orgIdForUser()
+      if (!orgId) throw new Error('Your account has no organisation yet.')
+      const { error } = await supabase.from('app_config').upsert({
+        org_id: orgId,
+        key,
+        value,
+      }, { onConflict: 'org_id,key' })
+      if (error) throw new Error(error.message || 'Could not save.')
+      const { data } = await supabase.from('app_config').select('key,value,version,updated_at').eq('key', key).maybeSingle()
+      if (data) setRemoteConfig((prev) => ({ ...prev, [key]: data }))
+    },
+    async resetConfig(key) {
+      if (!supabase || !user || user.local) throw new Error('Sign in to the beta project to edit configuration.')
+      if (mfaGate !== 'ready') throw new Error('Finish two-factor authentication before editing.')
+      const orgId = orgIdRef.current
+      let query = supabase.from('app_config').delete().eq('key', key)
+      if (orgId) query = query.eq('org_id', orgId)
+      const { error } = await query
+      if (error) throw new Error(error.message || 'Could not reset.')
+      setRemoteConfig((prev) => {
+        const next = { ...prev }
+        delete next[key]
+        return next
+      })
+    },
+  }), [ready, user, recovery, rows, modules, site, cloudNote, storageWarning, authError, authNotice, mfaGate, vaultReady, vaultError, remoteConfig, isAdmin, adminChecked])
 
   return <AppContext.Provider value={api}>{children}</AppContext.Provider>
 }

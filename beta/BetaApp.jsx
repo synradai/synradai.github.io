@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import Admin from './components/Admin.jsx'
 import CaptureForm from './components/CaptureForm.jsx'
 import Home from './components/Home.jsx'
 import HseHome from './components/HseHome.jsx'
@@ -103,6 +104,7 @@ function Screen({ route }) {
   else if (route.screen === 'kpis') body = app.modules.kpis ? <KpiPreview /> : <Hidden name="KPIs & Forms" />
   else if (route.screen === 'stores') body = app.modules.stores ? <StoresPreview /> : <Hidden name="Stores" />
   else if (route.screen === 'scaffold') body = app.modules.scaffold ? <ScaffoldPreview /> : <Hidden name="Scaffold Register" />
+  else if (route.screen === 'admin') body = <Admin app={app} />
 
   return <Shell app={app} route={route}>{body}</Shell>
 }
