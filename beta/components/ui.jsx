@@ -23,6 +23,7 @@ export function FlagList({ flags }) {
           <div>{flag.pinpoint}</div>
           {flag.label ? <p className="muted">{flag.label}</p> : null}
           {flag.why ? <p className="muted">{flag.why}</p> : null}
+          {flag.unverified ? <p className="note">{flag.unverified}</p> : null}
         </li>
       ))}
     </ul>

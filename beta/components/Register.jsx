@@ -62,7 +62,7 @@ export default function Register({ app }) {
         {rows.map((row) => (
           <a className="card record" href={`#/hse/record/${row.id}`} key={row.id}>
             <strong>{row.fields?.siteArea || row.kind} · {row.kind}</strong>
-            <span>{formatWhen(row.fields?.occurredAt || row.createdAt)} · severity {row.severity || '—'} · {row.status}</span>
+            <span>{formatWhen(row.fields?.occurredAt || row.createdAt)} · severity {row.severity || '—'} · {row.ruleset || 'general'} · {row.status}</span>
             <span>{row.fields?.description || row.fields?.task || row.fields?.note || 'No description'}</span>
           </a>
         ))}

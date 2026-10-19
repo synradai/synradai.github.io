@@ -1,13 +1,13 @@
 import { useMemo, useRef, useState } from 'react'
-import { getForm, matchOption, missingRequired, voiceSteps } from '../config/forms.js'
-import { severityMeta, SEVERITY_SCALE } from '../config/severity.js'
+import { getForm, matchOption, missingRequired, take5Blocked, voiceSteps } from '../config/forms.js'
+import { assessReport, severityMeta, SEVERITY_SCALE, triageSummary } from '../config/severity.js'
 import { useVoiceWalkthrough } from '../../src/hooks/useVoiceWalkthrough.js'
 import { compressPhoto } from '../../src/utils/storage.js'
 import { buildRecord } from '../lib/record.js'
 import { nameWarning } from '../lib/roles.js'
 import { perthDateTimeLocal } from '../lib/time.js'
-import { triageSummary } from '../lib/triage.js'
 import { go } from '../lib/routes.js'
+import Reporting from './Reporting.jsx'
 import { Button, Field, OfflineBanner } from './ui.jsx'
 
 const SEV_COLOR = ['#3ee0a8', '#8fd98a', '#ffb15a', '#ff8a4a', '#ff6b7a']
@@ -97,12 +97,15 @@ export default function CaptureForm({ app, kind, initial, source = 'typed', bann
       kind,
       fields: values,
       source: usedVoice ? 'voice' : source,
+      ruleset: app.site.ruleset || 'general',
+      prior: app.rows,
     })
     app.addRecord(record)
-    go(record.path === 'investigation' ? `#/hse/investigate/${record.id}` : `#/hse/record/${record.id}`)
+    go(record.fiveWhys ? `#/hse/investigate/${record.id}` : `#/hse/record/${record.id}`)
   }
 
-  const level = Number(values.severity)
+  const decision = kind === 'take5' ? null : assessReport(values, { prior: app.rows })
+  const stopped = kind === 'take5' ? take5Blocked(values) : []
 
   return (
     <form onSubmit={save}>
@@ -111,6 +114,9 @@ export default function CaptureForm({ app, kind, initial, source = 'typed', bann
       <p className="lede">Talk it through, or type. Say “done” to finish the long answers. People by role, not name.</p>
       {banner}
       <OfflineBanner show={offlineSample} />
+      {stopped.length > 0 && (
+        <p className="note">Stop. A No means the task does not start. Tell the supervisor. Still open: {stopped.join(' ')}</p>
+      )}
 
       {!walk.active ? (
         <Button type="button" onClick={() => { setUsedVoice(true); setError(''); walk.start() }}>Voice walkthrough</Button>
@@ -128,11 +134,19 @@ export default function CaptureForm({ app, kind, initial, source = 'typed', bann
         </div>
       )}
 
-      {form.fields.map((field) => {
+      {form.fields.map((field, index) => {
         const active = walk.active && steps[walk.step]?.key === field.key
+        const section = field.section && field.section !== form.fields[index - 1]?.section
+          ? <h2 key={`${field.key}-section`}>{field.section}</h2>
+          : null
+        if (field.type === 'note') {
+          return <div key={field.key}>{section}<p className="muted">{field.help}</p></div>
+        }
         if (field.type === 'photos') {
           return (
-            <div key={field.key} className="field">
+            <div key={field.key}>
+              {section}
+            <div className="field">
               <span className="field-label">{field.label}</span>
               <div className="actions">
                 <label className="btn ghost">Camera<input type="file" accept="image/*" capture="environment" onChange={addPhoto} hidden /></label>
@@ -147,20 +161,24 @@ export default function CaptureForm({ app, kind, initial, source = 'typed', bann
               </div>
               <span className="help">{field.help}</span>
             </div>
+            </div>
           )
         }
         if (field.type === 'severity') {
+          const level = Number(values[field.key])
           return (
-            <div key={field.key} className="field">
+            <div key={field.key}>
+              {section}
+            <div className="field">
               <span className="field-label">{field.label}</span>
-              <div className="severity" role="radiogroup" aria-label="Severity">
+              <div className="severity" role="radiogroup" aria-label={field.label}>
                 {SEVERITY_SCALE.map((item) => (
                   <button
                     type="button"
                     key={item.level}
                     className={`sev${level === item.level ? ' on' : ''}`}
                     style={level === item.level ? { background: SEV_COLOR[item.level - 1] } : undefined}
-                    onClick={() => set('severity', item.level)}
+                    onClick={() => set(field.key, item.level)}
                     aria-checked={level === item.level}
                     role="radio"
                   >
@@ -169,14 +187,16 @@ export default function CaptureForm({ app, kind, initial, source = 'typed', bann
                   </button>
                 ))}
               </div>
-              <span className="help">{level ? `${severityMeta(level)?.hint} ${triageSummary(level)}` : field.help}</span>
-              {level >= 4 && <span className="note">If this is a death, a serious injury, or a dangerous incident, notify the regulator under s.38. This app does not notify WorkSafe.</span>}
+              <span className="help">{level ? severityMeta(level)?.hint : field.help}</span>
+            </div>
             </div>
           )
         }
         const warning = field.key === 'peopleRoles' ? nameWarning(values[field.key]) : ''
+        const inputType = field.type === 'datetime' ? 'datetime-local' : field.type === 'date' ? 'date' : 'text'
         return (
           <div key={field.key} ref={(node) => { refs.current[field.key] = node }}>
+            {section}
             <Field label={field.label} hint={warning || field.help} active={active}>
               {field.type === 'textarea' ? (
                 <textarea value={values[field.key] || ''} placeholder={field.placeholder} onChange={(event) => set(field.key, event.target.value)} />
@@ -187,7 +207,7 @@ export default function CaptureForm({ app, kind, initial, source = 'typed', bann
                 </select>
               ) : (
                 <input
-                  type={field.type === 'datetime' ? 'datetime-local' : 'text'}
+                  type={inputType}
                   value={values[field.key] || ''}
                   placeholder={field.placeholder}
                   onChange={(event) => set(field.key, event.target.value)}
@@ -197,6 +217,15 @@ export default function CaptureForm({ app, kind, initial, source = 'typed', bann
           </div>
         )
       })}
+
+      {decision?.driving > 0 && (
+        <p className="note">
+          Driving severity {decision.driving} (actual {decision.actual || '—'}, potential {decision.potential || '—'}). {triageSummary(decision.driving)}
+          {decision.notifiable ? ' The notifiable check forces this to level 4 or above.' : ''}
+          {decision.icamReasons.length > 0 ? ` ICAM: ${decision.icamReasons.join(' ')}` : ''}
+        </p>
+      )}
+      {(decision?.notifiable || decision?.driving >= 4) && <Reporting ruleset={app.site.ruleset} forced />}
 
       {error && <p className="note">{error}</p>}
       <div className="actions">

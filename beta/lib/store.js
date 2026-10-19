@@ -30,11 +30,14 @@ export function saveModulePrefs(prefs) {
 }
 
 export function loadSite() {
+  const saved = loadJson(SITE_KEY, {}) || {}
+  const ruleset = saved.ruleset || (saved.mine ? 'mines' : 'general')
   return {
-    mine: true,
     siteName: '',
     setupDone: false,
-    ...loadJson(SITE_KEY, {}),
+    ...saved,
+    ruleset,
+    mine: ruleset === 'mines',
   }
 }
 

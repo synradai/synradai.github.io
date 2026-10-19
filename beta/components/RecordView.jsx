@@ -4,6 +4,7 @@ import { rewriteActions } from '../lib/ai.js'
 import { formatWhen } from '../lib/time.js'
 import { go } from '../lib/routes.js'
 import { exportRecordPdf } from '../lib/pdfExport.js'
+import Reporting from './Reporting.jsx'
 import { Button, FlagList, OfflineBanner } from './ui.jsx'
 
 const LABELS = { incident: 'Incident', hazard: 'Hazard', take5: 'Take 5', 'scene-check': 'Scene check' }
@@ -20,7 +21,9 @@ export default function RecordView({ app, id }) {
 
   const fields = record.fields || {}
   const form = record.kind !== 'scene-check' ? getForm(record.kind) : null
-  const majorLocked = record.path === 'investigation' && !record.fiveWhys?.rootCause?.trim()
+  const needsWhys = record.path === 'review' || record.path === 'escalate' || record.path === 'investigation'
+  const whysOpen = needsWhys && !record.fiveWhys?.rootCause?.trim()
+  const actionsOpen = (record.correctiveActions || []).some((action) => !action.done)
 
   const toggle = (actionId) => {
     app.updateRecord(record.id, {
@@ -52,10 +55,14 @@ export default function RecordView({ app, id }) {
 
   const closeOut = () => {
     if (!note.trim()) { setError('Add a close-out note.'); return }
-    if (majorLocked) { setError('Finish the five whys before closing a major record.'); return }
+    if (!byRole.trim()) { setError('A supervisor or HSE role has to verify the close-out.'); return }
+    if (record.path === 'closeout' && actionsOpen) { setError('Tick off the actions. A supervisor verifies them before this closes.'); return }
+    if (whysOpen) { setError('Finish the five whys before close-out. Level 4 and 5 do not auto-close.'); return }
+    if (record.path === 'review' && !record.fiveWhys?.signOff?.trim()) { setError('Level 3 needs an HSE sign-off on the five whys.'); return }
+    if (record.path === 'escalate' && !record.fiveWhys?.signOff?.trim()) { setError('Level 4 and 5 stay open until the investigation is signed off.'); return }
     app.updateRecord(record.id, {
       status: 'closed',
-      closeOut: { note: note.trim(), byRole: byRole.trim() || 'HSE adviser', closedAt: new Date().toISOString() },
+      closeOut: { note: note.trim(), byRole: byRole.trim(), closedAt: new Date().toISOString() },
     })
   }
 
@@ -63,14 +70,16 @@ export default function RecordView({ app, id }) {
     <>
       <p className="eyebrow">{LABELS[record.kind] || record.kind} · {record.status}</p>
       <h1>{fields.siteArea || LABELS[record.kind]}</h1>
-      <p className="muted">{formatWhen(fields.occurredAt || record.createdAt)} · severity {record.severity || '—'} · {record.source}</p>
+      <p className="muted">{formatWhen(fields.occurredAt || record.createdAt)} · driving severity {record.severity || '—'} · {record.ruleset || 'general'} · {record.source}</p>
       <OfflineBanner show={offline || record.sceneResult?.offline} />
-      {record.path === 'investigation' && (
-        <p className="note">Major record. <a href={`#/hse/investigate/${record.id}`}>Open the five whys</a>.</p>
+      {record.path === 'stopped' && <p className="note">Stopped. A Take 5 answer was No, so the task does not start until a supervisor clears it.</p>}
+      {needsWhys && (
+        <p className="note">{record.path === 'escalate' ? 'Escalated. No auto-close.' : 'HSE review.'} <a href={`#/hse/investigate/${record.id}`}>Open the five whys</a>.</p>
       )}
+      {(record.notifiable || record.path === 'escalate') && <Reporting ruleset={record.ruleset} forced={record.notifiable || record.path === 'escalate'} />}
 
       <div className="panel">
-        {form && form.fields.filter((field) => field.type !== 'photos' && field.type !== 'severity').map((field) => (
+        {form && form.fields.filter((field) => field.type !== 'photos' && field.type !== 'severity' && field.type !== 'note' && (fields[field.key] || field.required)).map((field) => (
           <p key={field.key}><strong>{field.label}. </strong>{fields[field.key] || '—'}</p>
         ))}
         {record.kind === 'scene-check' && (
@@ -120,7 +129,7 @@ export default function RecordView({ app, id }) {
                 <span className="field-label">Closed by (role)</span>
                 <input value={byRole} onChange={(event) => setByRole(event.target.value)} />
               </label>
-              <Button type="button" onClick={closeOut} disabled={majorLocked}>Close out</Button>
+              <Button type="button" onClick={closeOut} disabled={whysOpen}>Close out</Button>
             </>
           )}
         </div>

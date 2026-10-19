@@ -65,8 +65,8 @@ export async function extractForm(kind, image) {
   return { offline: false, fields: parsed && typeof parsed === 'object' ? parsed : {} }
 }
 
-export async function checkScene(images, note) {
-  const prompt = `${scenePrompt()}\nAdviser note: ${scrub(note || 'None')}`
+export async function checkScene(images, note, ruleset = 'general') {
+  const prompt = `${scenePrompt(ruleset)}\nAdviser note: ${scrub(note || 'None')}`
   if (aiMode() !== 'grok') return { offline: true, result: offlineScene() }
   const result = await complete({ prompt, images, task: 'vision', maxTokens: 1600 })
   return { offline: false, result: extractJson(result.text) }

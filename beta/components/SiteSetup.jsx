@@ -1,4 +1,5 @@
 import { MODULES } from '../config/modules.js'
+import { RULESETS } from '../config/regulations.js'
 import { Button, Field } from './ui.jsx'
 
 export default function SiteSetup({ app }) {
@@ -11,10 +12,14 @@ export default function SiteSetup({ app }) {
         <Field label="Site name" hint="Used as the starting site / area on new HSE records. Not a company name.">
           <input value={app.site.siteName || ''} onChange={(event) => app.setSite({ siteName: event.target.value, setupDone: true })} placeholder="e.g. Red Range workshop" />
         </Field>
-        <Field label="Is this a mine site?">
-          <select value={app.site.mine ? 'yes' : 'no'} onChange={(event) => app.setSite({ mine: event.target.value === 'yes', setupDone: true })}>
-            <option value="yes">Yes — WHS (Mines) Regulations 2022 apply</option>
-            <option value="no">No — general WHS duties only</option>
+        <Field label="Which regulations apply on this site?" hint={RULESETS.find((item) => item.id === (app.site.ruleset || 'general'))?.note}>
+          <select
+            value={app.site.ruleset || 'general'}
+            onChange={(event) => app.setSite({ ruleset: event.target.value, mine: event.target.value === 'mines', setupDone: true })}
+          >
+            {RULESETS.map((item) => (
+              <option key={item.id} value={item.id}>{item.label} — {item.instrument}</option>
+            ))}
           </select>
         </Field>
         {MODULES.filter((mod) => !mod.locked).map((mod) => (

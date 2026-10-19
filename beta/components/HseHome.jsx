@@ -1,4 +1,5 @@
 import { FORM_KINDS } from '../config/forms.js'
+import { rulesetMeta } from '../config/regulations.js'
 
 export default function HseHome({ app }) {
   const counts = app.rows.reduce((acc, row) => {
@@ -10,8 +11,8 @@ export default function HseHome({ app }) {
       <p className="eyebrow">HSE · working</p>
       <h1>Capture</h1>
       <p className="lede">
-        Voice or typed. {app.site.mine ? 'Mine-site flags include the WHS (Mines) Regulations 2022.' : 'General WHS flags are on. Turn the mine question on in site setup if this is a mine.'}
-        {' '}Field list lives in beta/config/forms.js.
+        Voice or typed. This site uses the {rulesetMeta(app.site.ruleset).label} ruleset ({rulesetMeta(app.site.ruleset).instrument}).
+        {' '}Fields live in beta/config/forms.js. Breach areas live in beta/config/breaches.js.
       </p>
       <div className="grid cards">
         {FORM_KINDS.map((kind) => (

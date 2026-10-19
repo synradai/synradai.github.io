@@ -29,7 +29,7 @@ export default function SceneCheck({ app }) {
     setBusy(true)
     setError('')
     try {
-      const checked = await checkScene(photos, note)
+      const checked = await checkScene(photos, note, app.site.ruleset || 'general')
       setResult(checked)
     } catch (err) {
       setError(err.message || 'Could not check the scene.')
@@ -39,7 +39,7 @@ export default function SceneCheck({ app }) {
   }
 
   const breaches = result ? [
-    ...matchFlags(`${note}\n${JSON.stringify(result.result)}`),
+    ...matchFlags(`${note}\n${JSON.stringify(result.result)}`, { ruleset: app.site.ruleset || 'general' }),
     ...(result.result.possibleBreaches || []).map((item, index) => ({
       id: `scene-${index}`,
       notice: 'Possible breach — verify',
@@ -55,6 +55,7 @@ export default function SceneCheck({ app }) {
       fields: { occurredAt: perthDateTimeLocal(), siteArea, note, reporter: 'HSE adviser' },
       result: { ...result.result, offline: result.offline },
       flags: withSeverityFlag(breaches, 0),
+      ruleset: app.site.ruleset || 'general',
     })
     record.scenePhotos = photos
     app.addRecord(record)
