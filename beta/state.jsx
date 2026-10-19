@@ -1,10 +1,14 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { STORAGE_KEYS } from '../src/constants.js'
 import { defaultModulePrefs } from './config/modules.js'
+import { getMfaGate } from './lib/mfa.js'
+import { LOCAL_KEY, MODULE_KEY, SITE_KEY, loadModulePrefs, loadRows, loadSite, mergeRows, saveModulePrefs, saveRows, saveSite, slimForCloud } from './lib/store.js'
 import { authReturnUrl, isBackendEnabled, liveProjectBlocked, supabase } from './lib/supabase.js'
-import { loadModulePrefs, loadRows, loadSite, mergeRows, saveModulePrefs, saveRows, saveSite, slimForCloud } from './lib/store.js'
+import { openVault, pauseWrites, sealVault } from '../src/utils/secureStore.js'
+import { safeGetItem } from '../src/utils/storage.js'
 
 const AppContext = createContext(null)
-const LOCAL_KEY = 'si-beta-local-user'
+const LOCAL_USER_KEY = 'si-beta-local-user'
 
 export function AppState({ children }) {
   const [ready, setReady] = useState(!isBackendEnabled)
@@ -12,16 +16,22 @@ export function AppState({ children }) {
   const [recovery, setRecovery] = useState(false)
   const [localUser, setLocalUser] = useState(() => {
     if (isBackendEnabled) return null
-    try { return JSON.parse(sessionStorage.getItem(LOCAL_KEY) || 'null') } catch { return null }
+    try { return JSON.parse(sessionStorage.getItem(LOCAL_USER_KEY) || 'null') } catch { return null }
   })
   const [rows, setRows] = useState([])
-  const [modules, setModules] = useState(() => loadModulePrefs(defaultModulePrefs()))
+  const [modules, setModules] = useState(() => defaultModulePrefs())
   const [site, setSite] = useState(() => loadSite())
   const [cloudNote, setCloudNote] = useState('')
   const [storageWarning, setStorageWarning] = useState('')
   const [authError, setAuthError] = useState('')
   const [authNotice, setAuthNotice] = useState('')
+  const [mfaGate, setMfaGate] = useState(isBackendEnabled ? 'pending' : 'ready')
+  const [vaultReady, setVaultReady] = useState(false)
+  const [vaultError, setVaultError] = useState('')
+  const [sealTick, setSealTick] = useState(0)
   const orgIdRef = useRef(null)
+  const seenUser = useRef(undefined)
+  const sealing = useRef(false)
 
   useEffect(() => {
     if (!supabase) return
@@ -42,46 +52,100 @@ export function AppState({ children }) {
   const user = session?.user
     ? { id: session.user.id, email: session.user.email || 'Signed in', local: false }
     : localUser
+  const userId = session?.user?.id || localUser?.id || null
 
   useEffect(() => {
-    if (!user) return
-    const local = loadRows()
-    setRows(local)
-    if (!supabase || user.local) return
+    if (!isBackendEnabled || localUser) {
+      setMfaGate('ready')
+      return
+    }
+    if (!session?.user || recovery) {
+      setMfaGate('pending')
+      setVaultReady(false)
+      return
+    }
     let cancel = false
-    supabase.from('profiles').select('org_id').eq('id', user.id).maybeSingle().then(({ data }) => {
-      if (!cancel) orgIdRef.current = data?.org_id || null
-    })
-    supabase.from('hse_records').select('id,kind,payload,updated_at').then(({ data, error }) => {
-      if (cancel) return
-      if (error) {
-        setCloudNote('Cloud register is not on this project yet. Records stay on this device until the beta hse_records migration is applied.')
-        return
-      }
-      const remote = (data || []).map((row) => ({
-        ...(row.payload || {}),
-        id: row.id,
-        kind: row.kind || row.payload?.kind,
-        updatedAt: row.payload?.updatedAt || row.updated_at,
-      }))
-      setRows((prev) => {
-        const merged = mergeRows(prev, remote)
-        try { saveRows(merged) } catch { /* keep memory copy */ }
-        return merged
-      })
-      setCloudNote('')
-    })
+    getMfaGate()
+      .then((gate) => { if (!cancel) setMfaGate(gate) })
+      .catch(() => { if (!cancel) setMfaGate('error') })
     return () => { cancel = true }
-  }, [user?.id])
+  }, [session?.user?.id, recovery, localUser])
+
+  useEffect(() => {
+    const prev = seenUser.current
+    if (prev && prev !== userId) {
+      pauseWrites()
+      sealing.current = true
+      setVaultReady(false)
+      setRows([])
+      setModules(defaultModulePrefs())
+      setSite(loadSite())
+      sealVault().finally(() => {
+        sealing.current = false
+        setSealTick((tick) => tick + 1)
+      })
+    }
+    seenUser.current = userId
+  }, [userId])
+
+  useEffect(() => {
+    if (!userId || sealing.current || recovery) return
+    if (isBackendEnabled && !localUser && mfaGate !== 'ready') return
+    let cancel = false
+    ;(async () => {
+      try {
+        await openVault(userId)
+        await safeGetItem(LOCAL_KEY)
+        await safeGetItem(MODULE_KEY)
+        await safeGetItem(SITE_KEY)
+        await safeGetItem(STORAGE_KEYS.DEIDENT_TERMS)
+        if (cancel || sealing.current) return
+        const local = loadRows()
+        setRows(local)
+        setModules(loadModulePrefs(defaultModulePrefs()))
+        setSite(loadSite())
+        setVaultError('')
+        setVaultReady(true)
+        if (!supabase || localUser) return
+        const { data: profile } = await supabase.from('profiles').select('org_id').eq('id', userId).maybeSingle()
+        if (cancel || sealing.current) return
+        orgIdRef.current = profile?.org_id || null
+        const { data, error } = await supabase.from('hse_records').select('id,kind,payload,updated_at')
+        if (cancel || sealing.current) return
+        if (error) {
+          setCloudNote('Cloud register is not on this project yet. Records stay on this device until the beta hse_records migration is applied.')
+          return
+        }
+        const remote = (data || []).map((row) => ({
+          ...(row.payload || {}),
+          id: row.id,
+          kind: row.kind || row.payload?.kind,
+          updatedAt: row.payload?.updatedAt || row.updated_at,
+        }))
+        setRows((prev) => {
+          const merged = mergeRows(prev, remote)
+          saveRows(merged).catch(() => {})
+          return merged
+        })
+        setCloudNote('')
+      } catch {
+        if (!cancel) {
+          setVaultReady(false)
+          setVaultError('Could not open saved records on this device. Sign out and sign in again.')
+        }
+      }
+    })()
+    return () => { cancel = true }
+  }, [mfaGate, userId, localUser, recovery, sealTick])
 
   const persist = (next) => {
     setRows(next)
-    try {
-      saveRows(next)
+    saveRows(next).then((res) => {
+      if (res?.locked) return
       setStorageWarning('')
-    } catch {
-      setStorageWarning('This device is out of storage. Remove some photos and try again.')
-    }
+    }).catch((error) => {
+      if (error?.quota) setStorageWarning('This device is out of storage. Remove some photos and try again.')
+    })
   }
 
   const orgIdForUser = async () => {
@@ -92,7 +156,7 @@ export function AppState({ children }) {
   }
 
   const push = async (row) => {
-    if (!supabase || !user || user.local) return
+    if (!supabase || !user || user.local || mfaGate !== 'ready' || !vaultReady) return
     const orgId = await orgIdForUser()
     if (!orgId) {
       setCloudNote('Saved on this device. Cloud sync is waiting for your organisation.')
@@ -120,6 +184,9 @@ export function AppState({ children }) {
     storageWarning,
     authError,
     authNotice,
+    mfaGate,
+    vaultReady,
+    vaultError,
     liveProjectBlocked,
     backend: isBackendEnabled,
     clearAuth() {
@@ -171,14 +238,31 @@ export function AppState({ children }) {
     },
     signInLocal() {
       const next = { id: 'local', email: 'On this device', local: true }
-      sessionStorage.setItem(LOCAL_KEY, JSON.stringify(next))
+      sessionStorage.setItem(LOCAL_USER_KEY, JSON.stringify(next))
       setLocalUser(next)
     },
+    async refreshMfa() {
+      try {
+        setMfaGate(await getMfaGate())
+      } catch {
+        setMfaGate('error')
+      }
+    },
     async signOut() {
+      pauseWrites()
+      sealing.current = true
+      seenUser.current = null
+      setVaultReady(false)
+      setRows([])
+      setModules(defaultModulePrefs())
+      setSite(loadSite())
+      setMfaGate(isBackendEnabled ? 'pending' : 'ready')
+      await sealVault()
       if (supabase) await supabase.auth.signOut()
-      sessionStorage.removeItem(LOCAL_KEY)
       setLocalUser(null)
       setSession(null)
+      setRecovery(false)
+      sealing.current = false
       window.location.hash = '#/'
     },
     addRecord(row) {
@@ -194,7 +278,7 @@ export function AppState({ children }) {
     },
     async deleteRecord(id) {
       persist(rows.filter((row) => row.id !== id))
-      if (!supabase || !user || user.local) return
+      if (!supabase || !user || user.local || mfaGate !== 'ready' || !vaultReady) return
       let query = supabase.from('hse_records').delete().eq('id', id)
       if (orgIdRef.current) query = query.eq('org_id', orgIdRef.current)
       const { error } = await query
@@ -204,14 +288,14 @@ export function AppState({ children }) {
       if (id === 'hse') return
       const next = { ...modules, [id]: on, hse: true }
       setModules(next)
-      saveModulePrefs(next)
+      saveModulePrefs(next).catch(() => {})
     },
     setSite(patch) {
       const next = { ...site, ...patch }
       setSite(next)
-      saveSite(next)
+      saveSite(next).catch(() => {})
     },
-  }), [ready, user, recovery, rows, modules, site, cloudNote, storageWarning, authError, authNotice])
+  }), [ready, user, recovery, rows, modules, site, cloudNote, storageWarning, authError, authNotice, mfaGate, vaultReady, vaultError])
 
   return <AppContext.Provider value={api}>{children}</AppContext.Provider>
 }

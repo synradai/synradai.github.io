@@ -27,7 +27,7 @@
 //
 // Gateway verify_jwt is off for this function (supabase/config.toml).
 // The beta project signs ES256 tokens, which that gateway check rejects.
-// The auth.getUser() check below stays.
+// The auth.getUser() check below stays. After that, aal1 tokens are rejected.
 //
 // This function does not check billing or the free-trial clock, and it does
 // not return 402. The beta field test is not gated on the 14-day trial.
@@ -38,6 +38,7 @@
 // ---------------------------------------------------------------------------
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { requireAal2 } from "../_shared/aal.ts";
 import {
   SYSTEM,
   anthropicShape,
@@ -125,6 +126,7 @@ Deno.serve(async (req) => {
     });
     const { data: userData, error: authErr } = await userClient.auth.getUser();
     if (authErr || !userData.user) return json({ error: "Not authenticated" }, 401);
+    if (!requireAal2(authHeader)) return json({ error: "Two-factor authentication required." }, 401);
 
     const raw = await req.text();
     if (raw.length > MAX_BODY_CHARS) return json({ error: "Request too large" }, 413);

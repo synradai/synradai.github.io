@@ -14,7 +14,8 @@ import { buildRecord } from './record.js'
 import { nameWarning } from './roles.js'
 import { routeFromHash } from './routes.js'
 import { redact } from './redact.js'
-import { mergeRows, slimForCloud } from './store.js'
+import { ENC_PREFIX, openVault, sealVault } from '../../src/utils/secureStore.js'
+import { LOCAL_KEY, loadRows, mergeRows, saveRows, slimForCloud } from './store.js'
 import { perthDateTimeLocal } from './time.js'
 import { triagePath, triageSummary } from './triage.js'
 import { scanPrompt } from './prompts.js'
@@ -262,6 +263,7 @@ test('beta build is separate from the live app', () => {
   assert.equal(grok.includes('subscription_status'), false)
   assert.match(grok, /AI_PROVIDER/)
   assert.match(grok, /auth\.getUser\(\)/)
+  assert.match(grok, /auth\.getUser\(\)[\s\S]*requireAal2\(authHeader\)/)
   assert.match(grok, /https:\/\/api\.x\.ai\/v1\/responses/)
   assert.equal(grok.includes('/v1/chat/completions'), false)
   assert.match(grok, /bump_ai_usage/)
@@ -274,6 +276,8 @@ test('beta build is separate from the live app', () => {
   const state = readFileSync(new URL('../state.jsx', import.meta.url), 'utf8')
   assert.match(state, /await query/)
   assert.match(state, /onConflict: 'org_id,id'/)
+  assert.match(state, /await openVault\([\s\S]*from\('hse_records'\)/)
+  assert.match(state, /mfaGate !== 'ready'/)
 
   const deploy = readFileSync(new URL('../../.github/workflows/deploy.yml', import.meta.url), 'utf8')
   assert.ok(deploy.indexOf('npm run build') < deploy.indexOf('npm run build:beta'))
@@ -290,4 +294,30 @@ test('beta build is separate from the live app', () => {
 
   const liveEnv = readFileSync(new URL('../../.env.production', import.meta.url), 'utf8')
   assert.equal(liveEnv.includes('rocobdfuvaecrkzsxqub'), false)
+})
+
+test('beta records round-trip through the device vault', async () => {
+  const store = new Map()
+  const local = {
+    getItem: (key) => (store.has(key) ? store.get(key) : null),
+    setItem: (key, value) => store.set(key, String(value)),
+    removeItem: (key) => store.delete(key),
+    key: (index) => [...store.keys()][index] ?? null,
+    get length() { return store.size },
+  }
+  const previous = globalThis.localStorage
+  Object.defineProperty(globalThis, 'localStorage', { value: local, configurable: true })
+  const env = { localStorage: local, sessionStorage: null, indexedDB: null, caches: null }
+  try {
+    await openVault('beta-user', env)
+    await saveRows([{ id: 'rec-1', kind: 'incident', updatedAt: '2026-10-19T00:00:00.000Z' }])
+    const raw = local.getItem(LOCAL_KEY)
+    assert.equal(typeof raw, 'string')
+    assert.ok(raw.startsWith(ENC_PREFIX))
+    assert.equal(raw.includes('rec-1'), false)
+    assert.equal(loadRows()[0].id, 'rec-1')
+  } finally {
+    await sealVault(env)
+    Object.defineProperty(globalThis, 'localStorage', { value: previous, configurable: true })
+  }
 })

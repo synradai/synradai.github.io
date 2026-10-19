@@ -1,14 +1,23 @@
-const LOCAL_KEY = 'si-beta-hse-records-v1'
-const MODULE_KEY = 'si-beta-modules'
-const SITE_KEY = 'si-beta-site'
+import { cachedItem } from '../../src/utils/secureStore.js'
+import { safeSetItem } from '../../src/utils/storage.js'
 
-export function loadJson(key, fallback) {
+export const LOCAL_KEY = 'si-beta-hse-records-v1'
+export const MODULE_KEY = 'si-beta-modules'
+export const SITE_KEY = 'si-beta-site'
+
+function parseJson(raw, fallback) {
+  if (raw == null || raw === '') return fallback
   try {
-    const raw = localStorage.getItem(key)
-    return raw ? JSON.parse(raw) : fallback
+    const value = JSON.parse(raw)
+    return value == null ? fallback : value
   } catch {
     return fallback
   }
+}
+
+// Reads the decrypted session cache. Call only after the vault is open.
+export function loadJson(key, fallback) {
+  return parseJson(cachedItem(key), fallback)
 }
 
 export function loadRows() {
@@ -16,8 +25,15 @@ export function loadRows() {
   return Array.isArray(rows) ? rows : []
 }
 
-export function saveRows(rows) {
-  localStorage.setItem(LOCAL_KEY, JSON.stringify(rows))
+export async function saveRows(rows) {
+  const res = await safeSetItem(LOCAL_KEY, JSON.stringify(rows))
+  if (res?.locked) return res
+  if (!res?.ok) {
+    const error = new Error('quota')
+    error.quota = true
+    throw error
+  }
+  return res
 }
 
 export function loadModulePrefs(defaults) {
@@ -25,8 +41,8 @@ export function loadModulePrefs(defaults) {
   return { ...defaults, ...(saved || {}), hse: true }
 }
 
-export function saveModulePrefs(prefs) {
-  localStorage.setItem(MODULE_KEY, JSON.stringify({ ...prefs, hse: true }))
+export async function saveModulePrefs(prefs) {
+  return safeSetItem(MODULE_KEY, JSON.stringify({ ...prefs, hse: true }))
 }
 
 export function loadSite() {
@@ -41,8 +57,8 @@ export function loadSite() {
   }
 }
 
-export function saveSite(site) {
-  localStorage.setItem(SITE_KEY, JSON.stringify(site))
+export async function saveSite(site) {
+  return safeSetItem(SITE_KEY, JSON.stringify(site))
 }
 
 function hasDevicePhotos(list) {
