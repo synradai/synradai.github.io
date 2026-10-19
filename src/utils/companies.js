@@ -1,5 +1,5 @@
 import { STORAGE_KEYS } from '../constants'
-import { safeSetItem } from './storage'
+import { cachedItem, safeSetItem } from './storage'
 
 // Company memory — every company typed into a report is remembered on-device,
 // ranked by how often it's used, capped at 50 (about the whole WA mining
@@ -8,7 +8,7 @@ import { safeSetItem } from './storage'
 
 const load = () => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.KNOWN_COMPANIES)
+    const raw = cachedItem(STORAGE_KEYS.KNOWN_COMPANIES)
     const list = raw ? JSON.parse(raw) : []
     return Array.isArray(list) ? list : []
   } catch (_) { return [] }

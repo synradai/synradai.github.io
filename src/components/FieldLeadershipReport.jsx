@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { generateId, compressPhoto } from '../utils/storage'
+import { cachedItem, compressPhoto, generateId, safeSetItem } from '../utils/storage'
 import { formatDateTime } from '../utils/format'
 import { STORAGE_KEYS } from '../constants'
 import { callAnthropicAPI, buildFieldLeadershipPrompt } from '../utils/api'
@@ -28,7 +28,7 @@ export default function FieldLeadershipReport({ apiKey, onClose, onSave }) {
   const [location, setLocation] = useState('')
   const [companyAssessed, setCompanyAssessed] = useState('')
   const [yourCompany, setYourCompany] = useState(() => {
-    try { return localStorage.getItem(STORAGE_KEYS.FIELD_REPORT_COMPANY) || '' } catch (_) { return '' }
+    return cachedItem(STORAGE_KEYS.FIELD_REPORT_COMPANY) || ''
   })
   const [activity, setActivity] = useState('')
   const [positives, setPositives] = useState('')
@@ -93,7 +93,7 @@ export default function FieldLeadershipReport({ apiKey, onClose, onSave }) {
   const save = () => {
     if (leaving) return
     walk.stop()
-    try { localStorage.setItem(STORAGE_KEYS.FIELD_REPORT_COMPANY, yourCompany) } catch (_) {}
+    safeSetItem(STORAGE_KEYS.FIELD_REPORT_COMPANY, yourCompany).catch(() => {})
     rememberCompanies(companyAssessed, yourCompany)
     setLeaving(true)
     setTimeout(() => onSave({

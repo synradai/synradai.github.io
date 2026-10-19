@@ -1,9 +1,9 @@
 import { supabase, isBackendEnabled } from './supabase'
 
-// Cloud sync for the app's records. Model: localStorage is the offline working
-// copy; the cloud is a continuous backup that can restore onto a new/wiped
-// device and carry records between devices. Pushes are fire-and-forget and skip
-// when offline (they re-run on the next change once back online).
+// Cloud sync for the app's records. The on-device copy is encrypted and is the
+// offline working set; the cloud is the backup that restores a new or wiped
+// device. Pushes are fire-and-forget and skip when offline (they re-run on the
+// next change once back online). Callers must already be at aal2.
 
 let owner = null // { userId, orgId } — fetched once per session
 

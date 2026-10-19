@@ -1,64 +1,22 @@
 import { getAccessToken } from './supabase'
 
-// When VITE_AI_PROXY_URL is set, AI calls go through the backend proxy (the
-// server holds the Anthropic key and authenticates the user via their Supabase
-// token). When it's empty — the default today — calls go direct from the
-// browser using the key from Settings. Same return shape either way, so callers
-// don't change.
+// AI calls go through the backend proxy. The server holds the model key and
+// requires an aal2 session. The browser never calls Anthropic directly and
+// never stores an API key.
 const PROXY_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_AI_PROXY_URL) || ''
 
-// True when AI calls run through the backend proxy (key is server-side, so the
-// Settings screen shouldn't ask the user for their own Anthropic key).
+// True when this build has a server-side AI proxy configured.
 export const isProxyMode = Boolean(PROXY_URL)
 
-export async function callAnthropicAPI(apiKey, prompt, maxTokens = 1000) {
+export async function callAnthropicAPI(_apiKey, prompt, maxTokens = 1000) {
   if (typeof navigator !== 'undefined' && navigator.onLine === false) {
     throw new Error('No internet connection. AI features need signal or Wi-Fi — try again once connected.')
   }
-
-  return PROXY_URL
-    ? callViaProxy(prompt, maxTokens)
-    : callDirect(apiKey, prompt, maxTokens)
+  if (!PROXY_URL) throw new Error('AI is unavailable in this build.')
+  return callViaProxy(prompt, maxTokens)
 }
 
-// Direct browser → Anthropic (current behaviour; user supplies their own key).
-async function callDirect(apiKey, prompt, maxTokens) {
-  if (!apiKey) throw new Error('No API key. Add it in Settings.')
-
-  let res
-  try {
-    res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: maxTokens,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    })
-  } catch (e) {
-    const detail = e?.message || e?.name || String(e)
-    throw new Error(`Network error reaching Anthropic: ${detail}`)
-  }
-
-  let data
-  try {
-    data = await res.json()
-  } catch (e) {
-    throw new Error(`Bad response from Anthropic (HTTP ${res.status})`)
-  }
-
-  if (!res.ok) throw new Error(data.error?.message || `API error ${res.status}`)
-  if (!data.content?.[0]?.text) throw new Error('Unexpected response from Anthropic API')
-  return data.content[0].text
-}
-
-// Browser → your backend proxy → Anthropic (production; key stays server-side).
+// Browser → backend proxy → model provider (the key stays server-side).
 async function callViaProxy(prompt, maxTokens) {
   const authToken = await getAccessToken()
   if (!authToken) throw new Error('Please sign in to use AI features.')

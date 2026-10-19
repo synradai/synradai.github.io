@@ -1,4 +1,5 @@
 import { supabase, isBackendEnabled } from './supabase'
+import { safeGetItem, safeSetItem } from './storage'
 
 // AI disclaimer acknowledgment — named, dated, logged server-side before a
 // user can use the app (a liability requirement for AI in a safety context,
@@ -11,13 +12,13 @@ const CACHE_KEY = `sa_ai_ack_v${DISCLAIMER_VERSION}`
 // read errors — the field tool is never bricked; it re-prompts next session.
 export async function needsAiAck() {
   if (!isBackendEnabled) return false
-  try { if (localStorage.getItem(CACHE_KEY) === '1') return false } catch (_) {}
+  try { if (await safeGetItem(CACHE_KEY) === '1') return false } catch (_) {}
   try {
     const { data, error } = await supabase
       .from('disclaimer_acks').select('id').eq('version', DISCLAIMER_VERSION).limit(1)
     if (error) return false
     const acked = (data || []).length > 0
-    if (acked) { try { localStorage.setItem(CACHE_KEY, '1') } catch (_) {} }
+    if (acked) { try { await safeSetItem(CACHE_KEY, '1') } catch (_) {} }
     return !acked
   } catch (_) { return false }
 }
@@ -31,5 +32,5 @@ export async function recordAiAck(fullName) {
   })
   // A duplicate means it's already recorded — that's success, not failure.
   if (error && !/duplicate|unique/i.test(error.message)) throw error
-  try { localStorage.setItem(CACHE_KEY, '1') } catch (_) {}
+  try { await safeSetItem(CACHE_KEY, '1') } catch (_) {}
 }

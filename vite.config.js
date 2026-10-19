@@ -20,11 +20,13 @@ export default defineConfig({
         // Standalone apps live under public/ and must stay out of this
         // service worker. /tracker/ (SwingTrack) has its own worker.
         // /muay-thai/ (Muay Thai Kru) is a static page with no worker.
-        // globPatterns would otherwise precache muay-thai/index.html, and the
+        // /beta/ is the Safe Intelligence beta build. It must not be precached
+        // or served as this app's shell when both are on GitHub Pages.
+        // globPatterns would otherwise precache those index.html files, and the
         // navigation fallback would serve this app's shell for those URLs
-        // (including /muay-thai with no slash, and with a query string).
-        globIgnores: ['tracker/**', 'muay-thai/**'],
-        navigateFallbackDenylist: [/^\/tracker\//, /^\/muay-thai(?:\/|\?|$)/],
+        // (including with no slash, and with a query string).
+        globIgnores: ['tracker/**', 'muay-thai/**', 'beta/**'],
+        navigateFallbackDenylist: [/^\/tracker\//, /^\/muay-thai(?:\/|\?|$)/, /^\/beta(?:\/|\?|$)/],
         cleanupOutdatedCaches: true,
         // App data/API calls (Supabase, AI proxy) always go to the network —
         // never cache them. Only same-origin static assets are precached, plus

@@ -40,7 +40,7 @@ export default function Learnings({ entries, onAdd, onRemove, apiKey, onBack }) 
       footer={
         <div>
           <ErrorBox style={{ marginBottom: '0.5rem' }}>{error}</ErrorBox>
-          {!apiKey && <p style={{ fontSize: '0.7rem', color: 'var(--text-faint)', margin: '0 0 0.5rem', fontWeight: 600 }}>No API key — go to Settings to enable AI tidy-up.</p>}
+          {!apiKey && <p style={{ fontSize: '0.7rem', color: 'var(--text-faint)', margin: '0 0 0.5rem', fontWeight: 600 }}>AI isn’t available in this build.</p>}
           <div style={{ backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-accent)', borderRadius: '1rem', padding: '0.6rem 0.75rem' }}>
             <SafetyTextarea
               value={text}

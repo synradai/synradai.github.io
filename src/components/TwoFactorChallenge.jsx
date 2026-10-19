@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { getVerifiedTotpFactor, verifyTotp } from '../utils/mfa'
+import { MFA_RECOVERY_NOTE } from './TwoFactorEnroll'
 import { FIELD_LABEL, INPUT, PrimaryButton, ErrorBox } from './ui'
 
 // Shown after password login when the account has 2FA on — must enter a current
@@ -51,7 +52,10 @@ export default function TwoFactorChallenge({ onVerified, onSignOut }) {
           {loading ? 'Verifying…' : 'Verify'}
         </PrimaryButton>
 
-        <button onClick={onSignOut} style={{ width: '100%', marginTop: '1rem', background: 'none', border: 'none', color: 'var(--text-faint)', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
+        <p style={{ fontSize: '0.72rem', color: 'var(--text-faint)', margin: '1rem 0 0', lineHeight: 1.5, fontWeight: 600 }}>
+          {MFA_RECOVERY_NOTE}
+        </p>
+        <button onClick={onSignOut} style={{ width: '100%', marginTop: '0.75rem', background: 'none', border: 'none', color: 'var(--text-faint)', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
           Sign out
         </button>
       </div>

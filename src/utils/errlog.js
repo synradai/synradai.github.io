@@ -1,3 +1,4 @@
+import { aalFromAccessToken } from './aal'
 import { supabase, isBackendEnabled } from './supabase'
 
 // Crash reporting: uncaught errors get written to the client_errors table so
@@ -13,6 +14,7 @@ async function report(kind, message, stack) {
   try {
     const { data } = await supabase.auth.getSession()
     if (!data.session) return
+    if (aalFromAccessToken(data.session.access_token) !== 'aal2') return
     await supabase.from('client_errors').insert({
       kind,
       message: String(message).slice(0, 500),

@@ -190,7 +190,7 @@ export default function AskSafety({ initialChats = [], onPersist, apiKey, learni
       footer={
         <div>
           <ErrorBox style={{ marginBottom: '0.5rem' }}>{error}</ErrorBox>
-          {!apiKey && <p style={{ fontSize: '0.7rem', color: 'var(--text-faint)', margin: '0 0 0.5rem', fontWeight: 600 }}>No API key — go to Settings to enable Gaz.</p>}
+          {!apiKey && <p style={{ fontSize: '0.7rem', color: 'var(--text-faint)', margin: '0 0 0.5rem', fontWeight: 600 }}>AI isn’t available in this build.</p>}
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end', backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-accent)', borderRadius: '1.4rem', padding: '0.5rem 0.5rem 0.5rem 0.9rem' }}>
             <div style={{ flex: 1 }}>
               <SafetyTextarea
