@@ -17,9 +17,10 @@ export default defineConfig({
       manifest: false,
       workbox: {
         globPatterns: ['**/*.{js,css,html,png,svg,webmanifest}'],
-        // Standalone apps live under public/ and must stay out of this
-        // service worker. /tracker/ (SwingTrack) has its own worker.
-        // /muay-thai/ (Muay Thai Kru) is a static page with no worker.
+        // /tracker/ and /muay-thai/ are now redirects off this origin. They must
+        // stay out of this service worker so it cannot replace those pages with
+        // the Safe Intelligence shell. /tracker/ still ships its own sw.js, which
+        // only unregisters the old SwingTrack worker. /muay-thai/ never had one.
         // /beta/ is the Safe Intelligence beta build. It must not be precached
         // or served as this app's shell when both are on GitHub Pages.
         // globPatterns would otherwise precache those index.html files, and the
