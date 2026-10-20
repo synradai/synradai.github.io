@@ -4,6 +4,7 @@ import { safeSetItem } from '../../src/utils/storage.js'
 export const LOCAL_KEY = 'si-beta-hse-records-v1'
 export const MODULE_KEY = 'si-beta-modules'
 export const SITE_KEY = 'si-beta-site'
+export const INJURY_KEY = 'si-beta-injury-cases-v1'
 
 function parseJson(raw, fallback) {
   if (raw == null || raw === '') return fallback
@@ -23,6 +24,15 @@ export function loadJson(key, fallback) {
 export function loadRows() {
   const rows = loadJson(LOCAL_KEY, [])
   return Array.isArray(rows) ? rows : []
+}
+
+export function loadInjuryCases() {
+  const rows = loadJson(INJURY_KEY, [])
+  return Array.isArray(rows) ? rows : []
+}
+
+export async function saveInjuryCases(rows) {
+  return safeSetItem(INJURY_KEY, JSON.stringify(rows))
 }
 
 export async function saveRows(rows) {

@@ -2,8 +2,10 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import { STORAGE_KEYS } from '../src/constants.js'
 import { defaultModulePrefs } from './config/modules.js'
 import { moduleRows, resolveMatrix, resolveTemplates, resolveWording, visibleModules } from './lib/config.js'
+import { injuryError, injuryPayload, mergeInjury, nextCaseCode, toPrivateCase } from './lib/injury.js'
 import { getMfaGate } from './lib/mfa.js'
-import { LOCAL_KEY, MODULE_KEY, SITE_KEY, loadModulePrefs, loadRows, loadSite, mergeRows, saveModulePrefs, saveRows, saveSite, slimForCloud } from './lib/store.js'
+import { INJURY_KEY, LOCAL_KEY, MODULE_KEY, SITE_KEY, loadInjuryCases, loadModulePrefs, loadRows, loadSite, mergeRows, saveInjuryCases, saveModulePrefs, saveRows, saveSite, slimForCloud } from './lib/store.js'
+import { generateId } from '../src/utils/storage.js'
 import { authReturnUrl, isBackendEnabled, liveProjectBlocked, supabase } from './lib/supabase.js'
 import { openVault, pauseWrites, sealVault } from '../src/utils/secureStore.js'
 import { safeGetItem } from '../src/utils/storage.js'
@@ -20,6 +22,8 @@ export function AppState({ children }) {
     try { return JSON.parse(sessionStorage.getItem(LOCAL_USER_KEY) || 'null') } catch { return null }
   })
   const [rows, setRows] = useState([])
+  const [injuryCases, setInjuryCases] = useState([])
+  const [orgRole, setOrgRole] = useState('member')
   const [modules, setModules] = useState(() => defaultModulePrefs())
   const [site, setSite] = useState(() => loadSite())
   const [cloudNote, setCloudNote] = useState('')
@@ -82,6 +86,8 @@ export function AppState({ children }) {
       sealing.current = true
       setVaultReady(false)
       setRows([])
+      setInjuryCases([])
+      setOrgRole('member')
       setModules(defaultModulePrefs())
       setSite(loadSite())
       sealVault().finally(() => {
@@ -102,18 +108,21 @@ export function AppState({ children }) {
         await safeGetItem(LOCAL_KEY)
         await safeGetItem(MODULE_KEY)
         await safeGetItem(SITE_KEY)
+        await safeGetItem(INJURY_KEY)
         await safeGetItem(STORAGE_KEYS.DEIDENT_TERMS)
         if (cancel || sealing.current) return
         const local = loadRows()
         setRows(local)
+        setInjuryCases(loadInjuryCases())
         setModules(loadModulePrefs(defaultModulePrefs()))
         setSite(loadSite())
         setVaultError('')
         setVaultReady(true)
         if (!supabase || localUser) return
-        const { data: profile } = await supabase.from('profiles').select('org_id').eq('id', userId).maybeSingle()
+        const { data: profile } = await supabase.from('profiles').select('org_id, role').eq('id', userId).maybeSingle()
         if (cancel || sealing.current) return
         orgIdRef.current = profile?.org_id || null
+        setOrgRole(profile?.role === 'admin' ? 'admin' : 'member')
         const { data, error } = await supabase.from('hse_records').select('id,kind,payload,updated_at')
         if (cancel || sealing.current) return
         if (error) {
@@ -131,6 +140,20 @@ export function AppState({ children }) {
           saveRows(merged).catch(() => {})
           return merged
         })
+        const [indexRes, privateRes] = await Promise.all([
+          supabase.from('injury_case_index').select('id,case_code,event_id,classification,status,restricted_from,rtw_on,created_at'),
+          supabase.from('injury_cases').select('id,case_code,event_id,classification,status,restricted_from,rtw_on,person_name,body_part,treatment,note,user_id,created_at'),
+        ])
+        if (!cancel && !indexRes.error) {
+          const remoteInjury = mergeInjury(indexRes.data || [], privateRes.error ? [] : (privateRes.data || []))
+          setInjuryCases((prev) => {
+            const remoteIds = new Set(remoteInjury.map((item) => item.id))
+            const pending = prev.filter((item) => item.private && !remoteIds.has(item.id))
+            const mergedInjury = [...pending, ...remoteInjury]
+            saveInjuryCases(mergedInjury).catch(() => {})
+            return mergedInjury
+          })
+        }
         setCloudNote('')
       } catch {
         if (!cancel) {
@@ -300,6 +323,8 @@ export function AppState({ children }) {
       seenUser.current = null
       setVaultReady(false)
       setRows([])
+      setInjuryCases([])
+      setOrgRole('member')
       setModules(defaultModulePrefs())
       setSite(loadSite())
       setMfaGate(isBackendEnabled ? 'pending' : 'ready')
@@ -360,6 +385,80 @@ export function AppState({ children }) {
       const { error } = await query
       if (error) setCloudNote('Removed on this device. The cloud copy could not be deleted, so it may come back on the next refresh.')
     },
+    async saveInjury(fields) {
+      const problem = injuryError(fields)
+      if (problem) throw new Error(problem)
+      const id = fields.id || generateId()
+      const localCase = toPrivateCase({
+        id,
+        caseCode: nextCaseCode(injuryCases),
+        eventId: fields.eventId,
+        classification: fields.classification,
+        status: fields.status || 'open',
+        restrictedFrom: fields.restrictedFrom,
+        rtwOn: fields.rtwOn,
+        createdAt: new Date().toISOString(),
+        personName: fields.personName,
+        bodyPart: fields.bodyPart,
+        treatment: fields.treatment,
+        note: fields.note,
+        userId: user?.id || '',
+      })
+      const writeLocal = (item) => {
+        setInjuryCases((prev) => {
+          const next = [item, ...prev.filter((row) => row.id !== item.id)]
+          saveInjuryCases(next).catch(() => {})
+          return next
+        })
+      }
+      writeLocal(localCase)
+      if (!supabase || !user || user.local || mfaGate !== 'ready') return localCase
+      const { data, error } = await supabase.from('injury_cases').insert({ id, ...injuryPayload(fields) })
+        .select('id,case_code,event_id,classification,status,restricted_from,rtw_on,person_name,body_part,treatment,note,user_id,created_at')
+        .maybeSingle()
+      if (error || !data) {
+        setCloudNote('Saved on this device. The injury case could not be stored for the organisation yet.')
+        return localCase
+      }
+      const saved = toPrivateCase(data)
+      writeLocal(saved)
+      return saved
+    },
+    async updateInjury(id, fields) {
+      const existing = injuryCases.find((row) => row.id === id)
+      if (!existing?.private) throw new Error('This case is not open for you to edit.')
+      const problem = injuryError(fields)
+      if (problem) throw new Error(problem)
+      const localCase = toPrivateCase({
+        ...existing,
+        ...fields,
+        id,
+        caseCode: existing.caseCode,
+        userId: existing.userId,
+      })
+      setInjuryCases((prev) => {
+        const next = prev.map((row) => row.id === id ? localCase : row)
+        saveInjuryCases(next).catch(() => {})
+        return next
+      })
+      if (!supabase || !user || user.local || mfaGate !== 'ready') return localCase
+      let query = supabase.from('injury_cases').update(injuryPayload(fields)).eq('id', id)
+      if (orgIdRef.current) query = query.eq('org_id', orgIdRef.current)
+      const { data, error } = await query
+        .select('id,case_code,event_id,classification,status,restricted_from,rtw_on,person_name,body_part,treatment,note,user_id,created_at')
+        .maybeSingle()
+      if (error || !data) {
+        setCloudNote('Saved on this device. The injury case could not be updated for the organisation yet.')
+        return localCase
+      }
+      const saved = toPrivateCase(data)
+      setInjuryCases((prev) => {
+        const next = prev.map((row) => row.id === id ? saved : row)
+        saveInjuryCases(next).catch(() => {})
+        return next
+      })
+      return saved
+    },
     setModule(id, on) {
       if (id === 'hse') return
       const next = { ...modules, [id]: on, hse: true }
@@ -371,6 +470,8 @@ export function AppState({ children }) {
       setSite(next)
       saveSite(next).catch(() => {})
     },
+    injuryCases,
+    orgRole,
     wording: resolveWording(remoteConfig.wording?.value),
     moduleConfig: moduleRows(remoteConfig.modules?.value),
     navModules: visibleModules(moduleRows(remoteConfig.modules?.value), modules),
@@ -437,7 +538,7 @@ export function AppState({ children }) {
         return next
       })
     },
-  }), [ready, user, recovery, rows, modules, site, cloudNote, storageWarning, authError, authNotice, mfaGate, vaultReady, vaultError, remoteConfig, isAdmin, adminChecked])
+  }), [ready, user, recovery, rows, injuryCases, orgRole, modules, site, cloudNote, storageWarning, authError, authNotice, mfaGate, vaultReady, vaultError, remoteConfig, isAdmin, adminChecked])
 
   return <AppContext.Provider value={api}>{children}</AppContext.Provider>
 }

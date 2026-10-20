@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { isOverdue } from '../lib/actions.js'
+import { InjuryChips } from './Injury.jsx'
 import { QUICK_ADD, recordTime, recordsForDay, timelineDetail, timelineTitle, TIMELINE_LABELS } from '../lib/day.js'
 import { cleanLinks } from '../lib/links.js'
 import { buildNoteRecord } from '../lib/record.js'
@@ -105,6 +106,7 @@ export default function DailyRecord({ app }) {
                 <strong>{recordTime(row) || '—'} · {timelineTitle(row)}</strong>
                 <span>{timelineDetail(row) || row.status}</span>
               </a>
+              <InjuryChips app={app} eventId={row.id} />
               {links.length > 0 && (
                 <span className="link-row">
                   {links.map((link) => {
