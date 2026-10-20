@@ -14,6 +14,7 @@ import { buildNoteRecord, buildRecord } from './record.js'
 import { nameWarning } from './roles.js'
 import { auditToCsv, filterAudit } from './audit.js'
 import { buildActionRecord, canRemind, isOverdue, ownerChoices, reminderPatch, selectedOwner, sortActions, statusPatch } from './actions.js'
+import { addDays, addHours, flagNotifiable, lodgementError, notifiableChecklist, readLodgement } from './notifiable.js'
 import { buildHoursRecord, dashboardSummary, daysLost } from './dashboard.js'
 import { investigationRows, signOffError } from './investigation.js'
 import { leadCounts, weekStarting } from './leads.js'
@@ -404,6 +405,29 @@ test('a day timeline keeps the selected date and short notes', () => {
   assert.equal(recordDay({ createdAt: '2026-10-18T16:30:00.000Z', fields: {} }), '2026-10-19')
   const day = recordsForDay([other, incident, meeting], '2026-10-19')
   assert.deepEqual(day.map((row) => row.id), ['day-3', 'day-1'])
+})
+
+test('a notifiable incident keeps the lodgement on the record and does not send it', () => {
+  const incident = buildRecord({
+    id: 'evt-n',
+    kind: 'incident',
+    fields: { severity: 2, actualSeverity: 2, potentialSeverity: 2, description: 'Spill', occurredAt: '2026-10-18T10:00', siteArea: 'Tank', peopleRoles: 'Operator', notifiable: 'No' },
+  })
+  assert.equal(incident.notifiable, false)
+  const flagged = { ...incident, ...flagNotifiable(incident) }
+  assert.equal(flagged.notifiable, true)
+  assert.equal(flagged.severity, 4)
+  assert.equal(flagged.path, 'escalate')
+  assert.equal(flagged.fields.notifiable, 'Yes')
+  assert.equal(addHours('2026-10-18T10:00', 48), '2026-10-20T10:00')
+  assert.equal(addDays('2026-10-18T10:00', 21), '2026-11-08')
+  const lodged = readLodgement({ ...flagged, lodgement: { writtenRequested: true, dangerousGoods: true } })
+  const items = notifiableChecklist(flagged, lodged, '2026-10-21')
+  assert.equal(items.find((item) => item.id === 'written').overdue, true)
+  assert.equal(items.find((item) => item.id === 'dg').deadline.includes('2026-11-08'), true)
+  assert.match(lodgementError({ reference: 'WS-1', lodgedOn: '', lodgedBy: '' }), /date/)
+  assert.equal(lodgementError({ reference: 'WS-1', lodgedOn: '2026-10-18', lodgedBy: 'Supervisor' }), '')
+  assert.equal(reportingFor('general').lodgeUrl, 'https://www.worksafe.wa.gov.au/report-incident')
 })
 
 test('actions link both records and overdue is calculated', () => {

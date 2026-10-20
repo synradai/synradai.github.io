@@ -132,7 +132,10 @@ export default function RecordView({ app, id }) {
       {needsWhys && (
         <p className="note">{record.path === 'escalate' ? 'Escalated. No auto-close.' : 'HSE review.'} <a href={`#/hse/investigate/${record.id}`}>Open the five whys</a>.</p>
       )}
-      {(record.notifiable || record.path === 'escalate') && <Reporting ruleset={record.ruleset} forced={record.notifiable || record.path === 'escalate'} />}
+      {record.kind === 'incident' && (
+        <Reporting ruleset={record.ruleset} forced={record.notifiable || record.path === 'escalate'} record={record} onSave={(patch) => app.updateRecord(record.id, patch)} />
+      )}
+      {record.kind !== 'incident' && (record.notifiable || record.path === 'escalate') && <Reporting ruleset={record.ruleset} forced={record.notifiable || record.path === 'escalate'} />}
 
       {record.kind === 'action' && (
         <div className="panel">
