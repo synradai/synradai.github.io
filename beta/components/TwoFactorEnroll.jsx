@@ -1,8 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { clearUnverifiedFactors, enrollTotp, verifyTotp } from '../lib/mfa.js'
-import { Button, Field } from './ui.jsx'
+import { AuthSteps, CodeField } from './AuthBits.jsx'
+import { Button } from './ui.jsx'
 
 const RECOVERY = 'Supabase does not provide backup codes. If you lose this authenticator, an administrator has to reset two-factor authentication on your account before you can sign in again. Email synradai@outlook.com.'
+
+function totpError(error) {
+  const message = error?.message || ''
+  if (/expired/i.test(message)) return 'That code has expired. Wait for the next one in the app.'
+  if (/invalid/i.test(message)) return 'That code didn’t match. Check the app and try again.'
+  return message || 'That code didn’t match. Check the app and try again.'
+}
 
 export default function TwoFactorEnroll({ onVerified, onSignOut, preview = null }) {
   const [enroll, setEnroll] = useState(preview)
@@ -10,9 +18,11 @@ export default function TwoFactorEnroll({ onVerified, onSignOut, preview = null 
   const [loading, setLoading] = useState(!preview)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [copied, setCopied] = useState(false)
+  const verifying = useRef(false)
 
   useEffect(() => {
-    if (preview) return
+    if (preview) return undefined
     let cancelled = false
     ;(async () => {
       try {
@@ -28,52 +38,59 @@ export default function TwoFactorEnroll({ onVerified, onSignOut, preview = null 
     return () => { cancelled = true }
   }, [preview])
 
-  const confirm = async () => {
-    if (code.trim().length < 6) {
-      setError('Enter the 6-digit code from your authenticator app.')
-      return
-    }
+  const confirm = useCallback(async (token) => {
+    const next = String(token || '').trim()
+    if (next.length < 6 || verifying.current) return
     if (preview) {
       setError('This preview screen cannot verify a code.')
       return
     }
+    verifying.current = true
     setError('')
     setBusy(true)
     try {
-      await verifyTotp(enroll.factorId, code.trim())
+      await verifyTotp(enroll.factorId, next)
       onVerified()
-    } catch {
-      setError('That code didn’t match. Check the app and try again.')
+    } catch (e) {
+      setError(totpError(e))
+      setCode('')
       setBusy(false)
+      verifying.current = false
+    }
+  }, [enroll, onVerified, preview])
+
+  const copyKey = async () => {
+    try {
+      await navigator.clipboard.writeText(enroll.secret)
+      setCopied(true)
+    } catch {
+      setCopied(false)
+      setError('Could not copy the key. Select it and copy it by hand.')
     }
   }
 
   return (
     <div className="login">
       <div className="card login-card">
+        <AuthSteps step={3} />
         <p className="eyebrow">Required</p>
-        <h1>Set up two-factor authentication</h1>
-        <p className="lede">Every account needs an authenticator app before any records open. Scan the code, or type the secret in by hand.</p>
+        <h1>Add your authenticator</h1>
+        <p className="lede">Open this in your authenticator app, or copy the setup key. Then enter the 6-digit code.</p>
         {loading && <p className="muted">Preparing your authenticator…</p>}
         {enroll && (
-          <form onSubmit={(event) => { event.preventDefault(); confirm() }}>
-            <div style={{ background: '#fff', padding: '0.75rem', borderRadius: 12, width: 'fit-content', margin: '0 auto 0.75rem' }}>
-              <img src={enroll.qrCode} alt="Authenticator QR code" width="180" height="180" />
+          <form onSubmit={(event) => { event.preventDefault(); confirm(code) }}>
+            <div className="auth-actions">
+              <a className="btn" href={enroll.uri}>Open in authenticator app</a>
+              <Button type="button" kind="ghost" onClick={copyKey}>{copied ? 'Setup key copied' : 'Copy setup key'}</Button>
             </div>
             <p className="muted" style={{ wordBreak: 'break-all', textAlign: 'center' }}>
-              Can’t scan? Enter this key manually:<br />
+              Setup key<br />
               <strong style={{ fontFamily: 'monospace' }}>{enroll.secret}</strong>
             </p>
-            <Field label="6-digit code">
-              <input
-                value={code}
-                onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="123456"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                style={{ fontFamily: 'monospace', letterSpacing: '0.3em', textAlign: 'center' }}
-              />
-            </Field>
+            <div className="qr-wide">
+              <img src={enroll.qrCode} alt="Authenticator QR code" width="180" height="180" />
+            </div>
+            <CodeField value={code} onChange={setCode} onComplete={confirm} disabled={busy} />
             {error && <p className="note">{error}</p>}
             <Button type="submit" disabled={busy}>{busy ? 'Verifying…' : 'Confirm and continue'}</Button>
           </form>
