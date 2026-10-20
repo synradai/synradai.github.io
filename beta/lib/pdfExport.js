@@ -1,6 +1,7 @@
 import { exportReportPdf } from '../../src/utils/pdf.js'
 import { resolveForm } from './config.js'
 import { recordsToPdfBody } from './exportRecords.js'
+import { readInvestigation } from './investigation.js'
 import { formatWhen } from './time.js'
 
 function titleFor(record) {
@@ -35,11 +36,32 @@ export async function exportRecordPdf(record, formsConfig) {
     })
   }
   if (record.fiveWhys) {
+    const whys = record.fiveWhys.whys || []
     blocks.push({
       type: 'section',
       heading: 'Five whys',
-      body: record.fiveWhys.whys.map((why, index) => `${index + 1}. ${why || '—'}`).join('\n') + `\n\nRoot cause: ${record.fiveWhys.rootCause || '—'}\nActions: ${record.fiveWhys.actions || '—'}`,
+      body: whys.map((why, index) => `${index + 1}. ${typeof why === 'string' ? why : (why?.why || '—')}`).join('\n') + `\n\nRoot cause: ${record.fiveWhys.rootCause || '—'}\nActions: ${record.fiveWhys.actions || '—'}`,
     })
+  }
+  if (record.investigation) {
+    const item = record.investigation
+    blocks.push({
+      type: 'section',
+      heading: 'ICAM investigation',
+      body: [
+        `Team: ${(item.team || []).map((member) => `${member.name || '—'} (${member.role || 'role'})`).join('; ') || '—'}`,
+        `Timeline: ${(item.timeline || []).map((step) => `${step.when || ''} ${step.event || ''}`).join('\n') || '—'}`,
+        `Evidence: ${(item.evidence || []).map((entry) => entry.note).filter(Boolean).join('\n') || '—'}`,
+        `Absent or failed defences: ${item.defences || '—'}`,
+        `Individual and team actions: ${item.individual || '—'}`,
+        `Task and environment: ${item.conditions || '—'}`,
+        `Organisational factors: ${item.organisational || '—'}`,
+        `Root factors: ${item.root || '—'}`,
+        `Contributing factors: ${item.contributing || '—'}`,
+        `Sign-off: ${item.signOffName || '—'} (${item.signOffRole || '—'}) ${item.signOffOn || ''}`,
+      ].join('\n\n'),
+    })
+    if (item.photos?.length) blocks.push({ type: 'photos', heading: 'Investigation evidence', photos: item.photos })
   }
   const photos = fields.photos || record.scenePhotos || []
   if (photos.length) blocks.push({ type: 'photos', heading: 'Photos', photos })
@@ -49,6 +71,51 @@ export async function exportRecordPdf(record, formsConfig) {
     dateLabel: formatWhen(fields.occurredAt || record.createdAt),
     advisor: fields.reporter || '',
     blocks,
+  })
+}
+
+export async function exportInvestigationPdf(record) {
+  const item = readInvestigation(record)
+  return exportReportPdf({
+    filename: `safe-intelligence-investigation-${record.id}.pdf`,
+    title: 'ICAM investigation',
+    dateLabel: formatWhen(record.fields?.occurredAt || record.createdAt),
+    advisor: item.signOffRole || '',
+    blocks: [
+      {
+        type: 'section',
+        heading: 'Incident',
+        body: `${record.fields?.siteArea || ''}\n${record.fields?.description || ''}`,
+      },
+      {
+        type: 'section',
+        heading: 'Team',
+        body: item.team.map((member) => `${member.name} · ${member.role}`).join('\n') || 'None',
+      },
+      {
+        type: 'section',
+        heading: 'Sequence of events',
+        body: item.timeline.map((step) => `${step.when} — ${step.event}`).join('\n') || 'None',
+      },
+      {
+        type: 'section',
+        heading: 'ICAM',
+        body: [
+          `Absent or failed defences: ${item.defences || '—'}`,
+          `Individual and team actions: ${item.individual || '—'}`,
+          `Task and environmental conditions: ${item.conditions || '—'}`,
+          `Organisational factors: ${item.organisational || '—'}`,
+          `Root factors: ${item.root || '—'}`,
+          `Contributing factors: ${item.contributing || '—'}`,
+        ].join('\n\n'),
+      },
+      {
+        type: 'section',
+        heading: 'Sign-off',
+        body: item.signOffOn ? `${item.signOffName} (${item.signOffRole}) on ${item.signOffOn}` : 'Not signed off',
+      },
+      ...(item.photos.length ? [{ type: 'photos', heading: 'Evidence', photos: item.photos }] : []),
+    ],
   })
 }
 
