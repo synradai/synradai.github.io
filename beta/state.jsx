@@ -319,6 +319,18 @@ export function AppState({ children }) {
       persist(next)
       push(row)
     },
+    saveRecords(list) {
+      const now = new Date().toISOString()
+      const incoming = new Map((list || []).filter((row) => row?.id).map((row) => [row.id, { ...row, updatedAt: now }]))
+      const existing = new Set(rows.map((row) => row.id))
+      const added = []
+      for (const row of incoming.values()) {
+        if (!existing.has(row.id)) added.push(row)
+      }
+      const next = [...added, ...rows.map((row) => incoming.get(row.id) || row)]
+      persist(next)
+      for (const row of incoming.values()) push(row)
+    },
     updateRecord(id, patch) {
       const next = rows.map((row) => row.id === id ? { ...row, ...patch, updatedAt: new Date().toISOString() } : row)
       persist(next)
@@ -326,7 +338,22 @@ export function AppState({ children }) {
       if (saved) push(saved)
     },
     async deleteRecord(id) {
-      persist(rows.filter((row) => row.id !== id))
+      const now = new Date().toISOString()
+      const touched = []
+      const next = []
+      for (const row of rows) {
+        if (row.id === id) continue
+        const links = Array.isArray(row.links) ? row.links.filter((link) => link?.id !== id) : row.links
+        if (Array.isArray(row.links) && links.length !== row.links.length) {
+          const updated = { ...row, links, updatedAt: now }
+          touched.push(updated)
+          next.push(updated)
+        } else {
+          next.push(row)
+        }
+      }
+      persist(next)
+      for (const row of touched) push(row)
       if (!supabase || !user || user.local || mfaGate !== 'ready' || !vaultReady) return
       let query = supabase.from('hse_records').delete().eq('id', id)
       if (orgIdRef.current) query = query.eq('org_id', orgIdRef.current)

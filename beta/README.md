@@ -61,6 +61,10 @@ Apply these on the beta project, in order:
 
 `#/hse/audit` lists append-only events. A database trigger writes one when an `hse_records` row is created, edited, or deleted. The before and after values are a short summary (kind, status, severity, label), not the record body. Exporting the list writes an export event. Configuration saves are audited the same way.
 
+## Actions and links
+
+`#/hse/actions` is the actions register. Each action has an owner, a due date, and a status (open, in progress, or done). Overdue is calculated when the due date is before today in Western Australia and the status is not done. Linking a record stores the same link on both sides, and those links show on the daily record timeline and on each record. Raising an action from a record links it automatically. Actions are `hse_records` rows with `kind` `action`, so the audit trigger covers them.
+
 ## Daily record
 
 `#/hse/day` is one day at a time, defaulting to today in Western Australia. Incidents, hazards and Take 5s open the full capture form. Meetings, prestarts and toolbox talks are a short note on that day. All of them save as `hse_records` rows, using `kind` as the type.

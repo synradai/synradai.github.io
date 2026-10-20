@@ -13,7 +13,9 @@ import { extractJson } from './parse.js'
 import { buildNoteRecord, buildRecord } from './record.js'
 import { nameWarning } from './roles.js'
 import { auditToCsv, filterAudit } from './audit.js'
+import { buildActionRecord, isOverdue, sortActions } from './actions.js'
 import { recordDay, recordsForDay } from './day.js'
+import { linkPair, unlinkPair } from './links.js'
 import { initialDraft, moduleRows, prepareConfig, resolveForm, resolveMatrix, resolveTemplates, resolveWording, visibleModules } from './config.js'
 import { routeFromHash } from './routes.js'
 import { redact } from './redact.js'
@@ -382,6 +384,27 @@ test('a day timeline keeps the selected date and short notes', () => {
   assert.equal(recordDay({ createdAt: '2026-10-18T16:30:00.000Z', fields: {} }), '2026-10-19')
   const day = recordsForDay([other, incident, meeting], '2026-10-19')
   assert.deepEqual(day.map((row) => row.id), ['day-3', 'day-1'])
+})
+
+test('actions link both records and overdue is calculated', () => {
+  const incident = buildRecord({ id: 'evt-1', kind: 'hazard', fields: { severity: 2, description: 'Oil', occurredAt: '2026-10-19T09:15', siteArea: 'Workshop', peopleRoles: 'Fitter' } })
+  const action = buildActionRecord({ id: 'act-1', fields: { title: 'Isolate the leak', owner: 'Supervisor', due: '2026-10-18' } })
+  assert.equal(action.kind, 'action')
+  assert.equal(action.status, 'open')
+  assert.throws(() => buildActionRecord({ fields: { title: 'x', owner: '', due: '2026-10-18' } }), /owner/)
+  const linked = linkPair([incident, action], incident.id, action.id)
+  assert.equal(linked.find((row) => row.id === 'evt-1').links[0].id, 'act-1')
+  assert.equal(linked.find((row) => row.id === 'act-1').links[0].kind, 'hazard')
+  assert.equal(linkPair(linked, 'evt-1', 'act-1').find((row) => row.id === 'act-1').links.length, 1)
+  assert.equal(isOverdue(action, '2026-10-19'), true)
+  assert.equal(isOverdue({ ...action, status: 'done' }, '2026-10-19'), false)
+  assert.equal(isOverdue(action, '2026-10-18'), false)
+  const cleared = unlinkPair(linked, 'evt-1', 'act-1')
+  assert.equal(cleared.find((row) => row.id === 'evt-1').links.length, 0)
+  assert.equal(cleared.find((row) => row.id === 'act-1').links.length, 0)
+  const done = buildActionRecord({ id: 'act-2', fields: { title: 'Later', owner: 'Crew', due: '2026-10-21', status: 'done' } })
+  assert.deepEqual(sortActions([done, action], '2026-10-19').map((row) => row.id), ['act-1', 'act-2'])
+  assert.equal(routeFromHash('#/hse/actions').screen, 'actions')
 })
 
 test('audit filters by day and action and the csv stays a summary', () => {
