@@ -13,7 +13,15 @@ export const liveProjectBlocked = Boolean(url && url.includes(LIVE_PROJECT_REF))
 export const isBackendEnabled = Boolean(url && key) && !liveProjectBlocked
 export const proxyUrl = import.meta.env?.VITE_AI_PROXY_URL || ''
 
-export const supabase = isBackendEnabled ? createClient(url, key) : null
+export const supabase = isBackendEnabled
+  ? createClient(url, key, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
+    })
+  : null
 
 export function authReturnUrl() {
   if (typeof window === 'undefined') return ''

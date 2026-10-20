@@ -13,6 +13,30 @@ import { safeGetItem } from '../src/utils/storage.js'
 const AppContext = createContext(null)
 const LOCAL_USER_KEY = 'si-beta-local-user'
 
+function emailCodeMessage(error) {
+  const blob = `${error?.code || ''} ${error?.message || ''}`.toLowerCase()
+  if (blob.includes('rate') || blob.includes('too many') || blob.includes('only request this')) {
+    return 'Too many emails just now. Wait a minute, then send another code.'
+  }
+  if (blob.includes('not authorized') || blob.includes('not authorised')) {
+    return 'The built-in mailer only sends to addresses on the Supabase organisation team. Add this email under Organisation → Team, or turn on custom SMTP.'
+  }
+  if (blob.includes('email') && blob.includes('invalid')) return 'That email address doesn’t look right.'
+  if (blob.includes('otp_expired')) return 'That code has expired. Send a new one.'
+  if (blob.includes('expired') && blob.includes('invalid')) return 'That code didn’t match, or it has expired. Check the email or send a new one.'
+  if (blob.includes('expired')) return 'That code has expired. Send a new one.'
+  if (blob.includes('otp') || blob.includes('token')) return 'That code didn’t match. Check the email and try again.'
+  return error?.message || 'Could not send the code.'
+}
+
+function passwordSignInMessage(error) {
+  const blob = `${error?.code || ''} ${error?.message || ''}`.toLowerCase()
+  if (blob.includes('invalid login') || blob.includes('invalid_credentials')) {
+    return 'That email and password did not match. Use Email me a 6-digit code to open or create the account.'
+  }
+  return error?.message || 'Could not sign in.'
+}
+
 export function AppState({ children }) {
   const [ready, setReady] = useState(!isBackendEnabled)
   const [session, setSession] = useState(null)
@@ -46,7 +70,7 @@ export function AppState({ children }) {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
       setReady(true)
-    })
+    }).catch(() => setReady(true))
     const { data: sub } = supabase.auth.onAuthStateChange((event, next) => {
       setSession(next)
       if (event === 'PASSWORD_RECOVERY') setRecovery(true)
@@ -265,8 +289,60 @@ export function AppState({ children }) {
     async signIn(email, password) {
       setAuthError('')
       setAuthNotice('')
-      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
-      if (error) setAuthError(error.message || 'Could not sign in.')
+      try {
+        const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
+        if (error) setAuthError(passwordSignInMessage(error))
+      } catch (error) {
+        setAuthError(error?.message || 'Could not sign in. Check the connection and try again.')
+      }
+    },
+    async sendEmailCode(email) {
+      setAuthError('')
+      setAuthNotice('')
+      const address = String(email || '').trim()
+      if (!address || !address.includes('@')) {
+        setAuthError('Enter the email address that should receive the code.')
+        return false
+      }
+      try {
+        const { error } = await supabase.auth.signInWithOtp({
+          email: address,
+          options: { shouldCreateUser: true },
+        })
+        if (error) {
+          setAuthError(emailCodeMessage(error))
+          return false
+        }
+        setAuthNotice('Code sent. Check your inbox and spam folder.')
+        return true
+      } catch (error) {
+        setAuthError(error?.message || 'Could not send the code. Check the connection and try again.')
+        return false
+      }
+    },
+    async verifyEmailCode(email, token) {
+      setAuthError('')
+      const address = String(email || '').trim()
+      const code = String(token || '').replace(/\D/g, '')
+      if (code.length < 6) {
+        setAuthError('Enter the 6-digit code from the email.')
+        return false
+      }
+      try {
+        const { error } = await supabase.auth.verifyOtp({
+          email: address,
+          token: code,
+          type: 'email',
+        })
+        if (error) {
+          setAuthError(emailCodeMessage(error))
+          return false
+        }
+        return true
+      } catch (error) {
+        setAuthError(error?.message || 'Could not check that code. Check the connection and try again.')
+        return false
+      }
     },
     async signUp(email, password, fullName) {
       setAuthError('')

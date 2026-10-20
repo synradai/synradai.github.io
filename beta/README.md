@@ -19,7 +19,7 @@ Open `http://localhost:4174/beta/`.
 
 To put it on GitHub Pages later, copy the contents of `dist-beta/` into the site at `/beta/` and deploy **with** the service-worker change on this branch (`/beta` is excluded from the live app shell). Do not merge until that is intended. The live site does not change until `main` is updated.
 
-Sign-in is on the home screen. Account creation is a direct route, `#/join` (for example `http://localhost:4174/beta/#/join`). That route is not linked from sign-in. Email confirmation is on for the beta project, so the first account has to confirm before signing in. Add these to the beta project's Auth redirect allow list:
+Sign-in and sign-up are the same screen. Enter an email and choose **Email me a 6-digit code**. That calls `signInWithOtp` with `shouldCreateUser: true`, so a new address creates an `auth.users` row and an existing address signs in. There is no separate `#/join` page. Password sign-in stays behind **Use a password instead**. A returning browser session skips the email step and asks only for the authenticator code. A new address is sent the Confirm signup email. A later code is sent with the Magic Link template. Both templates must contain `{{ .Token }}` and must not contain `{{ .ConfirmationURL }}`, or the message is a link instead of a code. Dashboard: Authentication → Emails → Templates → Confirm signup, and the same for Magic Link. Subject: `Your Safe Intelligence code`. Body: `Your Safe Intelligence code is {{ .Token }}`. It expires in an hour. Add these to the beta project's Auth redirect allow list (needed if a link is still in a template):
 
 - `https://synradai.github.io/beta/`
 - `http://localhost:4174/beta/`
@@ -95,7 +95,7 @@ The daily record exports CSV and PDF for a day or a date range. Columns are day,
 
 https://synradai.github.io/beta/#/admin
 
-Trent opens an account at https://synradai.github.io/beta/#/join with `trentrwood@outlook.com` or `nextlevelaccess@outlook.com`. That address is not linked from the sign-in screen. Confirm the email, sign in, and complete authenticator enrolment when asked. The signup trigger adds that user to `beta_admins`. Configuration saves only after the session is authenticator-verified (aal2). Anyone else sees a closed page.
+Trent opens https://synradai.github.io/beta/, enters `trentrwood@outlook.com` or `nextlevelaccess@outlook.com`, and requests the 6-digit code. The signup trigger adds that user to `beta_admins`. He then enrols an authenticator. Configuration saves only after the session is authenticator-verified (aal2). Anyone else sees a closed page.
 
 Labels, form fields, module order, inspection templates, and training-matrix columns are stored per organisation. The app reads them at startup, refreshes when the window regains focus, and listens on Supabase realtime. Reset to default removes that key so the built-in copy is used again. Each save or reset writes an audit event with the before and after values.
 

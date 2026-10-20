@@ -68,7 +68,7 @@ function Screen({ route }) {
   }
 
   if (!app.ready) return <div className="login"><p className="muted">Opening beta…</p></div>
-  if (app.recovery || !app.user) return <Login key={route.screen === 'join' ? 'join' : 'signin'} mode={route.screen === 'join' ? 'join' : 'signin'} />
+  if (app.recovery || !app.user) return <Login />
   if (!app.user.local && app.mfaGate !== 'ready') {
     if (app.mfaGate === 'enroll') return <TwoFactorEnroll onVerified={app.refreshMfa} onSignOut={app.signOut} />
     if (app.mfaGate === 'challenge') return <TwoFactorChallenge onVerified={app.refreshMfa} onSignOut={app.signOut} />

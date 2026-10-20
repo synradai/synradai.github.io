@@ -1,49 +1,50 @@
-import { useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { getVerifiedTotpFactor, verifyTotp } from '../lib/mfa.js'
+import { AuthSteps, CodeField } from './AuthBits.jsx'
 import { MFA_RECOVERY_NOTE } from './TwoFactorEnroll.jsx'
-import { Button, Field } from './ui.jsx'
+import { Button } from './ui.jsx'
+
+function totpError(error) {
+  const message = error?.message || ''
+  if (/expired/i.test(message)) return 'That code has expired. Wait for the next one in the app.'
+  if (/invalid/i.test(message) || /match/i.test(message)) return 'That code didn’t match. Try the current one.'
+  return message || 'Verification failed.'
+}
 
 export default function TwoFactorChallenge({ onVerified, onSignOut }) {
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const verifying = useRef(false)
 
-  const submit = async () => {
-    if (code.trim().length < 6) {
-      setError('Enter the 6-digit code from your authenticator app.')
-      return
-    }
+  const submit = useCallback(async (token) => {
+    const next = String(token || '').trim()
+    if (next.length < 6 || verifying.current) return
+    verifying.current = true
     setError('')
     setLoading(true)
     try {
       const factor = await getVerifiedTotpFactor()
-      if (!factor) throw new Error('No 2FA device found on this account.')
-      await verifyTotp(factor.id, code.trim())
+      if (!factor) throw new Error('No authenticator is set up on this account. Sign out and start again.')
+      await verifyTotp(factor.id, next)
       onVerified()
     } catch (e) {
-      setError(e?.message?.includes('Invalid') ? 'That code didn’t match. Try the current one.' : (e?.message || 'Verification failed.'))
+      setError(totpError(e))
+      setCode('')
       setLoading(false)
+      verifying.current = false
     }
-  }
+  }, [onVerified])
 
   return (
     <div className="login">
       <div className="card login-card">
+        <AuthSteps step={3} />
         <p className="eyebrow">Required</p>
-        <h1>Two-factor verification</h1>
-        <p className="lede">Enter the 6-digit code from your authenticator app.</p>
-        <form onSubmit={(event) => { event.preventDefault(); submit() }}>
-          <Field label="Authentication code">
-            <input
-              value={code}
-              onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
-              placeholder="123456"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              autoFocus
-              style={{ fontFamily: 'monospace', letterSpacing: '0.3em', textAlign: 'center' }}
-            />
-          </Field>
+        <h1>Authenticator code</h1>
+        <p className="lede">Your session is still here. Enter the 6-digit code from your authenticator app.</p>
+        <form onSubmit={(event) => { event.preventDefault(); submit(code) }}>
+          <CodeField value={code} onChange={setCode} onComplete={submit} disabled={loading} label="Authentication code" />
           {error && <p className="note">{error}</p>}
           <Button type="submit" disabled={loading}>{loading ? 'Verifying…' : 'Verify'}</Button>
         </form>

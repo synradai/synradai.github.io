@@ -274,9 +274,16 @@ h2 { font-size: 1.15rem; margin: 0 0 0.4rem; font-weight: 650; }
   padding: 1.5rem;
 }
 .login-card { width: min(440px, 100%); }
+.auth-steps { margin-bottom: 0.9rem; }
+.step-labels { display: flex; justify-content: space-between; gap: 0.4rem; margin-bottom: 0.35rem; font-size: 0.75rem; color: var(--faint); }
+.step-labels .on { color: var(--cyan); font-weight: 700; }
 .stepper { display: flex; gap: 0.3rem; margin-bottom: 0.8rem; }
 .dot { width: 100%; height: 4px; border-radius: 99px; background: var(--line); }
 .dot.on { background: var(--cyan); }
+.auth-actions { display: grid; gap: 0.55rem; }
+.auth-actions .btn, .auth-actions a.btn { width: 100%; text-align: center; display: block; box-sizing: border-box; }
+.qr-wide { display: none; background: #fff; padding: 0.75rem; border-radius: 12px; width: fit-content; margin: 0 auto 0.75rem; }
+.secret-key { font-family: ui-monospace, monospace; letter-spacing: 0.04em; }
 .split { display: grid; gap: 0.75rem; }
 .kpi { display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; }
 .bar { height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; }
@@ -294,6 +301,9 @@ th { color: var(--faint); font-weight: 600; font-size: 0.75rem; letter-spacing: 
   background-repeat: no-repeat, repeat;
 }
 
+@media (min-width: 768px) {
+  .qr-wide { display: block; }
+}
 @media (min-width: 720px) {
   .cards { grid-template-columns: 1fr 1fr; }
   .filters { grid-template-columns: repeat(4, 1fr); }

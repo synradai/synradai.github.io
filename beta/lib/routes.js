@@ -8,7 +8,6 @@ export function routeFromHash(hash) {
   const path = raw.replace(/^#/, '').split('?')[0]
   const parts = path.split('/').filter(Boolean)
   if (!parts.length) return { screen: 'home' }
-  if (parts[0] === 'join') return { screen: 'join' }
   if (parts[0] === 'setup') return { screen: 'setup' }
   if (parts[0] === 'admin') return { screen: 'admin' }
   if (parts[0] === 'hse') {
