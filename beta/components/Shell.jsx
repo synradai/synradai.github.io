@@ -6,7 +6,7 @@ export default function Shell({ app, route, children }) {
   const enabled = app.navModules || MODULES.filter((mod) => app.modules[mod.id])
   const active = route.screen === 'home' || route.screen === 'setup' || route.screen === 'admin'
     ? route.screen
-    : (['capture', 'scan', 'scene', 'register', 'record', 'investigate', 'hse', 'day', 'audit', 'actions'].includes(route.screen) ? 'hse' : route.screen)
+    : (['capture', 'scan', 'scene', 'register', 'record', 'investigate', 'hse', 'day', 'audit', 'actions', 'injury'].includes(route.screen) ? 'hse' : route.screen)
 
   const link = (mod) => (
     <a

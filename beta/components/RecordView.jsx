@@ -7,6 +7,7 @@ import { cleanLinks, linkPair, unlinkPair } from '../lib/links.js'
 import { formatWhen, perthDate, perthDateTimeLocal } from '../lib/time.js'
 import { go } from '../lib/routes.js'
 import { exportRecordPdf } from '../lib/pdfExport.js'
+import { InjuryChips, InjuryForm } from './Injury.jsx'
 import Reporting from './Reporting.jsx'
 import { Button, Field, FlagList, OfflineBanner } from './ui.jsx'
 
@@ -26,6 +27,7 @@ export default function RecordView({ app, id }) {
   const [actionOwner, setActionOwner] = useState('')
   const [actionDue, setActionDue] = useState(() => perthDate())
   const [raising, setRaising] = useState(false)
+  const [caseOpen, setCaseOpen] = useState(false)
 
   if (!record) return <p className="note">That record is not on this device.</p>
 
@@ -207,6 +209,22 @@ export default function RecordView({ app, id }) {
             </select>
             <Button type="button" kind="ghost" onClick={addLink}>Link</Button>
           </div>
+        )}
+        {record.kind === 'incident' && (
+          <>
+            <h2>Injury cases</h2>
+            <InjuryChips app={app} eventId={record.id} />
+            <p className="muted">The daily record shows the case ID. The name stays on the injury case.</p>
+            {!caseOpen && <Button type="button" kind="ghost" onClick={() => setCaseOpen(true)}>Open injury case</Button>}
+            {caseOpen && (
+              <InjuryForm
+                initial={{ eventId: record.id, personName: '', bodyPart: '', treatment: '', classification: 'FAI', status: 'open', restrictedFrom: '', rtwOn: '', note: '' }}
+                incidents={app.rows.filter((row) => row.kind === 'incident')}
+                onSave={async (fields) => { await app.saveInjury(fields); setCaseOpen(false) }}
+                onCancel={() => setCaseOpen(false)}
+              />
+            )}
+          </>
         )}
         {record.kind !== 'action' && !raising && (
           <Button type="button" kind="ghost" onClick={() => setRaising(true)}>Raise an action</Button>

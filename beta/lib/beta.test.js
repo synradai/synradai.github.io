@@ -15,6 +15,7 @@ import { nameWarning } from './roles.js'
 import { auditToCsv, filterAudit } from './audit.js'
 import { buildActionRecord, isOverdue, sortActions } from './actions.js'
 import { recordDay, recordsForDay } from './day.js'
+import { injuryLabel, injuryPayload, mergeInjury, toPublicCase } from './injury.js'
 import { linkPair, unlinkPair } from './links.js'
 import { initialDraft, moduleRows, prepareConfig, resolveForm, resolveMatrix, resolveTemplates, resolveWording, visibleModules } from './config.js'
 import { routeFromHash } from './routes.js'
@@ -405,6 +406,33 @@ test('actions link both records and overdue is calculated', () => {
   const done = buildActionRecord({ id: 'act-2', fields: { title: 'Later', owner: 'Crew', due: '2026-10-21', status: 'done' } })
   assert.deepEqual(sortActions([done, action], '2026-10-19').map((row) => row.id), ['act-1', 'act-2'])
   assert.equal(routeFromHash('#/hse/actions').screen, 'actions')
+})
+
+test('injury names stay off the public case and the audit brief', () => {
+  const secret = { id: 'c1', case_code: 'INJ-0004', event_id: 'evt', classification: 'LTI', status: 'restricted', person_name: 'Secret Person', treatment: 'clinic', note: 'private note' }
+  const pub = toPublicCase(secret)
+  assert.equal(pub.caseCode, 'INJ-0004')
+  assert.equal(Object.hasOwn(pub, 'personName'), false)
+  assert.equal(injuryLabel({ ...pub, personName: 'Secret Person' }).includes('Secret'), false)
+  const merged = mergeInjury([secret], [{ ...secret, person_name: 'Secret Person' }])
+  assert.equal(merged[0].private, true)
+  assert.equal(merged[0].personName, 'Secret Person')
+  const indexOnly = mergeInjury([secret], [])
+  assert.equal(indexOnly[0].private, false)
+  assert.equal(JSON.stringify(indexOnly).includes('Secret'), false)
+  assert.equal(injuryPayload({ eventId: 'evt', personName: 'Ada', classification: 'FAI', restrictedFrom: '' }).restricted_from, null)
+  assert.equal(routeFromHash('#/hse/injury/c1').screen, 'injury')
+  assert.equal(routeFromHash('#/hse/injury/c1').id, 'c1')
+
+  const sql = readFileSync(new URL('../../supabase/migrations/20261020002000_injury_cases.sql', import.meta.url), 'utf8')
+  assert.match(sql, /injury_case_index/)
+  assert.match(sql, /profiles\.role = admin|role = 'admin'/)
+  assert.match(sql, /case_code/)
+  const brief = sql.slice(sql.indexOf('function beta_private.injury_brief'), sql.indexOf('function beta_private.audit_injury_case'))
+  assert.equal(brief.includes('person_name'), false)
+  assert.equal(brief.includes('treatment'), false)
+  assert.equal(sql.includes('rgkiagqexoafmtxhrlqo'), false)
+  assert.equal(sql.includes('require_aal2'), false)
 })
 
 test('audit filters by day and action and the csv stays a summary', () => {

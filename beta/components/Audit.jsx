@@ -16,6 +16,7 @@ const ACTIONS = [
 const ENTITIES = [
   ['all', 'All types'],
   ['hse_records', 'Records'],
+  ['injury_cases', 'Injury cases'],
   ['app_config', 'Configuration'],
   ['audit_events', 'Audit export'],
 ]

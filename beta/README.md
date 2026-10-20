@@ -56,10 +56,16 @@ Apply these on the beta project, in order:
 1. `supabase/migrations/20261019060723_beta_hse_records.sql` — adds `public.hse_records` with org-scoped RLS. Photos stay on the device.
 2. `supabase/migrations/20261019073248_hse_records_unique_per_org.sql` — primary key becomes `(org_id, id)`.
 3. `supabase/migrations/20261019235000_beta_admin_config.sql` — `beta_admins`, versioned `app_config`, and append-only `audit_events`. Apply on the beta project only.
+4. `supabase/migrations/20261020001000_hse_record_audit.sql` — audit trigger on `hse_records`.
+5. `supabase/migrations/20261020002000_injury_cases.sql` — private injury cases and the public case-ID index.
 
 ## Audit
 
 `#/hse/audit` lists append-only events. A database trigger writes one when an `hse_records` row is created, edited, or deleted. The before and after values are a short summary (kind, status, severity, label), not the record body. Exporting the list writes an export event. Configuration saves are audited the same way.
+
+## Injury cases
+
+`#/hse/injury` opens one case per injured person and links it to an incident. Classification is FAI, MTI, LTI, or RWI, with restricted-work and return-to-work dates. The name, body part, treatment, and medical note are stored on `injury_cases` and are readable only by the person who opened the case and organisation admins (`profiles.role = admin`). Other people in the organisation see `injury_case_index`: case ID, classification, status, dates, and the linked incident. The daily record and the incident show that case ID only. The audit row records the case ID and classification, not the name.
 
 ## Actions and links
 
