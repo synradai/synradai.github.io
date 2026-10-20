@@ -107,6 +107,9 @@ export function slimForCloud(row) {
     clone.scenePhotoCount = clone.scenePhotos.length
     delete clone.scenePhotos
   }
-  if (clone.scanPhoto) delete clone.scanPhoto
+  if (Array.isArray(clone.investigation?.photos)) {
+    clone.investigation.photoCount = clone.investigation.photos.length
+    delete clone.investigation.photos
+  }
   return clone
 }

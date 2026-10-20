@@ -15,6 +15,7 @@ import { nameWarning } from './roles.js'
 import { auditToCsv, filterAudit } from './audit.js'
 import { buildActionRecord, isOverdue, sortActions, statusPatch } from './actions.js'
 import { buildHoursRecord, dashboardSummary, daysLost } from './dashboard.js'
+import { investigationRows, signOffError } from './investigation.js'
 import { leadCounts, weekStarting } from './leads.js'
 import { recordDay, recordsForDay } from './day.js'
 import { fileInspection } from './inspections.js'
@@ -460,6 +461,18 @@ test('the dashboard counts incidents, rates, and hours in the selected range', (
   assert.equal(summary.injury.ltifr, 5)
   assert.equal(summary.injury.trifr, 5)
   assert.equal(routeFromHash('#/hse/dashboard').screen, 'dashboard')
+})
+
+test('an ICAM corrective action is linked back to the incident', () => {
+  const incident = buildRecord({ id: 'inc-9', kind: 'incident', fields: { severity: 4, description: 'Fall', occurredAt: '2026-10-12T09:00', siteArea: 'Tank', peopleRoles: 'Rigger', incidentType: 'Injury / illness', actualSeverity: 4, potentialSeverity: 4 } })
+  const investigation = { team: [{ name: 'Ada', role: 'Lead' }], defences: 'No edge protection', root: 'No standard for the task' }
+  assert.equal(signOffError(investigation), 'Add the role signing this off.')
+  const rows = investigationRows(incident, investigation, { title: 'Fit edge protection', owner: 'Supervisor', due: '2026-10-20' })
+  const savedIncident = rows.find((row) => row.id === 'inc-9')
+  const action = rows.find((row) => row.kind === 'action')
+  assert.equal(savedIncident.links.some((link) => link.id === action.id), true)
+  assert.equal(action.links.some((link) => link.id === 'inc-9'), true)
+  assert.equal(action.fields.siteArea, 'Tank')
 })
 
 test('lead counts use the Perth week and on-time closures', () => {

@@ -1,8 +1,12 @@
 import { useState } from 'react'
 import { FIVE_WHYS, humanErrorGuard, ICAM_FIELDS } from '../config/severity.js'
 import { suggestWhys } from '../lib/ai.js'
+import { investigationRows, readInvestigation, signOffError } from '../lib/investigation.js'
+import { exportInvestigationPdf } from '../lib/pdfExport.js'
 import { go } from '../lib/routes.js'
-import { Button, OfflineBanner } from './ui.jsx'
+import { compressPhoto } from '../../src/utils/storage.js'
+import { perthDate } from '../lib/time.js'
+import { Button, Field, OfflineBanner } from './ui.jsx'
 
 function asWhy(item) {
   if (item && typeof item === 'object') {
@@ -31,6 +35,16 @@ export default function Investigate({ app, id }) {
   const [busy, setBusy] = useState(false)
   const [offline, setOffline] = useState(false)
   const [error, setError] = useState('')
+  const savedInvestigation = readInvestigation(record)
+  const [investigation, setInvestigation] = useState(savedInvestigation)
+  const [memberName, setMemberName] = useState('')
+  const [memberRole, setMemberRole] = useState('')
+  const [when, setWhen] = useState('')
+  const [eventText, setEventText] = useState('')
+  const [evidenceNote, setEvidenceNote] = useState('')
+  const [actionTitle, setActionTitle] = useState('')
+  const [actionOwner, setActionOwner] = useState('')
+  const [actionDue, setActionDue] = useState(perthDate())
 
   if (!record) return <p className="note">That investigation is not on this device.</p>
 
@@ -99,14 +113,117 @@ export default function Investigate({ app, id }) {
     setStep(step + 1)
   }
 
+  const setInvestigationField = (key, value) => {
+    const next = { ...investigation, [key]: value }
+    setInvestigation(next)
+    app.updateRecord(record.id, { investigation: next })
+  }
+
+  const addMember = () => {
+    if (!memberName.trim() || !memberRole.trim()) { setError('Add the team member’s name and role.'); return }
+    setError('')
+    const team = [...investigation.team, { name: memberName.trim(), role: memberRole.trim() }]
+    setMemberName('')
+    setMemberRole('')
+    setInvestigationField('team', team)
+  }
+
+  const addEvent = () => {
+    if (!when.trim() || !eventText.trim()) { setError('Add the time and what happened.'); return }
+    setError('')
+    const timeline = [...investigation.timeline, { when: when.trim(), event: eventText.trim() }]
+    setWhen('')
+    setEventText('')
+    setInvestigationField('timeline', timeline)
+  }
+
+  const addEvidence = () => {
+    if (!evidenceNote.trim()) { setError('Write what the evidence shows.'); return }
+    setError('')
+    const evidence = [...investigation.evidence, { note: evidenceNote.trim() }]
+    setEvidenceNote('')
+    setInvestigationField('evidence', evidence)
+  }
+
+  const addEvidencePhoto = async (event) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    if (investigation.photos.length >= 4) { setError('Four evidence photos is the limit.'); return }
+    const photo = await compressPhoto(file)
+    setInvestigationField('photos', [...investigation.photos, photo])
+  }
+
+  const raiseAction = () => {
+    try {
+      const rows = investigationRows(record, investigation, { title: actionTitle, owner: actionOwner, due: actionDue })
+      app.saveRecords(rows)
+      setActionTitle('')
+      setError('')
+    } catch (err) {
+      setError(err.message || 'Could not raise that action.')
+    }
+  }
+
+  const signInvestigation = () => {
+    const problem = signOffError(investigation)
+    if (problem) { setError(problem); return }
+    setError('')
+    app.updateRecord(record.id, { investigation, status: record.status === 'closed' ? record.status : 'hse-review' })
+  }
+
   const guarded = step > 0 && step < 6 && humanErrorGuard(whys[step - 1].why)
 
   return (
     <div className="split">
       <div>
         <p className="eyebrow">Investigation · driving severity {record.severity} · actual {record.actualSeverity || '—'} · potential {record.potentialSeverity || '—'}</p>
-        <h1>Five whys</h1>
+        <h1>Investigation</h1>
         <p className="lede">{record.fields?.description || record.fields?.task || record.fields?.hazards}</p>
+        <div className="panel">
+          <p className="eyebrow">ICAM</p>
+          <h2>Team</h2>
+          <p className="muted">Don’t put the injured person’s name here.</p>
+          <ul>{investigation.team.map((member, index) => <li key={`${member.name}-${index}`}>{member.name} · {member.role}</li>)}</ul>
+          <Field label="Name"><input value={memberName} onChange={(event) => setMemberName(event.target.value)} /></Field>
+          <Field label="Role"><input value={memberRole} onChange={(event) => setMemberRole(event.target.value)} /></Field>
+          <Button type="button" kind="ghost" onClick={addMember}>Add to team</Button>
+          <h2>Sequence of events</h2>
+          <ul>{investigation.timeline.map((stepItem, index) => <li key={`${stepItem.when}-${index}`}>{stepItem.when} — {stepItem.event}</li>)}</ul>
+          <Field label="When"><input value={when} onChange={(event) => setWhen(event.target.value)} placeholder="06:40" /></Field>
+          <Field label="What happened"><input value={eventText} onChange={(event) => setEventText(event.target.value)} /></Field>
+          <Button type="button" kind="ghost" onClick={addEvent}>Add to timeline</Button>
+          <h2>Evidence</h2>
+          <ul>{investigation.evidence.map((entry, index) => <li key={index}>{entry.note}</li>)}</ul>
+          <Field label="What it shows"><input value={evidenceNote} onChange={(event) => setEvidenceNote(event.target.value)} /></Field>
+          <Button type="button" kind="ghost" onClick={addEvidence}>Add evidence note</Button>
+          <Field label="Photo">
+            <input type="file" accept="image/*" onChange={addEvidencePhoto} />
+          </Field>
+          <p className="muted">{investigation.photos.length} photo{investigation.photos.length === 1 ? '' : 's'} on this device.</p>
+          <h2>ICAM analysis</h2>
+          <Field label="Absent or failed defences"><textarea value={investigation.defences} onChange={(event) => setInvestigationField('defences', event.target.value)} /></Field>
+          <Field label="Individual and team actions"><textarea value={investigation.individual} onChange={(event) => setInvestigationField('individual', event.target.value)} /></Field>
+          <Field label="Task and environmental conditions"><textarea value={investigation.conditions} onChange={(event) => setInvestigationField('conditions', event.target.value)} /></Field>
+          <Field label="Organisational factors"><textarea value={investigation.organisational} onChange={(event) => setInvestigationField('organisational', event.target.value)} /></Field>
+          <Field label="Root factors"><textarea value={investigation.root} onChange={(event) => setInvestigationField('root', event.target.value)} /></Field>
+          <Field label="Contributing factors"><textarea value={investigation.contributing} onChange={(event) => setInvestigationField('contributing', event.target.value)} /></Field>
+          <h2>Corrective action</h2>
+          <p className="muted">This opens an action and links it to the incident.</p>
+          <Field label="What needs to be done"><input value={actionTitle} onChange={(event) => setActionTitle(event.target.value)} /></Field>
+          <Field label="Owner"><input value={actionOwner} onChange={(event) => setActionOwner(event.target.value)} /></Field>
+          <Field label="Due"><input type="date" value={actionDue} onChange={(event) => setActionDue(event.target.value)} /></Field>
+          <Button type="button" onClick={raiseAction}>Create linked action</Button>
+          <h2>Sign-off</h2>
+          <Field label="Role"><input value={investigation.signOffRole} onChange={(event) => setInvestigationField('signOffRole', event.target.value)} /></Field>
+          <Field label="Name"><input value={investigation.signOffName} onChange={(event) => setInvestigationField('signOffName', event.target.value)} /></Field>
+          <Field label="Date"><input type="date" value={investigation.signOffOn} onChange={(event) => setInvestigationField('signOffOn', event.target.value)} /></Field>
+          <div className="actions">
+            <Button type="button" onClick={signInvestigation}>Sign off</Button>
+            <Button type="button" kind="ghost" onClick={() => exportInvestigationPdf({ ...record, investigation })}>Export PDF</Button>
+          </div>
+        </div>
+        <h2>Five whys</h2>
         <OfflineBanner show={offline} />
         {step === 0 && (
           <div className="panel">
@@ -164,11 +281,6 @@ export default function Investigate({ app, id }) {
       </div>
       <aside className="panel">
         <p className="eyebrow">{record.icam ? 'ICAM required' : 'ICAM'}</p>
-        <h2>{record.icam ? 'Escalate to ICAM' : 'ICAM not triggered'}</h2>
-        {(record.icamReasons || []).length > 0 ? (
-          <ul>{record.icamReasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
-        ) : <p className="muted">Level 3 stays on the five whys and an HSE sign-off.</p>}
-        <p className="muted">The ICAM chart itself is still a placeholder. When it starts, record:</p>
         <ul>{ICAM_FIELDS.map((item) => <li key={item}>{item}</li>)}</ul>
       </aside>
     </div>

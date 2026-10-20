@@ -122,6 +122,9 @@ export default function RecordView({ app, id }) {
       <p className="muted">{formatWhen(fields.occurredAt || record.createdAt)} · driving severity {record.severity || '—'} · {record.ruleset || 'general'} · {record.source}</p>
       <OfflineBanner show={offline || record.sceneResult?.offline} />
       {record.path === 'stopped' && <p className="note">Stopped. A Take 5 answer was No, so the task does not start until a supervisor clears it.</p>}
+      {record.kind === 'incident' && (
+        <p className="lede"><a href={`#/hse/investigate/${record.id}`}>Open the investigation</a></p>
+      )}
       {needsWhys && (
         <p className="note">{record.path === 'escalate' ? 'Escalated. No auto-close.' : 'HSE review.'} <a href={`#/hse/investigate/${record.id}`}>Open the five whys</a>.</p>
       )}
