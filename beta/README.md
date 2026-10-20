@@ -63,6 +63,10 @@ Apply these on the beta project, in order:
 
 `#/hse/audit` lists append-only events. A database trigger writes one when an `hse_records` row is created, edited, or deleted. The before and after values are a short summary (kind, status, severity, label), not the record body. Exporting the list writes an export event. Configuration saves are audited the same way.
 
+## Record export
+
+The daily record exports CSV and PDF for a day or a date range. Columns are day, time, kind, title, status, site, a short summary, and injury case IDs. The export does not include an injured person's name, treatment, or medical note. Saving the file writes an export event on the audit trail.
+
 ## Lead indicators
 
 `#/kpis` counts the selected week, Monday to Sunday in Western Australia: prestarts, toolbox talks, inspections, observations (hazard reports), and actions marked done on or before their due date. Each count has a starter target. Maintenance, stores, and scaffold stay previews.
