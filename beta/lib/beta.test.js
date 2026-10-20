@@ -18,6 +18,7 @@ import { leadCounts, weekStarting } from './leads.js'
 import { recordDay, recordsForDay } from './day.js'
 import { fileInspection } from './inspections.js'
 import { buildTrainingRecord, matrixRows, trainingState } from './training.js'
+import { projectRecord, recordsInRange, recordsToCsv } from './exportRecords.js'
 import { injuryLabel, injuryPayload, mergeInjury, toPublicCase } from './injury.js'
 import { linkPair, unlinkPair } from './links.js'
 import { initialDraft, moduleRows, prepareConfig, resolveForm, resolveMatrix, resolveTemplates, resolveWording, visibleModules } from './config.js'
@@ -409,6 +410,19 @@ test('actions link both records and overdue is calculated', () => {
   const done = buildActionRecord({ id: 'act-2', fields: { title: 'Later', owner: 'Crew', due: '2026-10-21', status: 'done' } })
   assert.deepEqual(sortActions([done, action], '2026-10-19').map((row) => row.id), ['act-1', 'act-2'])
   assert.equal(routeFromHash('#/hse/actions').screen, 'actions')
+})
+
+test('a date-range export keeps injury names out and keeps the case id', () => {
+  const incident = buildRecord({ id: 'evt-9', kind: 'incident', fields: { severity: 2, description: 'Oil on the floor', occurredAt: '2026-10-19T09:00', siteArea: 'Workshop', peopleRoles: 'Fitter' } })
+  const other = buildRecord({ id: 'evt-8', kind: 'hazard', fields: { severity: 1, description: 'Next', occurredAt: '2026-10-21T09:00', siteArea: 'Yard', peopleRoles: 'Crew' } })
+  const ranged = recordsInRange([other, incident], '2026-10-19', '2026-10-19')
+  assert.deepEqual(ranged.map((row) => row.id), ['evt-9'])
+  const projected = projectRecord(incident, [{ id: 'c1', eventId: 'evt-9', caseCode: 'INJ-0007', classification: 'LTI', status: 'open', personName: 'Secret Person', treatment: 'clinic' }])
+  const csv = recordsToCsv([projected])
+  assert.match(csv, /INJ-0007/)
+  assert.match(csv, /Oil on the floor/)
+  assert.equal(csv.includes('Secret Person'), false)
+  assert.equal(csv.includes('clinic'), false)
 })
 
 test('lead counts use the Perth week and on-time closures', () => {

@@ -1,5 +1,6 @@
 import { exportReportPdf } from '../../src/utils/pdf.js'
 import { resolveForm } from './config.js'
+import { recordsToPdfBody } from './exportRecords.js'
 import { formatWhen } from './time.js'
 
 function titleFor(record) {
@@ -48,6 +49,20 @@ export async function exportRecordPdf(record, formsConfig) {
     dateLabel: formatWhen(fields.occurredAt || record.createdAt),
     advisor: fields.reporter || '',
     blocks,
+  })
+}
+
+export async function exportRangePdf(rows, from, to) {
+  return exportReportPdf({
+    filename: `safe-intelligence-${from}-to-${to}.pdf`,
+    title: 'HSE records',
+    dateLabel: `${from} to ${to}`,
+    advisor: 'Safe Intelligence beta',
+    blocks: [{
+      type: 'section',
+      heading: `${rows.length} record${rows.length === 1 ? '' : 's'}`,
+      body: recordsToPdfBody(rows),
+    }],
   })
 }
 
