@@ -16,6 +16,7 @@ import { auditToCsv, filterAudit } from './audit.js'
 import { buildActionRecord, isOverdue, sortActions } from './actions.js'
 import { recordDay, recordsForDay } from './day.js'
 import { fileInspection } from './inspections.js'
+import { buildTrainingRecord, matrixRows, trainingState } from './training.js'
 import { injuryLabel, injuryPayload, mergeInjury, toPublicCase } from './injury.js'
 import { linkPair, unlinkPair } from './links.js'
 import { initialDraft, moduleRows, prepareConfig, resolveForm, resolveMatrix, resolveTemplates, resolveWording, visibleModules } from './config.js'
@@ -407,6 +408,21 @@ test('actions link both records and overdue is calculated', () => {
   const done = buildActionRecord({ id: 'act-2', fields: { title: 'Later', owner: 'Crew', due: '2026-10-21', status: 'done' } })
   assert.deepEqual(sortActions([done, action], '2026-10-19').map((row) => row.id), ['act-1', 'act-2'])
   assert.equal(routeFromHash('#/hse/actions').screen, 'actions')
+})
+
+test('the training matrix marks missing and expired courses as gaps', () => {
+  const current = buildTrainingRecord({ id: 'tr-1', fields: { person: 'Sam', role: 'Fitter', course: 'First aid', completed: '2026-01-01', expiry: '2027-01-01' } })
+  const expiring = buildTrainingRecord({ id: 'tr-2', fields: { person: 'Jo', role: 'Fitter', course: 'White card', completed: '2026-09-01', expiry: '2026-11-01' } })
+  const expired = buildTrainingRecord({ id: 'tr-3', fields: { person: 'Jo', role: 'Operator', course: 'First aid', completed: '2024-01-01', expiry: '2025-01-01' } })
+  assert.equal(trainingState(current, '2026-10-19'), 'current')
+  assert.equal(trainingState(expiring, '2026-10-19'), 'expiring')
+  assert.equal(trainingState(expired, '2026-10-19'), 'expired')
+  const grid = matrixRows([current, expiring, expired], ['First aid', 'White card', 'Confined space'], '2026-10-19')
+  const fitter = grid.find((row) => row.role === 'Fitter')
+  const operator = grid.find((row) => row.role === 'Operator')
+  assert.deepEqual(fitter.cells, ['covered', 'expiring', 'gap'])
+  assert.deepEqual(operator.cells, ['gap', 'gap', 'gap'])
+  assert.equal(routeFromHash('#/training').screen, 'training')
 })
 
 test('a failed inspection item opens a linked action', () => {

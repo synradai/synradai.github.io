@@ -12,7 +12,8 @@ import Investigate from './components/Investigate.jsx'
 import Login from './components/Login.jsx'
 import TwoFactorChallenge from './components/TwoFactorChallenge.jsx'
 import TwoFactorEnroll from './components/TwoFactorEnroll.jsx'
-import { KpiPreview, MaintenancePreview, ScaffoldPreview, StoresPreview, TrainingPreview } from './components/Mocks.jsx'
+import { KpiPreview, MaintenancePreview, ScaffoldPreview, StoresPreview } from './components/Mocks.jsx'
+import Training from './components/Training.jsx'
 import PaperScan from './components/PaperScan.jsx'
 import RecordView from './components/RecordView.jsx'
 import Register from './components/Register.jsx'
@@ -109,7 +110,7 @@ function Screen({ route }) {
   else if (route.screen === 'register') body = <Register app={app} />
   else if (route.screen === 'record') body = <RecordView key={route.id} app={app} id={route.id} />
   else if (route.screen === 'investigate') body = <Investigate key={route.id} app={app} id={route.id} />
-  else if (route.screen === 'training') body = app.modules.training ? <TrainingPreview /> : <Hidden name="Training" />
+  else if (route.screen === 'training') body = app.modules.training ? <Training app={app} /> : <Hidden name="Training" />
   else if (route.screen === 'maintenance') body = app.modules.maintenance ? <MaintenancePreview /> : <Hidden name="Maintenance" />
   else if (route.screen === 'kpis') body = app.modules.kpis ? <KpiPreview /> : <Hidden name="KPIs & Forms" />
   else if (route.screen === 'stores') body = app.modules.stores ? <StoresPreview /> : <Hidden name="Stores" />

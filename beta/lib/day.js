@@ -10,6 +10,7 @@ export const TIMELINE_LABELS = {
   toolbox: 'Toolbox talk',
   action: 'Action',
   inspection: 'Inspection',
+  training: 'Training',
 }
 
 export const QUICK_ADD = [

@@ -13,7 +13,7 @@ import { Button, Field, FlagList, OfflineBanner } from './ui.jsx'
 
 const LABELS = { incident: 'Incident', hazard: 'Hazard', take5: 'Take 5', 'scene-check': 'Scene check', meeting: 'Meeting', prestart: 'Prestart', toolbox: 'Toolbox talk', action: 'Action', inspection: 'Inspection' }
 const RESULT_LABEL = { pass: 'Pass', fail: 'Fail', na: 'N/A' }
-const NOTE_KINDS = new Set(['meeting', 'prestart', 'toolbox'])
+const NOTE_KINDS = new Set(['meeting', 'prestart', 'toolbox', 'training'])
 const STATUS_LABEL = { open: 'Open', 'in-progress': 'In progress', done: 'Done' }
 
 export default function RecordView({ app, id }) {
@@ -175,7 +175,7 @@ export default function RecordView({ app, id }) {
       </div>
       )}
 
-      {record.kind !== 'action' && record.kind !== 'inspection' && (
+      {record.kind !== 'action' && record.kind !== 'inspection' && !NOTE_KINDS.has(record.kind) && (
         <div className="panel" style={{ marginTop: 12 }}>
           <h2>Possible breach — verify</h2>
           <FlagList flags={record.flags} />
