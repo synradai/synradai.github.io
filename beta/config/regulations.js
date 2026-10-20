@@ -53,6 +53,7 @@ export const REGULATOR = {
   name: 'WorkSafe',
   within: 'LGIRS',
   phone: '1800 678 198',
+  lodgeUrl: 'https://www.worksafe.wa.gov.au/report-incident',
   phoneWhen: 'Deaths, serious injuries, and life-threatening dangerous incidents. 24 hours.',
   onlineWhen: 'Non-life-threatening dangerous incidents, online.',
   dgPhone: '(08) 6551 2300',
