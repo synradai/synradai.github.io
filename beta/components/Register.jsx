@@ -15,6 +15,7 @@ const KINDS = [
   ['toolbox', 'Toolbox talk'],
   ['action', 'Action'],
   ['inspection', 'Inspection'],
+  ['training', 'Training'],
 ]
 
 function download(filename, text, type) {
