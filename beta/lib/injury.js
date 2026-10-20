@@ -14,6 +14,25 @@ export const INJURY_STATUSES = [
   ['closed', 'Closed'],
 ]
 
+const DATE = /^\d{4}-\d{2}-\d{2}$/
+
+function daysBetween(start, end) {
+  if (!DATE.test(start) || !DATE.test(end)) return 0
+  const [y, m, d] = start.split('-').map(Number)
+  const [y2, m2, d2] = end.split('-').map(Number)
+  return Math.round((Date.UTC(y2, m2 - 1, d2) - Date.UTC(y, m - 1, d)) / 86400000)
+}
+
+export function absenceDays(item, today) {
+  const start = DATE.test(String(item?.restrictedFrom || '')) ? item.restrictedFrom : ''
+  if (!start) return { lost: 0, restricted: 0 }
+  const returned = DATE.test(String(item?.rtwOn || ''))
+  const end = returned ? item.rtwOn : (DATE.test(String(today || '')) && today >= start ? today : '')
+  if (!end || end < start) return { lost: 0, restricted: 0 }
+  const span = daysBetween(start, end) + (returned ? 0 : 1)
+  if (item.classification === 'LTI') return { lost: span, restricted: 0 }
+  return { lost: 0, restricted: span }
+}
 const CLASS_SET = new Set(CLASSIFICATIONS.map(([id]) => id))
 const STATUS_SET = new Set(INJURY_STATUSES.map(([id]) => id))
 
@@ -34,6 +53,7 @@ export function toPublicCase(row) {
     status: row.status || 'open',
     restrictedFrom: row.restricted_from || row.restrictedFrom || '',
     rtwOn: row.rtw_on || row.rtwOn || '',
+    reviewOn: row.review_on || row.reviewOn || '',
     createdAt: row.created_at || row.createdAt || '',
     private: false,
   }
@@ -47,6 +67,9 @@ export function toPrivateCase(row) {
     bodyPart: row.body_part || row.bodyPart || '',
     treatment: row.treatment || '',
     note: row.note || '',
+    mechanism: row.mechanism || '',
+    duties: row.duties || '',
+    caseNotes: row.case_notes || row.caseNotes || '',
     userId: row.user_id || row.userId || '',
   }
 }
@@ -90,6 +113,10 @@ export function injuryPayload(fields) {
     restricted_from: dateOrNull(fields.restrictedFrom),
     rtw_on: dateOrNull(fields.rtwOn),
     note: String(fields.note || '').trim(),
+    mechanism: String(fields.mechanism || '').trim(),
+    duties: String(fields.duties || '').trim(),
+    case_notes: String(fields.caseNotes || '').trim(),
+    review_on: dateOrNull(fields.reviewOn),
   }
 }
 
@@ -105,5 +132,9 @@ export function blankInjury(eventId) {
     restrictedFrom: '',
     rtwOn: '',
     note: '',
+    mechanism: '',
+    duties: '',
+    caseNotes: '',
+    reviewOn: '',
   }
 }

@@ -21,7 +21,7 @@ import { recordDay, recordsForDay } from './day.js'
 import { fileInspection } from './inspections.js'
 import { buildTrainingRecord, matrixRows, trainingState } from './training.js'
 import { projectRecord, recordsInRange, recordsToCsv } from './exportRecords.js'
-import { injuryLabel, injuryPayload, mergeInjury, toPublicCase } from './injury.js'
+import { injuryLabel, injuryPayload, mergeInjury, toPublicCase, absenceDays } from './injury.js'
 import { linkPair, unlinkPair } from './links.js'
 import { initialDraft, moduleRows, prepareConfig, resolveForm, resolveMatrix, resolveTemplates, resolveWording, visibleModules } from './config.js'
 import { routeFromHash } from './routes.js'
@@ -547,6 +547,8 @@ test('injury names stay off the public case and the audit brief', () => {
   const indexOnly = mergeInjury([secret], [])
   assert.equal(indexOnly[0].private, false)
   assert.equal(JSON.stringify(indexOnly).includes('Secret'), false)
+  assert.equal(JSON.stringify(toPublicCase({ ...secret, mechanism: 'caught between', duties: 'light duties' })).includes('caught'), false)
+  assert.equal(absenceDays({ classification: 'LTI', restrictedFrom: '2026-10-12', rtwOn: '2026-10-15' }, '2026-10-20').lost, 3)
   assert.equal(injuryPayload({ eventId: 'evt', personName: 'Ada', classification: 'FAI', restrictedFrom: '' }).restricted_from, null)
   assert.equal(routeFromHash('#/hse/injury/c1').screen, 'injury')
   assert.equal(routeFromHash('#/hse/injury/c1').id, 'c1')

@@ -81,7 +81,7 @@ The daily record exports CSV and PDF for a day or a date range. Columns are day,
 
 ## Injury cases
 
-`#/hse/injury` opens one case per injured person and links it to an incident. Classification is FAI, MTI, LTI, or RWI, with restricted-work and return-to-work dates. The name, body part, treatment, and medical note are stored on `injury_cases` and are readable only by the person who opened the case and organisation admins (`profiles.role = admin`). Other people in the organisation see `injury_case_index`: case ID, classification, status, dates, and the linked incident. The daily record and the incident show that case ID only. The audit row records the case ID and classification, not the name.
+`#/hse/injury` opens one case per injured person and links it to an incident. Classification is FAI, MTI, LTI, or RWI, with restricted-work and return-to-work dates, days lost or restricted, a review date, mechanism, suitable duties, and case notes. The name, body part, mechanism, treatment, suitable duties, medical note, and case notes are stored on `injury_cases` and are readable only by the person who opened the case and organisation admins (`profiles.role = admin`). Other people in the organisation see `injury_case_index`: case ID, classification, status, dates including the review date, and the linked incident. The daily record and the incident show that case ID only. The audit row records the case ID, classification, and review date, not the name or the medical text.
 
 ## Actions and links
 

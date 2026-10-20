@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { CLASSIFICATIONS, INJURY_STATUSES, casesForEvent, injuryError, injuryLabel } from '../lib/injury.js'
+import { CLASSIFICATIONS, INJURY_STATUSES, absenceDays, casesForEvent, injuryError, injuryLabel } from '../lib/injury.js'
+import { perthDate } from '../lib/time.js'
 import { timelineTitle, TIMELINE_LABELS } from '../lib/day.js'
 import { go } from '../lib/routes.js'
 import { Button, Field } from './ui.jsx'
@@ -57,8 +58,14 @@ export function InjuryForm({ initial, incidents, onSave, onCancel }) {
       <Field label="Body part" hint="Private, with the name.">
         <input value={fields.bodyPart} onChange={set('bodyPart')} />
       </Field>
+      <Field label="Mechanism" hint="Private, with the name.">
+        <input value={fields.mechanism || ''} onChange={set('mechanism')} />
+      </Field>
       <Field label="Treatment" hint="Private, with the name.">
         <textarea value={fields.treatment} onChange={set('treatment')} />
+      </Field>
+      <Field label="Suitable duties" hint="Private return-to-work plan. Do not put this on a client update.">
+        <textarea value={fields.duties || ''} onChange={set('duties')} />
       </Field>
       <Field label="Restricted from">
         <input type="date" value={fields.restrictedFrom || ''} onChange={set('restrictedFrom')} />
@@ -66,8 +73,14 @@ export function InjuryForm({ initial, incidents, onSave, onCancel }) {
       <Field label="Return to work">
         <input type="date" value={fields.rtwOn || ''} onChange={set('rtwOn')} />
       </Field>
+      <Field label="Next review">
+        <input type="date" value={fields.reviewOn || ''} onChange={set('reviewOn')} />
+      </Field>
       <Field label="Medical note" hint="Private, with the name.">
         <textarea value={fields.note} onChange={set('note')} />
+      </Field>
+      <Field label="Case notes" hint="Private, with the name.">
+        <textarea value={fields.caseNotes || ''} onChange={set('caseNotes')} />
       </Field>
       {error && <p className="note">{error}</p>}
       <div className="actions">
@@ -104,7 +117,9 @@ export default function Injury({ app, id }) {
           <a href={`#/hse/record/${selected.eventId}`}>{eventLabel(app.rows, selected.eventId)}</a>
           {selected.restrictedFrom ? ` · restricted from ${selected.restrictedFrom}` : ''}
           {selected.rtwOn ? ` · return ${selected.rtwOn}` : ''}
+          {selected.reviewOn ? ` · review ${selected.reviewOn}` : ''}
         </p>
+        <p className="muted">{absenceDays(selected, perthDate()).lost} days lost · {absenceDays(selected, perthDate()).restricted} days restricted</p>
         {selected.private ? (
           <InjuryForm
             initial={{
@@ -117,6 +132,10 @@ export default function Injury({ app, id }) {
               restrictedFrom: selected.restrictedFrom || '',
               rtwOn: selected.rtwOn || '',
               note: selected.note || '',
+              mechanism: selected.mechanism || '',
+              duties: selected.duties || '',
+              caseNotes: selected.caseNotes || '',
+              reviewOn: selected.reviewOn || '',
             }}
             incidents={incidents}
             onSave={saveExisting}
@@ -125,7 +144,7 @@ export default function Injury({ app, id }) {
         ) : (
           <div className="panel">
             <p>Case {selected.caseCode}. Classification {selected.classification}. Status {selected.status}.</p>
-            <p className="note">The name, body part, treatment, and medical note stay with the person who opened the case and organisation admins.</p>
+            <p className="note">The name, body part, mechanism, treatment, suitable duties, and notes stay with the person who opened the case and organisation admins.</p>
           </div>
         )}
         <div className="actions" style={{ marginTop: 12 }}>
@@ -143,7 +162,7 @@ export default function Injury({ app, id }) {
       {!adding && <Button type="button" onClick={() => setAdding(true)}>Open a case</Button>}
       {adding && (
         <InjuryForm
-          initial={{ eventId: incidents[0]?.id || '', personName: '', bodyPart: '', treatment: '', classification: 'FAI', status: 'open', restrictedFrom: '', rtwOn: '', note: '' }}
+          initial={{ eventId: incidents[0]?.id || '', personName: '', bodyPart: '', mechanism: '', treatment: '', duties: '', caseNotes: '', classification: 'FAI', status: 'open', restrictedFrom: '', rtwOn: '', reviewOn: '', note: '' }}
           incidents={incidents}
           onSave={saveNew}
           onCancel={() => setAdding(false)}
