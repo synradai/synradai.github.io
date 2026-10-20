@@ -85,7 +85,7 @@ The daily record exports CSV and PDF for a day or a date range. Columns are day,
 
 ## Actions and links
 
-`#/hse/actions` is the actions register. Each action has an owner, a due date, and a status (open, in progress, or done). Overdue is calculated when the due date is before today in Western Australia and the status is not done. Linking a record stores the same link on both sides, and those links show on the daily record timeline and on each record. Raising an action from a record links it automatically. Actions are `hse_records` rows with `kind` `action`, so the audit trigger covers them.
+`#/hse/actions` is the actions register. The owner is picked from people in the organisation (`profiles` in that org), stored as `ownerId` plus their display name. A due date and a status (open, in progress, or done) sit on the same action. Overdue is calculated when the due date is before today in Western Australia and the status is not done. Send reminder records `remindedOn` for that Perth day (the `hse_records` audit trigger covers the update) and asks the `action-reminder` edge function to email the owner. One reminder per action per day. Email sends only when `RESEND_API_KEY` and `RESEND_FROM` are set on the beta project; otherwise the in-app reminder still records. The function does not use the signup mailer. Linking a record stores the same link on both sides. Inspections and ICAM corrective actions use the same owner list. Actions are `hse_records` rows with `kind` `action`.
 
 ## Investigation
 

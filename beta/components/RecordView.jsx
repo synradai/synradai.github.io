@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { actionError, buildActionRecord, isOverdue, statusPatch } from '../lib/actions.js'
+import { actionError, buildActionRecord, canRemind, isOverdue, selectedOwner, statusPatch } from '../lib/actions.js'
 import { resolveForm } from '../lib/config.js'
 import { rewriteActions } from '../lib/ai.js'
 import { timelineTitle, TIMELINE_LABELS } from '../lib/day.js'
@@ -8,6 +8,7 @@ import { formatWhen, perthDate, perthDateTimeLocal } from '../lib/time.js'
 import { go } from '../lib/routes.js'
 import { exportRecordPdf } from '../lib/pdfExport.js'
 import { InjuryChips, InjuryForm } from './Injury.jsx'
+import OwnerSelect from './OwnerSelect.jsx'
 import Reporting from './Reporting.jsx'
 import { Button, Field, FlagList, OfflineBanner } from './ui.jsx'
 
@@ -25,7 +26,8 @@ export default function RecordView({ app, id }) {
   const [offline, setOffline] = useState(false)
   const [linkId, setLinkId] = useState('')
   const [actionTitle, setActionTitle] = useState('')
-  const [actionOwner, setActionOwner] = useState('')
+  const [actionOwnerId, setActionOwnerId] = useState('')
+  const [reminding, setReminding] = useState(false)
   const [actionDue, setActionDue] = useState(() => perthDate())
   const [raising, setRaising] = useState(false)
   const [caseOpen, setCaseOpen] = useState(false)
@@ -84,9 +86,11 @@ export default function RecordView({ app, id }) {
 
   const raiseAction = (event) => {
     event.preventDefault()
+    const person = selectedOwner(app.orgMembers, app.user, actionOwnerId)
     const fields = {
       title: actionTitle,
-      owner: actionOwner,
+      owner: person?.name || '',
+      ownerId: person?.id || '',
       due: actionDue,
       status: 'open',
       occurredAt: perthDateTimeLocal().slice(0, 16),
@@ -97,7 +101,7 @@ export default function RecordView({ app, id }) {
     const next = linkPair([action, ...app.rows], action.id, record.id)
     app.saveRecords(next.filter((row) => row.id === action.id || row.id === record.id))
     setActionTitle('')
-    setActionOwner('')
+    setActionOwnerId('')
     setRaising(false)
     setError('')
   }
@@ -135,7 +139,17 @@ export default function RecordView({ app, id }) {
           <p><strong>{fields.title || 'Action'}. </strong>{fields.note || ''}</p>
           <p>Owner {fields.owner || '—'} · due {fields.due || '—'} · {STATUS_LABEL[record.status] || record.status}</p>
           {isOverdue(record, today) && <p className="note">Overdue. The due date has passed and this action is not done.</p>}
+          {fields.remindedOn === today && <p>Reminder recorded today.</p>}
           <div className="actions">
+            {canRemind(record, today) && (
+              <Button type="button" disabled={reminding} onClick={async () => {
+                setReminding(true)
+                setError('')
+                const result = await app.remindAction(record.id)
+                setError(result?.reason || '')
+                setReminding(false)
+              }}>{reminding ? 'Sending…' : 'Send reminder'}</Button>
+            )}
             {record.status !== 'open' && <Button type="button" kind="ghost" onClick={() => app.updateRecord(record.id, statusPatch(record, 'open', today))}>Open</Button>}
             {record.status !== 'in-progress' && <Button type="button" kind="ghost" onClick={() => app.updateRecord(record.id, statusPatch(record, 'in-progress', today))}>In progress</Button>}
             {record.status !== 'done' && <Button type="button" kind="ghost" onClick={() => app.updateRecord(record.id, statusPatch(record, 'done', today))}>Done</Button>}
@@ -248,7 +262,7 @@ export default function RecordView({ app, id }) {
               <input value={actionTitle} onChange={(event) => setActionTitle(event.target.value)} />
             </Field>
             <Field label="Owner">
-              <input value={actionOwner} onChange={(event) => setActionOwner(event.target.value)} />
+              <OwnerSelect members={app.orgMembers} user={app.user} value={actionOwnerId} onChange={setActionOwnerId} />
             </Field>
             <Field label="Due">
               <input type="date" value={actionDue} onChange={(event) => setActionDue(event.target.value)} />

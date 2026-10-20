@@ -51,6 +51,7 @@ export function investigationRows(incident, investigation, actionFields) {
       note: 'Raised from the ICAM investigation.',
       occurredAt: incident.fields?.occurredAt,
       status: 'open',
+      ownerId: actionFields.ownerId || '',
     },
   })
   if (incident.fields?.siteArea) action.fields.siteArea = incident.fields.siteArea

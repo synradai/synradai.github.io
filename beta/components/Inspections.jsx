@@ -1,6 +1,8 @@
 import { useState } from 'react'
+import { selectedOwner } from '../lib/actions.js'
 import { blankChecks, fileInspection, inspectionError } from '../lib/inspections.js'
 import { perthDate, perthDateTimeLocal } from '../lib/time.js'
+import OwnerSelect from './OwnerSelect.jsx'
 import { Button, Field } from './ui.jsx'
 
 const RESULT_LABEL = { pass: 'Pass', fail: 'Fail', na: 'N/A' }
@@ -10,7 +12,7 @@ export default function Inspections({ app }) {
   const [templateId, setTemplateId] = useState(templates[0]?.id || '')
   const template = templates.find((item) => item.id === templateId) || templates[0]
   const [checks, setChecks] = useState(() => blankChecks(template))
-  const [owner, setOwner] = useState('')
+  const [ownerId, setOwnerId] = useState('')
   const [due, setDue] = useState(() => perthDate())
   const [error, setError] = useState('')
 
@@ -31,11 +33,13 @@ export default function Inspections({ app }) {
 
   const save = (event) => {
     event.preventDefault()
+    const person = selectedOwner(app.orgMembers, app.user, ownerId)
     const fields = {
       templateId: template?.id || '',
       title: template?.name || 'Inspection',
       siteArea: app.site.siteName || '',
-      owner,
+      owner: person?.name || '',
+      ownerId: person?.id || '',
       due,
       occurredAt: perthDateTimeLocal().slice(0, 16),
     }
@@ -43,7 +47,6 @@ export default function Inspections({ app }) {
     if (problem) { setError(problem); return }
     const rows = fileInspection({ ruleset: app.site.ruleset || 'general', fields, checks })
     app.saveRecords(rows)
-    setOwner('')
     setChecks(blankChecks(template))
     setError('')
   }
@@ -79,7 +82,7 @@ export default function Inspections({ app }) {
           </div>
         ))}
         <Field label="Owner for failed items">
-          <input value={owner} onChange={(event) => setOwner(event.target.value)} placeholder="Supervisor" />
+          <OwnerSelect members={app.orgMembers} user={app.user} value={ownerId} onChange={setOwnerId} />
         </Field>
         <Field label="Due date for failed items">
           <input type="date" value={due} onChange={(event) => setDue(event.target.value)} />

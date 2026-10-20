@@ -4,3 +4,8 @@
 
 [functions.generate-grok]
 verify_jwt = false
+
+# action-reminder checks the caller with auth.getUser() and requires aal2.
+# The gateway verify_jwt check rejects the beta project's ES256 tokens.
+[functions.action-reminder]
+verify_jwt = false

@@ -13,7 +13,7 @@ import { extractJson } from './parse.js'
 import { buildNoteRecord, buildRecord } from './record.js'
 import { nameWarning } from './roles.js'
 import { auditToCsv, filterAudit } from './audit.js'
-import { buildActionRecord, isOverdue, sortActions, statusPatch } from './actions.js'
+import { buildActionRecord, canRemind, isOverdue, ownerChoices, reminderPatch, selectedOwner, sortActions, statusPatch } from './actions.js'
 import { buildHoursRecord, dashboardSummary, daysLost } from './dashboard.js'
 import { investigationRows, signOffError } from './investigation.js'
 import { leadCounts, weekStarting } from './leads.js'
@@ -419,6 +419,13 @@ test('actions link both records and overdue is calculated', () => {
   assert.equal(isOverdue(action, '2026-10-19'), true)
   assert.equal(isOverdue({ ...action, status: 'done' }, '2026-10-19'), false)
   assert.equal(isOverdue(action, '2026-10-18'), false)
+  assert.equal(canRemind(action, '2026-10-19'), true)
+  assert.equal(canRemind({ ...action, ...reminderPatch(action, '2026-10-19') }, '2026-10-19'), false)
+  assert.equal(canRemind(action, '2026-10-18'), false)
+  const owned = buildActionRecord({ id: 'act-owned', fields: { title: 'Check the guard', owner: 'Alex', ownerId: 'user-1', due: '2026-10-18' } })
+  assert.equal(owned.fields.ownerId, 'user-1')
+  assert.deepEqual(ownerChoices([], { id: 'local', email: 'On this device' }), [{ id: 'local', name: 'On this device' }])
+  assert.equal(selectedOwner([{ id: 'user-1', name: 'Alex' }, { id: 'user-2', name: 'Sam' }], null, 'user-2').name, 'Sam')
   const cleared = unlinkPair(linked, 'evt-1', 'act-1')
   assert.equal(cleared.find((row) => row.id === 'evt-1').links.length, 0)
   assert.equal(cleared.find((row) => row.id === 'act-1').links.length, 0)
