@@ -12,7 +12,8 @@ import Investigate from './components/Investigate.jsx'
 import Login from './components/Login.jsx'
 import TwoFactorChallenge from './components/TwoFactorChallenge.jsx'
 import TwoFactorEnroll from './components/TwoFactorEnroll.jsx'
-import { KpiPreview, MaintenancePreview, ScaffoldPreview, StoresPreview } from './components/Mocks.jsx'
+import Leads from './components/Leads.jsx'
+import { MaintenancePreview, ScaffoldPreview, StoresPreview } from './components/Mocks.jsx'
 import Training from './components/Training.jsx'
 import PaperScan from './components/PaperScan.jsx'
 import RecordView from './components/RecordView.jsx'
@@ -112,7 +113,7 @@ function Screen({ route }) {
   else if (route.screen === 'investigate') body = <Investigate key={route.id} app={app} id={route.id} />
   else if (route.screen === 'training') body = app.modules.training ? <Training app={app} /> : <Hidden name="Training" />
   else if (route.screen === 'maintenance') body = app.modules.maintenance ? <MaintenancePreview /> : <Hidden name="Maintenance" />
-  else if (route.screen === 'kpis') body = app.modules.kpis ? <KpiPreview /> : <Hidden name="KPIs & Forms" />
+  else if (route.screen === 'kpis') body = app.modules.kpis ? <Leads app={app} /> : <Hidden name="KPIs & Forms" />
   else if (route.screen === 'stores') body = app.modules.stores ? <StoresPreview /> : <Hidden name="Stores" />
   else if (route.screen === 'scaffold') body = app.modules.scaffold ? <ScaffoldPreview /> : <Hidden name="Scaffold Register" />
   else if (route.screen === 'admin') body = <Admin app={app} />

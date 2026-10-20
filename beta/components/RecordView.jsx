@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { actionError, buildActionRecord, isOverdue } from '../lib/actions.js'
+import { actionError, buildActionRecord, isOverdue, statusPatch } from '../lib/actions.js'
 import { resolveForm } from '../lib/config.js'
 import { rewriteActions } from '../lib/ai.js'
 import { timelineTitle, TIMELINE_LABELS } from '../lib/day.js'
@@ -133,9 +133,9 @@ export default function RecordView({ app, id }) {
           <p>Owner {fields.owner || '—'} · due {fields.due || '—'} · {STATUS_LABEL[record.status] || record.status}</p>
           {isOverdue(record, today) && <p className="note">Overdue. The due date has passed and this action is not done.</p>}
           <div className="actions">
-            {record.status !== 'open' && <Button type="button" kind="ghost" onClick={() => app.updateRecord(record.id, { status: 'open' })}>Open</Button>}
-            {record.status !== 'in-progress' && <Button type="button" kind="ghost" onClick={() => app.updateRecord(record.id, { status: 'in-progress' })}>In progress</Button>}
-            {record.status !== 'done' && <Button type="button" kind="ghost" onClick={() => app.updateRecord(record.id, { status: 'done' })}>Done</Button>}
+            {record.status !== 'open' && <Button type="button" kind="ghost" onClick={() => app.updateRecord(record.id, statusPatch(record, 'open', today))}>Open</Button>}
+            {record.status !== 'in-progress' && <Button type="button" kind="ghost" onClick={() => app.updateRecord(record.id, statusPatch(record, 'in-progress', today))}>In progress</Button>}
+            {record.status !== 'done' && <Button type="button" kind="ghost" onClick={() => app.updateRecord(record.id, statusPatch(record, 'done', today))}>Done</Button>}
           </div>
         </div>
       )}

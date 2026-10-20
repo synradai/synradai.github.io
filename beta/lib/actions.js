@@ -41,6 +41,16 @@ export function buildActionRecord({ id, ruleset = 'general', fields = {}, links 
   }
 }
 
+export function statusPatch(row, status, today) {
+  const fields = { ...(row?.fields || {}) }
+  if (status === 'done') {
+    if (!fields.closedOn) fields.closedOn = today
+  } else {
+    delete fields.closedOn
+  }
+  return { status, fields }
+}
+
 export function isOverdue(row, today) {
   if (row?.kind !== 'action' || row.status === 'done') return false
   const due = String(row.fields?.due || '')
