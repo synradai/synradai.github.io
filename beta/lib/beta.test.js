@@ -14,6 +14,7 @@ import { buildNoteRecord, buildRecord } from './record.js'
 import { nameWarning } from './roles.js'
 import { auditToCsv, filterAudit } from './audit.js'
 import { buildActionRecord, isOverdue, sortActions, statusPatch } from './actions.js'
+import { buildHoursRecord, dashboardSummary, daysLost } from './dashboard.js'
 import { leadCounts, weekStarting } from './leads.js'
 import { recordDay, recordsForDay } from './day.js'
 import { fileInspection } from './inspections.js'
@@ -436,6 +437,29 @@ test('a date-range export keeps injury names out and keeps the case id', () => {
   assert.match(csv, /Oil on the floor/)
   assert.equal(csv.includes('Secret Person'), false)
   assert.equal(csv.includes('clinic'), false)
+})
+
+test('the dashboard counts incidents, rates, and hours in the selected range', () => {
+  const incident = buildRecord({ id: 'inc-1', kind: 'incident', fields: { severity: 3, description: 'Slip', occurredAt: '2026-10-12T09:00', siteArea: 'Workshop', peopleRoles: 'Fitter', incidentType: 'Injury / illness', actualSeverity: 3, potentialSeverity: 3 } })
+  const other = buildRecord({ id: 'inc-2', kind: 'incident', fields: { severity: 1, description: 'Spill', occurredAt: '2026-09-02T09:00', siteArea: 'Yard', peopleRoles: 'Crew', incidentType: 'Environmental', actualSeverity: 1, potentialSeverity: 1 } })
+  const action = buildActionRecord({ id: 'act-1', fields: { title: 'Clean up', owner: 'Crew', due: '2026-10-01', status: 'open' } })
+  action.fields.siteArea = 'Workshop'
+  const hours = buildHoursRecord({ id: 'hrs-1', fields: { from: '2026-10-01', to: '2026-10-31', hours: 200000, siteArea: 'Workshop' } })
+  const summary = dashboardSummary(
+    [incident, other, action, hours],
+    [{ id: 'c1', caseCode: 'INJ-0001', eventId: 'inc-1', classification: 'LTI', status: 'open', restrictedFrom: '2026-10-12', createdAt: '2026-10-12T00:00:00.000Z' }],
+    { from: '2026-10-01', to: '2026-10-31', site: 'Workshop', today: '2026-10-20', columns: ['First aid'] },
+  )
+  assert.equal(summary.incidents.total, 1)
+  assert.equal(summary.incidents.byType[0].label, 'Injury / illness')
+  assert.equal(summary.incidents.byMonth[0].label, '2026-10')
+  assert.equal(summary.actions.overdue, 1)
+  assert.equal(summary.injury.LTI, 1)
+  assert.equal(daysLost({ classification: 'LTI', restrictedFrom: '2026-10-12', rtwOn: '2026-10-15' }, '2026-10-20'), 3)
+  assert.equal(summary.injury.hours, 200000)
+  assert.equal(summary.injury.ltifr, 5)
+  assert.equal(summary.injury.trifr, 5)
+  assert.equal(routeFromHash('#/hse/dashboard').screen, 'dashboard')
 })
 
 test('lead counts use the Perth week and on-time closures', () => {
