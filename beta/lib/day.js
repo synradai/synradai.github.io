@@ -9,6 +9,7 @@ export const TIMELINE_LABELS = {
   prestart: 'Prestart',
   toolbox: 'Toolbox talk',
   action: 'Action',
+  inspection: 'Inspection',
 }
 
 export const QUICK_ADD = [

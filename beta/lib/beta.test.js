@@ -15,6 +15,7 @@ import { nameWarning } from './roles.js'
 import { auditToCsv, filterAudit } from './audit.js'
 import { buildActionRecord, isOverdue, sortActions } from './actions.js'
 import { recordDay, recordsForDay } from './day.js'
+import { fileInspection } from './inspections.js'
 import { injuryLabel, injuryPayload, mergeInjury, toPublicCase } from './injury.js'
 import { linkPair, unlinkPair } from './links.js'
 import { initialDraft, moduleRows, prepareConfig, resolveForm, resolveMatrix, resolveTemplates, resolveWording, visibleModules } from './config.js'
@@ -406,6 +407,31 @@ test('actions link both records and overdue is calculated', () => {
   const done = buildActionRecord({ id: 'act-2', fields: { title: 'Later', owner: 'Crew', due: '2026-10-21', status: 'done' } })
   assert.deepEqual(sortActions([done, action], '2026-10-19').map((row) => row.id), ['act-1', 'act-2'])
   assert.equal(routeFromHash('#/hse/actions').screen, 'actions')
+})
+
+test('a failed inspection item opens a linked action', () => {
+  const rows = fileInspection({
+    id: 'insp-1',
+    fields: { templateId: 'workplace', title: 'Workplace walk', owner: 'Supervisor', due: '2026-10-21', occurredAt: '2026-10-19T07:00' },
+    checks: [
+      { id: 'ppe', label: 'PPE matches the task', result: 'fail', note: 'Torn glove' },
+      { id: 'plant', label: 'Plant is parked', result: 'pass', note: '' },
+      { id: 'exits', label: 'Exits are clear', result: 'na', note: '' },
+    ],
+  })
+  const inspection = rows.find((row) => row.kind === 'inspection')
+  const actions = rows.filter((row) => row.kind === 'action')
+  assert.equal(actions.length, 1)
+  assert.equal(actions[0].fields.title, 'Fix: PPE matches the task')
+  assert.equal(actions[0].fields.owner, 'Supervisor')
+  assert.equal(actions[0].links[0].id, 'insp-1')
+  assert.equal(inspection.links[0].id, actions[0].id)
+  assert.equal(inspection.fields.note, '1 item failed')
+  assert.throws(() => fileInspection({
+    fields: { templateId: 'workplace', title: 'Walk', owner: '', due: '' },
+    checks: [{ id: 'ppe', label: 'PPE', result: 'fail' }],
+  }), /owner/)
+  assert.equal(routeFromHash('#/hse/inspections').screen, 'inspections')
 })
 
 test('injury names stay off the public case and the audit brief', () => {

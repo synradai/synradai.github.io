@@ -7,6 +7,7 @@ import DailyRecord from './components/DailyRecord.jsx'
 import Home from './components/Home.jsx'
 import HseHome from './components/HseHome.jsx'
 import Injury from './components/Injury.jsx'
+import Inspections from './components/Inspections.jsx'
 import Investigate from './components/Investigate.jsx'
 import Login from './components/Login.jsx'
 import TwoFactorChallenge from './components/TwoFactorChallenge.jsx'
@@ -101,6 +102,7 @@ function Screen({ route }) {
   else if (route.screen === 'audit') body = <Audit app={app} />
   else if (route.screen === 'actions') body = <Actions app={app} />
   else if (route.screen === 'injury') body = <Injury key={route.id || 'list'} app={app} id={route.id} />
+  else if (route.screen === 'inspections') body = <Inspections app={app} />
   else if (route.screen === 'capture' && FORMS[route.kind]) body = <CaptureForm key={route.kind} app={app} kind={route.kind} />
   else if (route.screen === 'scan') body = <PaperScan app={app} />
   else if (route.screen === 'scene') body = <SceneCheck app={app} />
