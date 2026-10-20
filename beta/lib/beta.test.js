@@ -13,7 +13,8 @@ import { extractJson } from './parse.js'
 import { buildNoteRecord, buildRecord } from './record.js'
 import { nameWarning } from './roles.js'
 import { auditToCsv, filterAudit } from './audit.js'
-import { buildActionRecord, isOverdue, sortActions } from './actions.js'
+import { buildActionRecord, isOverdue, sortActions, statusPatch } from './actions.js'
+import { leadCounts, weekStarting } from './leads.js'
 import { recordDay, recordsForDay } from './day.js'
 import { fileInspection } from './inspections.js'
 import { buildTrainingRecord, matrixRows, trainingState } from './training.js'
@@ -408,6 +409,26 @@ test('actions link both records and overdue is calculated', () => {
   const done = buildActionRecord({ id: 'act-2', fields: { title: 'Later', owner: 'Crew', due: '2026-10-21', status: 'done' } })
   assert.deepEqual(sortActions([done, action], '2026-10-19').map((row) => row.id), ['act-1', 'act-2'])
   assert.equal(routeFromHash('#/hse/actions').screen, 'actions')
+})
+
+test('lead counts use the Perth week and on-time closures', () => {
+  assert.equal(weekStarting('2026-10-19'), '2026-10-19')
+  assert.equal(weekStarting('2026-10-18'), '2026-10-12')
+  const rows = [
+    { id: 'p', kind: 'prestart', fields: { occurredAt: '2026-10-19T06:00' } },
+    { id: 'h', kind: 'hazard', fields: { occurredAt: '2026-10-20T09:00' } },
+    { id: 'a', kind: 'action', status: 'done', fields: { due: '2026-10-21', closedOn: '2026-10-20' } },
+    { id: 'late', kind: 'action', status: 'done', fields: { due: '2026-10-18', closedOn: '2026-10-20' } },
+  ]
+  const counts = leadCounts(rows, '2026-10-19')
+  assert.equal(counts.prestart, 1)
+  assert.equal(counts.observation, 1)
+  assert.equal(counts.toolbox, 0)
+  assert.equal(counts.onTime, 1)
+  assert.equal(counts.end, '2026-10-25')
+  const done = statusPatch({ fields: { due: '2026-10-21' } }, 'done', '2026-10-19')
+  assert.equal(done.fields.closedOn, '2026-10-19')
+  assert.equal(statusPatch(done, 'open', '2026-10-19').fields.closedOn, undefined)
 })
 
 test('the training matrix marks missing and expired courses as gaps', () => {

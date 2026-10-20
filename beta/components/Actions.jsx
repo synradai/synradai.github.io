@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { actionError, buildActionRecord, isOverdue, sortActions } from '../lib/actions.js'
+import { actionError, buildActionRecord, isOverdue, sortActions, statusPatch } from '../lib/actions.js'
 import { timelineTitle, TIMELINE_LABELS } from '../lib/day.js'
 import { linkPair } from '../lib/links.js'
 import { perthDate, perthDateTimeLocal } from '../lib/time.js'
@@ -53,7 +53,7 @@ export default function Actions({ app }) {
     setError('')
   }
 
-  const setStatus = (row, status) => app.updateRecord(row.id, { status })
+  const setStatus = (row, status) => app.updateRecord(row.id, statusPatch(row, status, today))
 
   return (
     <>

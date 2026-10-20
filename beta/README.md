@@ -63,6 +63,10 @@ Apply these on the beta project, in order:
 
 `#/hse/audit` lists append-only events. A database trigger writes one when an `hse_records` row is created, edited, or deleted. The before and after values are a short summary (kind, status, severity, label), not the record body. Exporting the list writes an export event. Configuration saves are audited the same way.
 
+## Lead indicators
+
+`#/kpis` counts the selected week, Monday to Sunday in Western Australia: prestarts, toolbox talks, inspections, observations (hazard reports), and actions marked done on or before their due date. Each count has a starter target. Maintenance, stores, and scaffold stay previews.
+
 ## Training
 
 `#/training` stores a person, role, course or ticket, completed date, and expiry. A record with an expiry inside 30 days is marked expiring, and a past expiry is expired. The matrix lists each role on the records against the required courses from site configuration. Covered means someone in that role holds a current ticket. Expiring is shown on its own. A gap means the role has no current ticket for that course. Maintenance, stores, and scaffold stay previews.
