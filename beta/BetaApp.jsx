@@ -4,6 +4,7 @@ import Admin from './components/Admin.jsx'
 import Audit from './components/Audit.jsx'
 import CaptureForm from './components/CaptureForm.jsx'
 import DailyRecord from './components/DailyRecord.jsx'
+import Dashboard from './components/Dashboard.jsx'
 import Home from './components/Home.jsx'
 import HseHome from './components/HseHome.jsx'
 import Injury from './components/Injury.jsx'
@@ -100,6 +101,7 @@ function Screen({ route }) {
   let body = <Home app={app} />
   if (route.screen === 'setup') body = <SiteSetup app={app} />
   else if (route.screen === 'hse') body = <HseHome app={app} />
+  else if (route.screen === 'dashboard') body = <Dashboard app={app} />
   else if (route.screen === 'day') body = <DailyRecord app={app} />
   else if (route.screen === 'audit') body = <Audit app={app} />
   else if (route.screen === 'actions') body = <Actions app={app} />

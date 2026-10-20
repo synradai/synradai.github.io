@@ -87,6 +87,10 @@ The daily record exports CSV and PDF for a day or a date range. Columns are day,
 
 `#/hse/actions` is the actions register. Each action has an owner, a due date, and a status (open, in progress, or done). Overdue is calculated when the due date is before today in Western Australia and the status is not done. Linking a record stores the same link on both sides, and those links show on the daily record timeline and on each record. Raising an action from a record links it automatically. Actions are `hse_records` rows with `kind` `action`, so the audit trigger covers them.
 
+## Dashboard
+
+`#/hse/dashboard` counts the records already filed. Filter by date range and site. Incidents split by type, severity, site, and month. Actions show open, closed in the range, and overdue. Injury cases show LTI, MTI, FAI, and RWI counts and days lost. LTIFR and TRIFR appear after hours worked are saved on that screen (LTIFR is lost-time cases × 1,000,000 ÷ hours; TRIFR adds medical treatment and restricted work). Inspections compare filings with the weekly target across the range. Lead indicators use the same starter targets. Training shows current, expiring, expired, and missing required courses. Each count links through to the record.
+
 ## Daily record
 
 `#/hse/day` is one day at a time, defaulting to today in Western Australia. Incidents, hazards and Take 5s open the full capture form. Meetings, prestarts and toolbox talks are a short note on that day. All of them save as `hse_records` rows, using `kind` as the type.

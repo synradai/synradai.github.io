@@ -11,6 +11,7 @@ export const TIMELINE_LABELS = {
   action: 'Action',
   inspection: 'Inspection',
   training: 'Training',
+  hours: 'Hours worked',
 }
 
 export const QUICK_ADD = [

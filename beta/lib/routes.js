@@ -11,6 +11,7 @@ export function routeFromHash(hash) {
   if (parts[0] === 'setup') return { screen: 'setup' }
   if (parts[0] === 'admin') return { screen: 'admin' }
   if (parts[0] === 'hse') {
+    if (parts[1] === 'dashboard') return { screen: 'dashboard' }
     if (parts[1] === 'day') return { screen: 'day' }
     if (parts[1] === 'audit') return { screen: 'audit' }
     if (parts[1] === 'actions') return { screen: 'actions' }
