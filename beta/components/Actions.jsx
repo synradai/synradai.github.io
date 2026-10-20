@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
-import { actionError, buildActionRecord, isOverdue, sortActions, statusPatch } from '../lib/actions.js'
+import { actionError, buildActionRecord, canRemind, isOverdue, selectedOwner, sortActions, statusPatch } from '../lib/actions.js'
 import { timelineTitle, TIMELINE_LABELS } from '../lib/day.js'
 import { linkPair } from '../lib/links.js'
 import { perthDate, perthDateTimeLocal } from '../lib/time.js'
+import OwnerSelect from './OwnerSelect.jsx'
 import { Button, Field } from './ui.jsx'
 
 const FILTERS = [
@@ -18,11 +19,13 @@ export default function Actions({ app }) {
   const today = perthDate()
   const [filter, setFilter] = useState('open')
   const [title, setTitle] = useState('')
-  const [owner, setOwner] = useState('')
+  const [ownerId, setOwnerId] = useState('')
   const [due, setDue] = useState(today)
   const [note, setNote] = useState('')
   const [linkId, setLinkId] = useState('')
   const [error, setError] = useState('')
+  const [remindNote, setRemindNote] = useState('')
+  const [remindingId, setRemindingId] = useState('')
   const actions = useMemo(() => sortActions(app.rows, today), [app.rows, today])
   const shown = actions.filter((row) => {
     if (filter === 'done') return row.status === 'done'
@@ -34,7 +37,8 @@ export default function Actions({ app }) {
 
   const save = (event) => {
     event.preventDefault()
-    const fields = { title, owner, due, note, status: 'open', occurredAt: perthDateTimeLocal().slice(0, 16) }
+    const person = selectedOwner(app.orgMembers, app.user, ownerId)
+    const fields = { title, owner: person?.name || '', ownerId: person?.id || '', due, note, status: 'open', occurredAt: perthDateTimeLocal().slice(0, 16) }
     const problem = actionError(fields)
     if (problem) {
       setError(problem)
@@ -55,17 +59,25 @@ export default function Actions({ app }) {
 
   const setStatus = (row, status) => app.updateRecord(row.id, statusPatch(row, status, today))
 
+  const remind = async (row) => {
+    setRemindingId(row.id)
+    setRemindNote('')
+    const result = await app.remindAction(row.id)
+    setRemindNote(result?.reason || 'Reminder recorded.')
+    setRemindingId('')
+  }
+
   return (
     <>
       <p className="eyebrow">Actions</p>
       <h1>Actions register</h1>
-      <p className="lede">Owner, due date, and status. Overdue means the due date has passed and the action is not done.</p>
+      <p className="lede">The owner is someone in this organisation. Overdue means the due date has passed and the action is not done. A reminder is recorded once a day, and emailed when mail is configured.</p>
       <form className="panel" onSubmit={save}>
         <Field label="What needs to be done">
           <input value={title} onChange={(event) => setTitle(event.target.value)} />
         </Field>
         <Field label="Owner">
-          <input value={owner} onChange={(event) => setOwner(event.target.value)} placeholder="Supervisor" />
+          <OwnerSelect members={app.orgMembers} user={app.user} value={ownerId} onChange={setOwnerId} />
         </Field>
         <Field label="Due">
           <input type="date" value={due} onChange={(event) => setDue(event.target.value)} />
@@ -89,6 +101,7 @@ export default function Actions({ app }) {
           <button key={id} type="button" className={`chip${filter === id ? ' active' : ''}`} onClick={() => setFilter(id)}>{label}</button>
         ))}
       </div>
+      {remindNote && <p className="note">{remindNote}</p>}
       {shown.length === 0 && <p className="muted">No actions in this filter.</p>}
       <div className="grid" style={{ marginTop: '0.8rem' }}>
         {shown.map((row) => {
@@ -109,7 +122,9 @@ export default function Actions({ app }) {
                   })}
                 </span>
               )}
+              {row.fields?.remindedOn === today && <span>Reminder recorded today.</span>}
               <div className="actions" style={{ marginTop: '0.6rem' }}>
+                {canRemind(row, today) && <Button type="button" disabled={remindingId === row.id} onClick={() => remind(row)}>{remindingId === row.id ? 'Sending…' : 'Send reminder'}</Button>}
                 {row.status !== 'open' && <Button type="button" kind="ghost" onClick={() => setStatus(row, 'open')}>Open</Button>}
                 {row.status !== 'in-progress' && <Button type="button" kind="ghost" onClick={() => setStatus(row, 'in-progress')}>In progress</Button>}
                 {row.status !== 'done' && <Button type="button" kind="ghost" onClick={() => setStatus(row, 'done')}>Done</Button>}

@@ -6,7 +6,9 @@ import { injuryError, injuryPayload, mergeInjury, nextCaseCode, toPrivateCase } 
 import { getMfaGate } from './lib/mfa.js'
 import { INJURY_KEY, LOCAL_KEY, MODULE_KEY, SITE_KEY, loadInjuryCases, loadModulePrefs, loadRows, loadSite, mergeRows, saveInjuryCases, saveModulePrefs, saveRows, saveSite, slimForCloud } from './lib/store.js'
 import { generateId } from '../src/utils/storage.js'
-import { authReturnUrl, isBackendEnabled, liveProjectBlocked, supabase } from './lib/supabase.js'
+import { canRemind, reminderPatch } from './lib/actions.js'
+import { perthDate } from './lib/time.js'
+import { authReturnUrl, getAccessToken, isBackendEnabled, liveProjectBlocked, supabase, supabaseKey, supabaseUrl } from './lib/supabase.js'
 import { openVault, pauseWrites, sealVault } from '../src/utils/secureStore.js'
 import { safeGetItem } from '../src/utils/storage.js'
 
@@ -61,6 +63,7 @@ export function AppState({ children }) {
   const [remoteConfig, setRemoteConfig] = useState({})
   const [isAdmin, setIsAdmin] = useState(false)
   const [adminChecked, setAdminChecked] = useState(!isBackendEnabled)
+  const [orgMembers, setOrgMembers] = useState([])
   const orgIdRef = useRef(null)
   const seenUser = useRef(undefined)
   const sealing = useRef(false)
@@ -112,6 +115,7 @@ export function AppState({ children }) {
       setRows([])
       setInjuryCases([])
       setOrgRole('member')
+      setOrgMembers([])
       setModules(defaultModulePrefs())
       setSite(loadSite())
       sealVault().finally(() => {
@@ -147,6 +151,18 @@ export function AppState({ children }) {
         if (cancel || sealing.current) return
         orgIdRef.current = profile?.org_id || null
         setOrgRole(profile?.role === 'admin' ? 'admin' : 'member')
+        if (profile?.org_id) {
+          const { data: people } = await supabase.from('profiles').select('id, full_name').eq('org_id', profile.org_id)
+          if (!cancel && !sealing.current) {
+            const selfName = session?.user?.email || 'You'
+            const members = (people || []).map((person) => ({
+              id: person.id,
+              name: person.full_name || (person.id === userId ? selfName : 'Member'),
+            }))
+            if (!members.some((person) => person.id === userId)) members.unshift({ id: userId, name: selfName })
+            setOrgMembers(members)
+          }
+        }
         const { data, error } = await supabase.from('hse_records').select('id,kind,payload,updated_at')
         if (cancel || sealing.current) return
         if (error) {
@@ -187,7 +203,7 @@ export function AppState({ children }) {
       }
     })()
     return () => { cancel = true }
-  }, [mfaGate, userId, localUser, recovery, sealTick])
+  }, [mfaGate, userId, localUser, recovery, sealTick, session?.user?.email])
 
   useEffect(() => {
     if (!userId || !vaultReady) return undefined
@@ -401,6 +417,7 @@ export function AppState({ children }) {
       setRows([])
       setInjuryCases([])
       setOrgRole('member')
+      setOrgMembers([])
       setModules(defaultModulePrefs())
       setSite(loadSite())
       setMfaGate(isBackendEnabled ? 'pending' : 'ready')
@@ -437,6 +454,46 @@ export function AppState({ children }) {
       persist(next)
       const saved = next.find((row) => row.id === id)
       if (saved) push(saved)
+    },
+    async remindAction(id) {
+      const row = rows.find((item) => item.id === id)
+      const today = perthDate()
+      if (!row || !canRemind(row, today)) {
+        return { reminded: false, sent: false, reason: 'This action was already reminded today, or it is not overdue.' }
+      }
+      const recordLocal = () => {
+        const patch = reminderPatch(row, today)
+        const next = rows.map((item) => item.id === id ? { ...item, ...patch, updatedAt: new Date().toISOString() } : item)
+        persist(next)
+        const saved = next.find((item) => item.id === id)
+        if (saved) push(saved)
+      }
+      if (!supabase || !user || user.local || mfaGate !== 'ready') {
+        recordLocal()
+        return { reminded: true, sent: false, reason: 'Reminder recorded on this device.' }
+      }
+      try {
+        const token = await getAccessToken()
+        const response = await fetch(`${supabaseUrl}/functions/v1/action-reminder`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+            ...(supabaseKey ? { apikey: supabaseKey } : {}),
+          },
+          body: JSON.stringify({ actionId: id }),
+        })
+        const data = await response.json().catch(() => ({}))
+        if (response.status === 401) {
+          return { reminded: false, sent: false, reason: data.error || 'Finish two-factor authentication, then try the reminder again.' }
+        }
+        recordLocal()
+        if (data.sent) return { reminded: true, sent: true, reason: 'Reminder emailed to the owner.' }
+        return { reminded: true, sent: false, reason: data.reason || data.error || 'Reminder recorded in the app. Email could not be sent.' }
+      } catch {
+        recordLocal()
+        return { reminded: true, sent: false, reason: 'Reminder recorded on this device. Email could not be sent.' }
+      }
     },
     async deleteRecord(id) {
       const now = new Date().toISOString()
@@ -551,6 +608,7 @@ export function AppState({ children }) {
       saveSite(next).catch(() => {})
     },
     injuryCases,
+    orgMembers,
     orgRole,
     wording: resolveWording(remoteConfig.wording?.value),
     moduleConfig: moduleRows(remoteConfig.modules?.value),
@@ -618,7 +676,7 @@ export function AppState({ children }) {
         return next
       })
     },
-  }), [ready, user, recovery, rows, injuryCases, orgRole, modules, site, cloudNote, storageWarning, authError, authNotice, mfaGate, vaultReady, vaultError, remoteConfig, isAdmin, adminChecked])
+  }), [ready, user, recovery, rows, injuryCases, orgMembers, orgRole, modules, site, cloudNote, storageWarning, authError, authNotice, mfaGate, vaultReady, vaultError, remoteConfig, isAdmin, adminChecked])
 
   return <AppContext.Provider value={api}>{children}</AppContext.Provider>
 }

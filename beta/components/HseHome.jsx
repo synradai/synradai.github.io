@@ -59,7 +59,7 @@ export default function HseHome({ app }) {
         <a className="card" href="#/hse/actions">
           <span className="tag live">Actions</span>
           <strong>Actions register</strong>
-          <span>Owner, due date, and overdue. Link an action back to the record it came from.</span>
+          <span>Owner from the organisation, due date, overdue, and a daily reminder.</span>
         </a>
         <a className="card" href="#/hse/audit">
           <span className="tag live">Audit</span>

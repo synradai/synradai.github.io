@@ -27,6 +27,7 @@ export function buildActionRecord({ id, ruleset = 'general', fields = {}, links 
     fields: {
       title: String(fields.title).trim(),
       owner: String(fields.owner).trim(),
+      ownerId: String(fields.ownerId || '').trim(),
       due: String(fields.due).slice(0, 10),
       note: String(fields.note || '').trim(),
       occurredAt: fields.occurredAt || now.slice(0, 16),
@@ -56,6 +57,34 @@ export function isOverdue(row, today) {
   const due = String(row.fields?.due || '')
   if (!/^\d{4}-\d{2}-\d{2}$/.test(due) || !/^\d{4}-\d{2}-\d{2}$/.test(String(today || ''))) return false
   return due < today
+}
+
+export function canRemind(row, today) {
+  return isOverdue(row, today) && String(row?.fields?.remindedOn || '') !== today
+}
+
+export function reminderPatch(row, today) {
+  return { fields: { ...(row?.fields || {}), remindedOn: today } }
+}
+
+export function ownerChoices(members, user) {
+  const list = []
+  const seen = new Set()
+  for (const person of members || []) {
+    const id = String(person?.id || '').trim()
+    if (!id || seen.has(id)) continue
+    seen.add(id)
+    list.push({ id, name: String(person.name || '').trim() || 'Member' })
+  }
+  if (!list.length && user?.id) {
+    list.push({ id: String(user.id), name: String(user.email || user.name || 'You').trim() || 'You' })
+  }
+  return list
+}
+
+export function selectedOwner(members, user, ownerId) {
+  const choices = ownerChoices(members, user)
+  return choices.find((person) => person.id === ownerId) || choices[0] || null
 }
 
 export function sortActions(rows, today) {

@@ -72,6 +72,7 @@ export function fileInspection({ id, ruleset = 'general', fields, checks }) {
         note: check.note || '',
         occurredAt: inspection.fields.occurredAt,
         status: 'open',
+        ownerId: fields.ownerId || '',
       },
     })
     rows = linkPair([...rows, action], inspection.id, action.id)

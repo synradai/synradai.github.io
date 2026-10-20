@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { FIVE_WHYS, humanErrorGuard, ICAM_FIELDS } from '../config/severity.js'
 import { suggestWhys } from '../lib/ai.js'
+import { selectedOwner } from '../lib/actions.js'
 import { investigationRows, readInvestigation, signOffError } from '../lib/investigation.js'
+import OwnerSelect from './OwnerSelect.jsx'
 import { exportInvestigationPdf } from '../lib/pdfExport.js'
 import { go } from '../lib/routes.js'
 import { compressPhoto } from '../../src/utils/storage.js'
@@ -43,7 +45,7 @@ export default function Investigate({ app, id }) {
   const [eventText, setEventText] = useState('')
   const [evidenceNote, setEvidenceNote] = useState('')
   const [actionTitle, setActionTitle] = useState('')
-  const [actionOwner, setActionOwner] = useState('')
+  const [actionOwnerId, setActionOwnerId] = useState('')
   const [actionDue, setActionDue] = useState(perthDate())
 
   if (!record) return <p className="note">That investigation is not on this device.</p>
@@ -156,7 +158,8 @@ export default function Investigate({ app, id }) {
 
   const raiseAction = () => {
     try {
-      const rows = investigationRows(record, investigation, { title: actionTitle, owner: actionOwner, due: actionDue })
+      const person = selectedOwner(app.orgMembers, app.user, actionOwnerId)
+      const rows = investigationRows(record, investigation, { title: actionTitle, owner: person?.name || '', ownerId: person?.id || '', due: actionDue })
       app.saveRecords(rows)
       setActionTitle('')
       setError('')
@@ -211,7 +214,7 @@ export default function Investigate({ app, id }) {
           <h2>Corrective action</h2>
           <p className="muted">This opens an action and links it to the incident.</p>
           <Field label="What needs to be done"><input value={actionTitle} onChange={(event) => setActionTitle(event.target.value)} /></Field>
-          <Field label="Owner"><input value={actionOwner} onChange={(event) => setActionOwner(event.target.value)} /></Field>
+          <Field label="Owner"><OwnerSelect members={app.orgMembers} user={app.user} value={actionOwnerId} onChange={setActionOwnerId} /></Field>
           <Field label="Due"><input type="date" value={actionDue} onChange={(event) => setActionDue(event.target.value)} /></Field>
           <Button type="button" onClick={raiseAction}>Create linked action</Button>
           <h2>Sign-off</h2>
