@@ -14,6 +14,7 @@ const KINDS = [
   ['prestart', 'Prestart'],
   ['toolbox', 'Toolbox talk'],
   ['action', 'Action'],
+  ['inspection', 'Inspection'],
 ]
 
 function download(filename, text, type) {

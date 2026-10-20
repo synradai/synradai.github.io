@@ -11,7 +11,8 @@ import { InjuryChips, InjuryForm } from './Injury.jsx'
 import Reporting from './Reporting.jsx'
 import { Button, Field, FlagList, OfflineBanner } from './ui.jsx'
 
-const LABELS = { incident: 'Incident', hazard: 'Hazard', take5: 'Take 5', 'scene-check': 'Scene check', meeting: 'Meeting', prestart: 'Prestart', toolbox: 'Toolbox talk', action: 'Action' }
+const LABELS = { incident: 'Incident', hazard: 'Hazard', take5: 'Take 5', 'scene-check': 'Scene check', meeting: 'Meeting', prestart: 'Prestart', toolbox: 'Toolbox talk', action: 'Action', inspection: 'Inspection' }
+const RESULT_LABEL = { pass: 'Pass', fail: 'Fail', na: 'N/A' }
 const NOTE_KINDS = new Set(['meeting', 'prestart', 'toolbox'])
 const STATUS_LABEL = { open: 'Open', 'in-progress': 'In progress', done: 'Done' }
 
@@ -117,7 +118,7 @@ export default function RecordView({ app, id }) {
   return (
     <>
       <p className="eyebrow">{LABELS[record.kind] || record.kind} · {record.status}</p>
-      <h1>{record.kind === 'action' ? (fields.title || 'Action') : (fields.siteArea || LABELS[record.kind])}</h1>
+      <h1>{record.kind === 'action' || record.kind === 'inspection' ? (fields.title || LABELS[record.kind]) : (fields.siteArea || LABELS[record.kind])}</h1>
       <p className="muted">{formatWhen(fields.occurredAt || record.createdAt)} · driving severity {record.severity || '—'} · {record.ruleset || 'general'} · {record.source}</p>
       <OfflineBanner show={offline || record.sceneResult?.offline} />
       {record.path === 'stopped' && <p className="note">Stopped. A Take 5 answer was No, so the task does not start until a supervisor clears it.</p>}
@@ -139,7 +140,16 @@ export default function RecordView({ app, id }) {
         </div>
       )}
 
-      {record.kind !== 'action' && (
+      {record.kind === 'inspection' && (
+        <div className="panel">
+          <p><strong>{fields.title || 'Inspection'}. </strong>{fields.note || ''}</p>
+          {(record.checks || []).map((check) => (
+            <p key={check.id}><strong>{RESULT_LABEL[check.result] || check.result}. </strong>{check.label}{check.note ? ` — ${check.note}` : ''}</p>
+          ))}
+        </div>
+      )}
+
+      {record.kind !== 'action' && record.kind !== 'inspection' && (
       <div className="panel">
         {NOTE_KINDS.has(record.kind) && (
           <>
@@ -165,7 +175,7 @@ export default function RecordView({ app, id }) {
       </div>
       )}
 
-      {record.kind !== 'action' && (
+      {record.kind !== 'action' && record.kind !== 'inspection' && (
         <div className="panel" style={{ marginTop: 12 }}>
           <h2>Possible breach — verify</h2>
           <FlagList flags={record.flags} />
@@ -248,7 +258,7 @@ export default function RecordView({ app, id }) {
         )}
       </div>
 
-      {record.kind !== 'scene-check' && record.kind !== 'action' && !NOTE_KINDS.has(record.kind) && (
+      {record.kind !== 'scene-check' && record.kind !== 'action' && record.kind !== 'inspection' && !NOTE_KINDS.has(record.kind) && (
         <div className="panel" style={{ marginTop: 12 }}>
           <h2>Close-out</h2>
           {record.status === 'closed' ? (

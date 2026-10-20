@@ -63,6 +63,10 @@ Apply these on the beta project, in order:
 
 `#/hse/audit` lists append-only events. A database trigger writes one when an `hse_records` row is created, edited, or deleted. The before and after values are a short summary (kind, status, severity, label), not the record body. Exporting the list writes an export event. Configuration saves are audited the same way.
 
+## Inspections
+
+`#/hse/inspections` files a checklist from the site templates (Workplace walk and Area prestart, or whatever an admin saved). Each item is pass, fail, or N/A. Every failed item creates an action, linked both ways, with the owner and due date entered on the inspection. The inspection is an `hse_records` row with `kind` `inspection`, so it shows on the daily record and in the audit trail.
+
 ## Injury cases
 
 `#/hse/injury` opens one case per injured person and links it to an incident. Classification is FAI, MTI, LTI, or RWI, with restricted-work and return-to-work dates. The name, body part, treatment, and medical note are stored on `injury_cases` and are readable only by the person who opened the case and organisation admins (`profiles.role = admin`). Other people in the organisation see `injury_case_index`: case ID, classification, status, dates, and the linked incident. The daily record and the incident show that case ID only. The audit row records the case ID and classification, not the name.

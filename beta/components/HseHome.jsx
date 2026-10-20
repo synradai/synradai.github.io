@@ -41,6 +41,11 @@ export default function HseHome({ app }) {
           <strong>Scene photo check</strong>
           <span>Grok looks for missed hazards and possible breach areas.</span>
         </a>
+        <a className="card" href="#/hse/inspections">
+          <span className="tag live">Inspect</span>
+          <strong>Inspections</strong>
+          <span>Pass, fail, or N/A. Each failed item opens an action.</span>
+        </a>
         <a className="card" href="#/hse/injury">
           <span className="tag live">Injury</span>
           <strong>Injury cases</strong>
