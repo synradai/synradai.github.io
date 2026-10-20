@@ -1,14 +1,18 @@
 import { useState } from 'react'
+import { actionError, buildActionRecord, isOverdue } from '../lib/actions.js'
 import { resolveForm } from '../lib/config.js'
 import { rewriteActions } from '../lib/ai.js'
-import { formatWhen } from '../lib/time.js'
+import { timelineTitle, TIMELINE_LABELS } from '../lib/day.js'
+import { cleanLinks, linkPair, unlinkPair } from '../lib/links.js'
+import { formatWhen, perthDate, perthDateTimeLocal } from '../lib/time.js'
 import { go } from '../lib/routes.js'
 import { exportRecordPdf } from '../lib/pdfExport.js'
 import Reporting from './Reporting.jsx'
-import { Button, FlagList, OfflineBanner } from './ui.jsx'
+import { Button, Field, FlagList, OfflineBanner } from './ui.jsx'
 
-const LABELS = { incident: 'Incident', hazard: 'Hazard', take5: 'Take 5', 'scene-check': 'Scene check', meeting: 'Meeting', prestart: 'Prestart', toolbox: 'Toolbox talk' }
+const LABELS = { incident: 'Incident', hazard: 'Hazard', take5: 'Take 5', 'scene-check': 'Scene check', meeting: 'Meeting', prestart: 'Prestart', toolbox: 'Toolbox talk', action: 'Action' }
 const NOTE_KINDS = new Set(['meeting', 'prestart', 'toolbox'])
+const STATUS_LABEL = { open: 'Open', 'in-progress': 'In progress', done: 'Done' }
 
 export default function RecordView({ app, id }) {
   const record = app.rows.find((row) => row.id === id)
@@ -17,6 +21,11 @@ export default function RecordView({ app, id }) {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [offline, setOffline] = useState(false)
+  const [linkId, setLinkId] = useState('')
+  const [actionTitle, setActionTitle] = useState('')
+  const [actionOwner, setActionOwner] = useState('')
+  const [actionDue, setActionDue] = useState(() => perthDate())
+  const [raising, setRaising] = useState(false)
 
   if (!record) return <p className="note">That record is not on this device.</p>
 
@@ -54,6 +63,42 @@ export default function RecordView({ app, id }) {
     }
   }
 
+  const links = cleanLinks(record.links)
+  const others = app.rows.filter((row) => row.id !== record.id && !links.some((link) => link.id === row.id))
+  const today = perthDate()
+
+  const addLink = () => {
+    if (!linkId) return
+    const next = linkPair(app.rows, record.id, linkId)
+    app.saveRecords(next.filter((row) => row.id === record.id || row.id === linkId))
+    setLinkId('')
+  }
+
+  const removeLink = (otherId) => {
+    const next = unlinkPair(app.rows, record.id, otherId)
+    app.saveRecords(next.filter((row) => row.id === record.id || row.id === otherId))
+  }
+
+  const raiseAction = (event) => {
+    event.preventDefault()
+    const fields = {
+      title: actionTitle,
+      owner: actionOwner,
+      due: actionDue,
+      status: 'open',
+      occurredAt: perthDateTimeLocal().slice(0, 16),
+    }
+    const problem = actionError(fields)
+    if (problem) { setError(problem); return }
+    const action = buildActionRecord({ ruleset: record.ruleset || app.site.ruleset || 'general', fields })
+    const next = linkPair([action, ...app.rows], action.id, record.id)
+    app.saveRecords(next.filter((row) => row.id === action.id || row.id === record.id))
+    setActionTitle('')
+    setActionOwner('')
+    setRaising(false)
+    setError('')
+  }
+
   const closeOut = () => {
     if (!note.trim()) { setError('Add a close-out note.'); return }
     if (!byRole.trim()) { setError('A supervisor or HSE role has to verify the close-out.'); return }
@@ -70,7 +115,7 @@ export default function RecordView({ app, id }) {
   return (
     <>
       <p className="eyebrow">{LABELS[record.kind] || record.kind} · {record.status}</p>
-      <h1>{fields.siteArea || LABELS[record.kind]}</h1>
+      <h1>{record.kind === 'action' ? (fields.title || 'Action') : (fields.siteArea || LABELS[record.kind])}</h1>
       <p className="muted">{formatWhen(fields.occurredAt || record.createdAt)} · driving severity {record.severity || '—'} · {record.ruleset || 'general'} · {record.source}</p>
       <OfflineBanner show={offline || record.sceneResult?.offline} />
       {record.path === 'stopped' && <p className="note">Stopped. A Take 5 answer was No, so the task does not start until a supervisor clears it.</p>}
@@ -79,6 +124,20 @@ export default function RecordView({ app, id }) {
       )}
       {(record.notifiable || record.path === 'escalate') && <Reporting ruleset={record.ruleset} forced={record.notifiable || record.path === 'escalate'} />}
 
+      {record.kind === 'action' && (
+        <div className="panel">
+          <p><strong>{fields.title || 'Action'}. </strong>{fields.note || ''}</p>
+          <p>Owner {fields.owner || '—'} · due {fields.due || '—'} · {STATUS_LABEL[record.status] || record.status}</p>
+          {isOverdue(record, today) && <p className="note">Overdue. The due date has passed and this action is not done.</p>}
+          <div className="actions">
+            {record.status !== 'open' && <Button type="button" kind="ghost" onClick={() => app.updateRecord(record.id, { status: 'open' })}>Open</Button>}
+            {record.status !== 'in-progress' && <Button type="button" kind="ghost" onClick={() => app.updateRecord(record.id, { status: 'in-progress' })}>In progress</Button>}
+            {record.status !== 'done' && <Button type="button" kind="ghost" onClick={() => app.updateRecord(record.id, { status: 'done' })}>Done</Button>}
+          </div>
+        </div>
+      )}
+
+      {record.kind !== 'action' && (
       <div className="panel">
         {NOTE_KINDS.has(record.kind) && (
           <>
@@ -102,11 +161,14 @@ export default function RecordView({ app, id }) {
           <div className="photos">{(fields.photos || record.scenePhotos).map((photo, index) => <img key={index} src={photo} alt="" />)}</div>
         )}
       </div>
+      )}
 
-      <div className="panel" style={{ marginTop: 12 }}>
-        <h2>Possible breach — verify</h2>
-        <FlagList flags={record.flags} />
-      </div>
+      {record.kind !== 'action' && (
+        <div className="panel" style={{ marginTop: 12 }}>
+          <h2>Possible breach — verify</h2>
+          <FlagList flags={record.flags} />
+        </div>
+      )}
 
       {record.correctiveActions?.length > 0 && (
         <div className="panel" style={{ marginTop: 12 }}>
@@ -121,7 +183,54 @@ export default function RecordView({ app, id }) {
         </div>
       )}
 
-      {record.kind !== 'scene-check' && !NOTE_KINDS.has(record.kind) && (
+      <div className="panel" style={{ marginTop: 12 }}>
+        <h2>Linked records</h2>
+        {links.length === 0 && <p className="muted">Nothing linked yet.</p>}
+        {links.map((link) => {
+          const other = app.rows.find((row) => row.id === link.id)
+          const label = other ? `${TIMELINE_LABELS[other.kind] || other.kind}: ${timelineTitle(other)}` : 'Linked record is not on this device'
+          return (
+            <p key={link.id}>
+              <a href={`#/hse/record/${link.id}`}>{label}</a>
+              {' '}
+              <button type="button" className="text-btn" onClick={() => removeLink(link.id)}>Unlink</button>
+            </p>
+          )
+        })}
+        {others.length > 0 && (
+          <div className="admin-inline">
+            <select aria-label="Record to link" value={linkId} onChange={(event) => setLinkId(event.target.value)}>
+              <option value="">Choose a record</option>
+              {others.map((row) => (
+                <option key={row.id} value={row.id}>{TIMELINE_LABELS[row.kind] || row.kind}: {timelineTitle(row)}</option>
+              ))}
+            </select>
+            <Button type="button" kind="ghost" onClick={addLink}>Link</Button>
+          </div>
+        )}
+        {record.kind !== 'action' && !raising && (
+          <Button type="button" kind="ghost" onClick={() => setRaising(true)}>Raise an action</Button>
+        )}
+        {raising && (
+          <form onSubmit={raiseAction} style={{ marginTop: '0.8rem' }}>
+            <Field label="What needs to be done">
+              <input value={actionTitle} onChange={(event) => setActionTitle(event.target.value)} />
+            </Field>
+            <Field label="Owner">
+              <input value={actionOwner} onChange={(event) => setActionOwner(event.target.value)} />
+            </Field>
+            <Field label="Due">
+              <input type="date" value={actionDue} onChange={(event) => setActionDue(event.target.value)} />
+            </Field>
+            <div className="actions">
+              <Button type="submit">Save action</Button>
+              <Button type="button" kind="ghost" onClick={() => setRaising(false)}>Cancel</Button>
+            </div>
+          </form>
+        )}
+      </div>
+
+      {record.kind !== 'scene-check' && record.kind !== 'action' && !NOTE_KINDS.has(record.kind) && (
         <div className="panel" style={{ marginTop: 12 }}>
           <h2>Close-out</h2>
           {record.status === 'closed' ? (

@@ -8,6 +8,7 @@ export const TIMELINE_LABELS = {
   meeting: 'Meeting',
   prestart: 'Prestart',
   toolbox: 'Toolbox talk',
+  action: 'Action',
 }
 
 export const QUICK_ADD = [

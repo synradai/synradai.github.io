@@ -13,6 +13,7 @@ const KINDS = [
   ['meeting', 'Meeting'],
   ['prestart', 'Prestart'],
   ['toolbox', 'Toolbox talk'],
+  ['action', 'Action'],
 ]
 
 function download(filename, text, type) {

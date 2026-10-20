@@ -41,6 +41,11 @@ export default function HseHome({ app }) {
           <strong>Scene photo check</strong>
           <span>Grok looks for missed hazards and possible breach areas.</span>
         </a>
+        <a className="card" href="#/hse/actions">
+          <span className="tag live">Actions</span>
+          <strong>Actions register</strong>
+          <span>Owner, due date, and overdue. Link an action back to the record it came from.</span>
+        </a>
         <a className="card" href="#/hse/audit">
           <span className="tag live">Audit</span>
           <strong>Audit trail</strong>

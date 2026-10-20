@@ -208,6 +208,8 @@ h2 { font-size: 1.15rem; margin: 0 0 0.4rem; font-weight: 650; }
 }
 .tag.live { background: rgba(62, 224, 168, 0.15); color: var(--ok); }
 .tag.preview { background: rgba(255, 177, 90, 0.16); color: var(--amber); }
+.link-row { display: flex; flex-wrap: wrap; gap: 0.35rem 0.7rem; margin-top: 0.45rem; }
+.link-row a { font-size: 0.92rem; }
 .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .btn {
   border-radius: 12px;

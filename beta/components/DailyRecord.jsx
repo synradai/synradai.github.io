@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
+import { isOverdue } from '../lib/actions.js'
 import { QUICK_ADD, recordTime, recordsForDay, timelineDetail, timelineTitle, TIMELINE_LABELS } from '../lib/day.js'
+import { cleanLinks } from '../lib/links.js'
 import { buildNoteRecord } from '../lib/record.js'
 import { go } from '../lib/routes.js'
 import { perthDate, perthDateTimeLocal, shiftDate } from '../lib/time.js'
@@ -93,13 +95,28 @@ export default function DailyRecord({ app }) {
       )}
       {rows.length === 0 && <p className="muted">Nothing filed for this day yet.</p>}
       <div className="grid" style={{ marginTop: '0.8rem' }}>
-        {rows.map((row) => (
-          <a className="card record" href={`#/hse/record/${row.id}`} key={row.id}>
-            <span className="tag live">{TIMELINE_LABELS[row.kind] || row.kind}</span>
-            <strong>{recordTime(row) || '—'} · {timelineTitle(row)}</strong>
-            <span>{timelineDetail(row) || row.status}</span>
-          </a>
-        ))}
+        {rows.map((row) => {
+          const links = cleanLinks(row.links)
+          const overdue = isOverdue(row, today)
+          return (
+            <div className="card record" key={row.id}>
+              <a href={`#/hse/record/${row.id}`}>
+                <span className={`tag ${overdue ? 'preview' : 'live'}`}>{overdue ? 'Overdue' : (TIMELINE_LABELS[row.kind] || row.kind)}</span>
+                <strong>{recordTime(row) || '—'} · {timelineTitle(row)}</strong>
+                <span>{timelineDetail(row) || row.status}</span>
+              </a>
+              {links.length > 0 && (
+                <span className="link-row">
+                  {links.map((link) => {
+                    const other = app.rows.find((item) => item.id === link.id)
+                    const label = other ? `${TIMELINE_LABELS[other.kind] || other.kind}: ${timelineTitle(other)}` : 'Linked record'
+                    return <a key={link.id} href={`#/hse/record/${link.id}`}>{label}</a>
+                  })}
+                </span>
+              )}
+            </div>
+          )
+        })}
       </div>
     </>
   )
