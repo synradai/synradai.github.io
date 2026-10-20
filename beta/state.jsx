@@ -165,8 +165,8 @@ export function AppState({ children }) {
           return merged
         })
         const [indexRes, privateRes] = await Promise.all([
-          supabase.from('injury_case_index').select('id,case_code,event_id,classification,status,restricted_from,rtw_on,created_at'),
-          supabase.from('injury_cases').select('id,case_code,event_id,classification,status,restricted_from,rtw_on,person_name,body_part,treatment,note,user_id,created_at'),
+          supabase.from('injury_case_index').select('id,case_code,event_id,classification,status,restricted_from,rtw_on,review_on,created_at'),
+          supabase.from('injury_cases').select('id,case_code,event_id,classification,status,restricted_from,rtw_on,review_on,person_name,body_part,treatment,mechanism,duties,case_notes,note,user_id,created_at'),
         ])
         if (!cancel && !indexRes.error) {
           const remoteInjury = mergeInjury(indexRes.data || [], privateRes.error ? [] : (privateRes.data || []))
@@ -478,6 +478,10 @@ export function AppState({ children }) {
         bodyPart: fields.bodyPart,
         treatment: fields.treatment,
         note: fields.note,
+        mechanism: fields.mechanism,
+        duties: fields.duties,
+        caseNotes: fields.caseNotes,
+        reviewOn: fields.reviewOn,
         userId: user?.id || '',
       })
       const writeLocal = (item) => {
@@ -490,7 +494,7 @@ export function AppState({ children }) {
       writeLocal(localCase)
       if (!supabase || !user || user.local || mfaGate !== 'ready') return localCase
       const { data, error } = await supabase.from('injury_cases').insert({ id, ...injuryPayload(fields) })
-        .select('id,case_code,event_id,classification,status,restricted_from,rtw_on,person_name,body_part,treatment,note,user_id,created_at')
+        .select('id,case_code,event_id,classification,status,restricted_from,rtw_on,review_on,person_name,body_part,treatment,mechanism,duties,case_notes,note,user_id,created_at')
         .maybeSingle()
       if (error || !data) {
         setCloudNote('Saved on this device. The injury case could not be stored for the organisation yet.')
@@ -521,7 +525,7 @@ export function AppState({ children }) {
       let query = supabase.from('injury_cases').update(injuryPayload(fields)).eq('id', id)
       if (orgIdRef.current) query = query.eq('org_id', orgIdRef.current)
       const { data, error } = await query
-        .select('id,case_code,event_id,classification,status,restricted_from,rtw_on,person_name,body_part,treatment,note,user_id,created_at')
+        .select('id,case_code,event_id,classification,status,restricted_from,rtw_on,review_on,person_name,body_part,treatment,mechanism,duties,case_notes,note,user_id,created_at')
         .maybeSingle()
       if (error || !data) {
         setCloudNote('Saved on this device. The injury case could not be updated for the organisation yet.')
