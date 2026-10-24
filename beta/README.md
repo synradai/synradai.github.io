@@ -73,7 +73,7 @@ The daily record exports CSV and PDF for a day or a date range. Columns are day,
 
 ## Training
 
-`#/training` stores a person, role, course or ticket, completed date, and expiry. A record with an expiry inside 30 days is marked expiring, and a past expiry is expired. The matrix lists each role on the records against the required courses from site configuration. Covered means someone in that role holds a current ticket. Expiring is shown on its own. A gap means the role has no current ticket for that course. Maintenance, stores, and scaffold stay previews.
+`#/training` stores a person, role, site, course or ticket, completed date, and expiry on an `hse_records` row (`kind` `training`), so the existing org RLS and audit trigger cover it. Expiring means the expiry falls within 30 days. The people matrix lists each person against the required courses: current, expiring, expired, or missing. Filter by site and role. A cell that has a record opens that record. Export CSV downloads the filtered grid and writes an audit event. The role matrix stays on the same page. Maintenance, stores, and scaffold stay previews.
 
 ## Inspections
 

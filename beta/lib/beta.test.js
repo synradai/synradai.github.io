@@ -20,7 +20,7 @@ import { investigationRows, signOffError } from './investigation.js'
 import { leadCounts, weekStarting } from './leads.js'
 import { recordDay, recordsForDay } from './day.js'
 import { fileInspection } from './inspections.js'
-import { buildTrainingRecord, matrixRows, trainingState } from './training.js'
+import { buildTrainingRecord, matrixRows, personMatrix, personMatrixCsv, trainingFilters, trainingState } from './training.js'
 import { projectRecord, recordsInRange, recordsToCsv } from './exportRecords.js'
 import { injuryLabel, injuryPayload, mergeInjury, toPublicCase, absenceDays } from './injury.js'
 import { linkPair, unlinkPair } from './links.js'
@@ -527,9 +527,10 @@ test('lead counts use the Perth week and on-time closures', () => {
 })
 
 test('the training matrix marks missing and expired courses as gaps', () => {
-  const current = buildTrainingRecord({ id: 'tr-1', fields: { person: 'Sam', role: 'Fitter', course: 'First aid', completed: '2026-01-01', expiry: '2027-01-01' } })
-  const expiring = buildTrainingRecord({ id: 'tr-2', fields: { person: 'Jo', role: 'Fitter', course: 'White card', completed: '2026-09-01', expiry: '2026-11-01' } })
-  const expired = buildTrainingRecord({ id: 'tr-3', fields: { person: 'Jo', role: 'Operator', course: 'First aid', completed: '2024-01-01', expiry: '2025-01-01' } })
+  const current = buildTrainingRecord({ id: 'tr-1', fields: { person: 'Sam', role: 'Fitter', course: 'First aid', completed: '2026-01-01', expiry: '2027-01-01', siteArea: 'Workshop' } })
+  const expiring = buildTrainingRecord({ id: 'tr-2', fields: { person: 'Jo', role: 'Fitter', course: 'White card', completed: '2026-09-01', expiry: '2026-11-01', siteArea: 'Workshop' } })
+  const expired = buildTrainingRecord({ id: 'tr-3', fields: { person: 'Jo', role: 'Operator', course: 'First aid', completed: '2024-01-01', expiry: '2025-01-01', siteArea: 'Yard' } })
+  assert.throws(() => buildTrainingRecord({ fields: { person: 'Sam', role: 'Fitter', course: 'First aid', completed: '2026-01-01' } }), /site/)
   assert.equal(trainingState(current, '2026-10-19'), 'current')
   assert.equal(trainingState(expiring, '2026-10-19'), 'expiring')
   assert.equal(trainingState(expired, '2026-10-19'), 'expired')
@@ -538,6 +539,22 @@ test('the training matrix marks missing and expired courses as gaps', () => {
   const operator = grid.find((row) => row.role === 'Operator')
   assert.deepEqual(fitter.cells, ['covered', 'expiring', 'gap'])
   assert.deepEqual(operator.cells, ['gap', 'gap', 'gap'])
+  const workshop = buildTrainingRecord({ id: 'tr-4', fields: { person: 'Sam', role: 'Fitter', course: 'First aid', completed: '2026-01-01', expiry: '2027-01-01', siteArea: 'Workshop' } })
+  const yard = buildTrainingRecord({ id: 'tr-5', fields: { person: 'Sam', role: 'Operator', course: 'White card', completed: '2026-01-01', expiry: '2025-01-01', siteArea: 'Yard' } })
+  assert.equal(workshop.fields.siteArea, 'Workshop')
+  const people = personMatrix([current, expiring, expired, workshop, yard], ['First aid', 'White card', 'Confined space'], '2026-10-19')
+  assert.deepEqual(people.map((row) => row.person), ['Jo', 'Sam'])
+  assert.equal(people.find((row) => row.person === 'Sam').cells[0].state, 'current')
+  assert.equal(people.find((row) => row.person === 'Jo').cells[2].state, 'missing')
+  assert.equal(people.find((row) => row.person === 'Jo').cells[2].id, '')
+  const atYard = personMatrix([workshop, yard], ['First aid', 'White card'], '2026-10-19', { site: 'Yard', role: 'Operator' })
+  assert.equal(atYard.length, 1)
+  assert.deepEqual(atYard[0].cells.map((cell) => cell.state), ['missing', 'expired'])
+  assert.equal(atYard[0].cells[1].id, 'tr-5')
+  assert.deepEqual(trainingFilters([workshop, yard]).sites, ['Workshop', 'Yard'])
+  const csv = personMatrixCsv(atYard, ['First aid', 'White card'])
+  assert.match(csv, /Person,First aid,White card/)
+  assert.match(csv, /Sam,Missing,Expired/)
   assert.equal(routeFromHash('#/training').screen, 'training')
 })
 
