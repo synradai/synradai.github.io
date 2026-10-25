@@ -32,6 +32,19 @@ jobs:
           npm run build:beta
           mkdir -p dist/beta
           cp -a dist-beta/. dist/beta/
+      # Safe Intelligence on the LIVE project, served at /app/. Same beta app,
+      # built in mode "app" (the only mode allowed to use the live project).
+      # / and /beta/ are unchanged. These VITE_ values are public client config.
+      - name: Build the live app at /app/
+        env:
+          VITE_SUPABASE_URL: https://rgkiagqexoafmtxhrlqo.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_3AVXvoIyu8rmZslxKNUAtA_hlgIANdL
+          VITE_AI_PROXY_URL: https://rgkiagqexoafmtxhrlqo.supabase.co/functions/v1/generate-grok
+        run: |
+          npm run build:app
+          mkdir -p dist/app
+          cp -a dist-app/. dist/app/
+          sed -i -e 's#"/beta/"#"/app/"#g' -e 's#"Safe Intelligence beta"#"Safe Intelligence"#' -e 's#"SI beta"#"Safe Intel"#' dist/app/manifest.webmanifest
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
