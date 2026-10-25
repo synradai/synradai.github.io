@@ -1,4 +1,4 @@
-import { exportReportPdf } from '../../src/utils/pdf.js'
+import { exportReportPdf } from './reportPdf.js'
 import { resolveForm } from './config.js'
 import { recordsToPdfBody } from './exportRecords.js'
 import { readInvestigation } from './investigation.js'
@@ -9,7 +9,7 @@ function titleFor(record) {
   return `Safe Intelligence — ${names[record.kind] || 'HSE record'}`
 }
 
-export async function exportRecordPdf(record, formsConfig) {
+export async function exportRecordPdf(record, formsConfig, brand = {}) {
   const fields = record.fields || {}
   let rows = []
   const form = resolveForm(record.kind, formsConfig)
@@ -70,17 +70,21 @@ export async function exportRecordPdf(record, formsConfig) {
     title: titleFor(record),
     dateLabel: formatWhen(fields.occurredAt || record.createdAt),
     advisor: fields.reporter || '',
+    clientName: brand.clientName || '',
+    logo: brand.logo || '',
     blocks,
   })
 }
 
-export async function exportInvestigationPdf(record) {
+export async function exportInvestigationPdf(record, brand = {}) {
   const item = readInvestigation(record)
   return exportReportPdf({
     filename: `safe-intelligence-investigation-${record.id}.pdf`,
     title: 'ICAM investigation',
     dateLabel: formatWhen(record.fields?.occurredAt || record.createdAt),
     advisor: item.signOffRole || '',
+    clientName: brand.clientName || '',
+    logo: brand.logo || '',
     blocks: [
       {
         type: 'section',
@@ -119,12 +123,14 @@ export async function exportInvestigationPdf(record) {
   })
 }
 
-export async function exportRangePdf(rows, from, to) {
+export async function exportRangePdf(rows, from, to, brand = {}) {
   return exportReportPdf({
     filename: `safe-intelligence-${from}-to-${to}.pdf`,
     title: 'HSE records',
     dateLabel: `${from} to ${to}`,
     advisor: 'Safe Intelligence beta',
+    clientName: brand.clientName || '',
+    logo: brand.logo || '',
     blocks: [{
       type: 'section',
       heading: `${rows.length} record${rows.length === 1 ? '' : 's'}`,
@@ -133,12 +139,14 @@ export async function exportRangePdf(rows, from, to) {
   })
 }
 
-export async function exportRegisterPdf(rows) {
+export async function exportRegisterPdf(rows, brand = {}) {
   return exportReportPdf({
     filename: 'safe-intelligence-hse-register.pdf',
     title: 'HSE register',
     dateLabel: formatWhen(new Date().toISOString()),
     advisor: 'Safe Intelligence beta',
+    clientName: brand.clientName || '',
+    logo: brand.logo || '',
     blocks: [{
       type: 'section',
       heading: `${rows.length} record${rows.length === 1 ? '' : 's'}`,

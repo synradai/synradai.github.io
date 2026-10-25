@@ -5,6 +5,7 @@ import { selectedOwner } from '../lib/actions.js'
 import { investigationRows, readInvestigation, signOffError } from '../lib/investigation.js'
 import OwnerSelect from './OwnerSelect.jsx'
 import { exportInvestigationPdf } from '../lib/pdfExport.js'
+import { brandFrom } from '../lib/reportPdf.js'
 import { go } from '../lib/routes.js'
 import { compressPhoto } from '../../src/utils/storage.js'
 import { perthDate } from '../lib/time.js'
@@ -223,7 +224,7 @@ export default function Investigate({ app, id }) {
           <Field label="Date"><input type="date" value={investigation.signOffOn} onChange={(event) => setInvestigationField('signOffOn', event.target.value)} /></Field>
           <div className="actions">
             <Button type="button" onClick={signInvestigation}>Sign off</Button>
-            <Button type="button" kind="ghost" onClick={() => exportInvestigationPdf({ ...record, investigation })}>Export PDF</Button>
+            <Button type="button" kind="ghost" onClick={() => exportInvestigationPdf({ ...record, investigation }, brandFrom(app.site))}>Export PDF</Button>
           </div>
         </div>
         <h2>Five whys</h2>

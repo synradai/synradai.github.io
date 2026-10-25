@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { filterRecords, toCsv } from '../lib/csv.js'
 import { formatWhen } from '../lib/time.js'
 import { exportRegisterPdf } from '../lib/pdfExport.js'
+import { brandFrom } from '../lib/reportPdf.js'
 import { Button } from './ui.jsx'
 
 const KINDS = [
@@ -61,7 +62,7 @@ export default function Register({ app }) {
       </div>
       <div className="actions" style={{ marginBottom: 12 }}>
         <Button type="button" kind="ghost" onClick={() => download('hse-register.csv', toCsv(rows), 'text/csv;charset=utf-8')}>Export CSV</Button>
-        <Button type="button" kind="ghost" onClick={() => exportRegisterPdf(rows)}>Export PDF</Button>
+        <Button type="button" kind="ghost" onClick={() => exportRegisterPdf(rows, brandFrom(app.site))}>Export PDF</Button>
       </div>
       {rows.length === 0 && <p className="muted">No records in this filter yet. Capture an incident, hazard, or Take 5 to start the register.</p>}
       <div className="grid">

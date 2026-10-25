@@ -8,6 +8,7 @@ import { cleanLinks, linkPair, unlinkPair } from '../lib/links.js'
 import { formatWhen, perthDate, perthDateTimeLocal } from '../lib/time.js'
 import { go } from '../lib/routes.js'
 import { exportRecordPdf } from '../lib/pdfExport.js'
+import { brandFrom } from '../lib/reportPdf.js'
 import { InjuryChips, InjuryForm } from './Injury.jsx'
 import OwnerSelect from './OwnerSelect.jsx'
 import Reporting from './Reporting.jsx'
@@ -310,7 +311,7 @@ export default function RecordView({ app, id }) {
 
       {error && <p className="note">{error}</p>}
       <div className="actions" style={{ marginTop: 12 }}>
-        <Button type="button" kind="ghost" onClick={() => exportRecordPdf(record, app.formsConfig)}>Export PDF</Button>
+        <Button type="button" kind="ghost" onClick={() => exportRecordPdf(record, app.formsConfig, brandFrom(app.site))}>Export PDF</Button>
         <Button type="button" kind="ghost" onClick={() => go('#/hse/register')}>Register</Button>
         <Button type="button" kind="danger" onClick={async () => {
           if (!window.confirm('Delete this record?')) return

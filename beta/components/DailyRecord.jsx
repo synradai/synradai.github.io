@@ -5,6 +5,7 @@ import { QUICK_ADD, recordTime, recordsForDay, timelineDetail, timelineTitle, TI
 import { projectRecord, recordsInRange, recordsToCsv } from '../lib/exportRecords.js'
 import { cleanLinks } from '../lib/links.js'
 import { exportRangePdf } from '../lib/pdfExport.js'
+import { brandFrom } from '../lib/reportPdf.js'
 import { buildNoteRecord } from '../lib/record.js'
 import { go } from '../lib/routes.js'
 import { perthDate, perthDateTimeLocal, shiftDate } from '../lib/time.js'
@@ -38,7 +39,7 @@ export default function DailyRecord({ app }) {
       setExportNote(err.message || 'The export was not written to the audit trail.')
     }
     if (format === 'pdf') {
-      await exportRangePdf(projected, start, end)
+      await exportRangePdf(projected, start, end, brandFrom(app.site))
       return
     }
     const blob = new Blob([recordsToCsv(projected)], { type: 'text/csv;charset=utf-8' })

@@ -4,9 +4,10 @@ import { go } from '../lib/routes.js'
 export default function Shell({ app, route, children }) {
   const { user, signOut, cloudNote, storageWarning, isAdmin } = app
   const enabled = app.navModules || MODULES.filter((mod) => app.modules[mod.id])
-  const active = route.screen === 'home' || route.screen === 'setup' || route.screen === 'admin'
+  const active = route.screen === 'home' || route.screen === 'setup' || route.screen === 'import' || route.screen === 'admin'
     ? route.screen
     : (['capture', 'scan', 'scene', 'register', 'record', 'investigate', 'hse', 'day', 'audit', 'actions', 'injury', 'inspections', 'dashboard'].includes(route.screen) ? 'hse' : route.screen)
+  const sites = app.site?.sites || []
 
   const link = (mod) => (
     <a
@@ -27,6 +28,19 @@ export default function Shell({ app, route, children }) {
           <span>Safe Intelligence</span>
           <span className="pill">beta 1</span>
         </a>
+        {sites.length > 0 && (
+          <label className="site-switch">
+            <select
+              aria-label="Site"
+              value={app.site.activeSiteId || ''}
+              onChange={(event) => app.selectSite(event.target.value)}
+            >
+              {sites.map((item) => (
+                <option key={item.id} value={item.id}>{item.name}</option>
+              ))}
+            </select>
+          </label>
+        )}
         <button className="text-btn" onClick={signOut}>Sign out</button>
       </header>
       <nav className="phone-nav" aria-label="Modules">
@@ -36,6 +50,8 @@ export default function Shell({ app, route, children }) {
             {mod.label}
           </button>
         ))}
+        <button className={`chip${active === 'setup' ? ' active' : ''}`} onClick={() => go('#/setup')}>Sites</button>
+        <button className={`chip${active === 'import' ? ' active' : ''}`} onClick={() => go('#/import')}>Import</button>
         {isAdmin && <button className={`chip${active === 'admin' ? ' active' : ''}`} onClick={() => go('#/admin')}>Admin</button>}
       </nav>
       <div className="body">
@@ -47,6 +63,7 @@ export default function Shell({ app, route, children }) {
           {enabled.filter((mod) => mod.group === 'register').map(link)}
           <div className="group">Site</div>
           <a href="#/setup" className={active === 'setup' ? 'active' : ''}>Site setup</a>
+          <a href="#/import" className={active === 'import' ? 'active' : ''}>Import</a>
           {isAdmin && <a href="#/admin" className={active === 'admin' ? 'active' : ''}>Admin</a>}
           <button className="linkish" onClick={signOut}>Sign out</button>
         </aside>

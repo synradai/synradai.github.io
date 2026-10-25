@@ -20,6 +20,10 @@ import { investigationRows, signOffError } from './investigation.js'
 import { leadCounts, weekStarting } from './leads.js'
 import { recordDay, recordsForDay } from './day.js'
 import { fileInspection } from './inspections.js'
+import { errorReportCsv, guessMap, missingMapped, parseCsv, planImport } from './import.js'
+import { isUuid, rowsForSite } from './ids.js'
+import { buildPerson } from './people.js'
+import { buildReportPdf } from './reportPdf.js'
 import { buildTrainingRecord, matrixRows, personMatrix, personMatrixCsv, trainingFilters, trainingState } from './training.js'
 import { projectRecord, recordsInRange, recordsToCsv } from './exportRecords.js'
 import { injuryLabel, injuryPayload, mergeInjury, toPublicCase, absenceDays } from './injury.js'
@@ -656,4 +660,93 @@ test('beta records round-trip through the device vault', async () => {
     await sealVault(env)
     Object.defineProperty(globalThis, 'localStorage', { value: previous, configurable: true })
   }
+})
+
+test('sites scope records and a csv import reports the bad rows', () => {
+  assert.equal(routeFromHash('#/import').screen, 'import')
+  assert.equal(routeFromHash('#/setup').screen, 'setup')
+  const siteA = '11111111-1111-4111-8111-111111111111'
+  const visible = rowsForSite([
+    { id: '1', siteId: siteA },
+    { id: '2', siteId: '22222222-2222-4222-8222-222222222222' },
+    { id: '3' },
+  ], siteA)
+  assert.deepEqual(visible.map((row) => row.id), ['1', '3'])
+  assert.equal(isUuid(siteA), true)
+  assert.equal(isUuid('local-main'), false)
+
+  const parsed = parseCsv('\uFEFFperson,role,course,expiry\n"Wood, Sam",Fitter,White card,2026-12-01\n,Fitter,White card,nope\n')
+  assert.deepEqual(parsed.headers, ['person', 'role', 'course', 'expiry'])
+  assert.equal(parsed.rows[0][0], 'Wood, Sam')
+  const map = guessMap(parsed.headers, 'training')
+  assert.equal(map.person, 0)
+  assert.equal(map.course, 2)
+  assert.deepEqual(missingMapped('training', map), [])
+  const planned = planImport({
+    target: 'training',
+    headers: parsed.headers,
+    rows: parsed.rows,
+    map,
+    siteName: 'Yard',
+    siteId: siteA,
+    ruleset: 'general',
+  })
+  assert.equal(planned[0].error, '')
+  assert.equal(planned[0].record.fields.siteArea, 'Yard')
+  assert.equal(planned[0].record.siteId, siteA)
+  assert.match(planned[1].error, /person|date/i)
+  const report = errorReportCsv(parsed.headers, planned)
+  assert.match(report, /row,error,person/)
+  assert.match(report, /Add the person/)
+
+  const incidents = planImport({
+    target: 'incidents',
+    headers: ['description', 'actual', 'potential'],
+    rows: [['Dropped tube', '9', '2'], ['', '2', '2']],
+    map: guessMap(['description', 'actual', 'potential'], 'incidents'),
+    siteName: 'Yard',
+    siteId: siteA,
+  })
+  assert.match(incidents[0].error, /1 to 5/)
+  assert.match(incidents[1].error, /description/i)
+
+  const person = buildPerson({ siteId: siteA, fields: { fullName: 'Sam Wood', role: 'Fitter' } })
+  assert.equal(person.siteId, siteA)
+  assert.equal(isUuid(person.id), true)
+
+  const doc = buildReportPdf({ title: 'Register', clientName: 'Acme', blocks: [] })
+  assert.ok(doc.output('arraybuffer').byteLength > 500)
+  const plain = buildReportPdf({ title: 'Register', logo: 'data:image/png;base64,aaaa', blocks: [] })
+  assert.ok(plain.output('arraybuffer').byteLength > 500)
+
+  const sql = readFileSync(new URL('../../supabase/migrations/20261025030000_sites_import.sql', import.meta.url), 'utf8')
+  assert.match(sql, /org_id = public\.current_org_id\(\)/)
+  assert.match(sql, /create table if not exists public\.sites/)
+  assert.match(sql, /create table if not exists public\.people/)
+  assert.match(sql, /site-logos/)
+  assert.match(sql, /beta_private\.create_default_site/)
+  assert.match(sql, /Main site/)
+  assert.equal(sql.includes('rgkiagqexoafmtxhrlqo'), false)
+
+  const state = readFileSync(new URL('../state.jsx', import.meta.url), 'utf8')
+  assert.match(state, /site_id: isUuid\(row\.siteId\)/)
+  assert.match(state, /from\('sites'\)/)
+  assert.match(state, /from\('people'\)/)
+  const shell = readFileSync(new URL('../components/Shell.jsx', import.meta.url), 'utf8')
+  assert.match(shell, /aria-label="Site"/)
+  const screen = readFileSync(new URL('../components/Import.jsx', import.meta.url), 'utf8')
+  assert.match(screen, /The token is sent once to import a copy\. It is not saved\./)
+  assert.match(screen, /Download error report/)
+  const pdf = readFileSync(new URL('./pdfExport.js', import.meta.url), 'utf8')
+  assert.equal(pdf.includes('src/utils/pdf'), false)
+  assert.match(pdf, /reportPdf/)
+  const livePdf = readFileSync(new URL('../../src/utils/pdf.js', import.meta.url), 'utf8')
+  assert.equal(livePdf.includes('clientName'), false)
+  const fn = readFileSync(new URL('../../supabase/functions/airtable-import/index.ts', import.meta.url), 'utf8')
+  assert.match(fn, /requireAal2\(authHeader\)/)
+  assert.match(fn, /https:\/\/api\.airtable\.com/)
+  assert.equal(fn.includes('console.log'), false)
+  assert.match(fn, /not saved/)
+  const fnConfig = readFileSync(new URL('../../supabase/config.toml', import.meta.url), 'utf8')
+  assert.match(fnConfig, /\[functions\.airtable-import\]/)
 })

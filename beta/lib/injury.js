@@ -1,4 +1,5 @@
 import { generateId } from '../../src/utils/storage.js'
+import { isUuid } from './ids.js'
 
 export const CLASSIFICATIONS = [
   ['FAI', 'FAI — first aid'],
@@ -55,6 +56,7 @@ export function toPublicCase(row) {
     rtwOn: row.rtw_on || row.rtwOn || '',
     reviewOn: row.review_on || row.reviewOn || '',
     createdAt: row.created_at || row.createdAt || '',
+    siteId: row.site_id || row.siteId || '',
     private: false,
   }
 }
@@ -103,7 +105,7 @@ export function nextCaseCode(cases) {
 
 export function injuryPayload(fields) {
   const dateOrNull = (value) => (/^\d{4}-\d{2}-\d{2}$/.test(String(value || '')) ? value : null)
-  return {
+  const payload = {
     event_id: String(fields.eventId || '').trim(),
     person_name: String(fields.personName || '').trim(),
     body_part: String(fields.bodyPart || '').trim(),
@@ -118,6 +120,8 @@ export function injuryPayload(fields) {
     case_notes: String(fields.caseNotes || '').trim(),
     review_on: dateOrNull(fields.reviewOn),
   }
+  if (isUuid(fields.siteId)) payload.site_id = fields.siteId
+  return payload
 }
 
 export function blankInjury(eventId) {

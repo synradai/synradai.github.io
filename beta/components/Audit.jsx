@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { auditToCsv, filterAudit } from '../lib/audit.js'
-import { exportReportPdf } from '../../src/utils/pdf.js'
+import { brandFrom, exportReportPdf } from '../lib/reportPdf.js'
 import { supabase } from '../lib/supabase.js'
 import { formatWhen, perthDate } from '../lib/time.js'
 import { Button } from './ui.jsx'
@@ -19,6 +19,8 @@ const ENTITIES = [
   ['injury_cases', 'Injury cases'],
   ['app_config', 'Configuration'],
   ['audit_events', 'Audit export'],
+  ['sites', 'Sites'],
+  ['people', 'People'],
 ]
 
 function download(filename, text) {
@@ -72,6 +74,7 @@ export default function Audit({ app }) {
         title: 'Audit trail',
         dateLabel: query.day || 'All loaded days',
         advisor: 'Safe Intelligence beta',
+        ...brandFrom(app.site),
         blocks: [{
           type: 'section',
           heading: `${rows.length} event${rows.length === 1 ? '' : 's'}`,

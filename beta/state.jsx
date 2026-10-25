@@ -2,7 +2,9 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import { STORAGE_KEYS } from '../src/constants.js'
 import { defaultModulePrefs } from './config/modules.js'
 import { moduleRows, resolveMatrix, resolveTemplates, resolveWording, visibleModules } from './lib/config.js'
+import { isUuid, rowsForSite } from './lib/ids.js'
 import { injuryError, injuryPayload, mergeInjury, nextCaseCode, toPrivateCase } from './lib/injury.js'
+import { logoError, readImageFile } from './lib/logo.js'
 import { getMfaGate } from './lib/mfa.js'
 import { INJURY_KEY, LOCAL_KEY, MODULE_KEY, SITE_KEY, loadInjuryCases, loadModulePrefs, loadRows, loadSite, mergeRows, saveInjuryCases, saveModulePrefs, saveRows, saveSite, slimForCloud } from './lib/store.js'
 import { generateId } from '../src/utils/storage.js'
@@ -14,6 +16,31 @@ import { safeGetItem } from '../src/utils/storage.js'
 
 const AppContext = createContext(null)
 const LOCAL_USER_KEY = 'si-beta-local-user'
+
+function withActive(prev, patch) {
+  const next = { ...prev, ...patch }
+  const sites = next.sites || []
+  const active = sites.find((item) => item.id === next.activeSiteId) || sites[0]
+  if (!active) return next
+  return {
+    ...next,
+    activeSiteId: active.id,
+    siteName: active.name,
+    ruleset: active.ruleset || 'general',
+    mine: (active.ruleset || 'general') === 'mines',
+  }
+}
+
+async function downloadLogo(path) {
+  if (!supabase || !path) return ''
+  try {
+    const { data, error } = await supabase.storage.from('site-logos').download(path)
+    if (error || !data) return ''
+    return await readImageFile(data)
+  } catch {
+    return ''
+  }
+}
 
 function emailCodeMessage(error) {
   const blob = `${error?.code || ''} ${error?.message || ''}`.toLowerCase()
@@ -162,8 +189,50 @@ export function AppState({ children }) {
             if (!members.some((person) => person.id === userId)) members.unshift({ id: userId, name: selfName })
             setOrgMembers(members)
           }
+          const [orgRes, siteRes, peopleRes] = await Promise.all([
+            supabase.from('organisations').select('name').eq('id', profile.org_id).maybeSingle(),
+            supabase.from('sites').select('id,name,client_name,logo_path,ruleset,created_at').order('created_at'),
+            supabase.from('people').select('id,site_id,full_name,role,email,phone'),
+          ])
+          if (!cancel && !sealing.current && !siteRes.error && siteRes.data?.length) {
+            const loadedSites = await Promise.all(siteRes.data.map(async (row) => ({
+              id: row.id,
+              name: row.name,
+              clientName: row.client_name || '',
+              ruleset: row.ruleset || 'general',
+              logoPath: row.logo_path || '',
+              logoDataUrl: row.logo_path ? await downloadLogo(row.logo_path) : '',
+            })))
+            const loadedPeople = peopleRes.error ? null : (peopleRes.data || []).map((person) => ({
+              id: person.id,
+              siteId: person.site_id,
+              fullName: person.full_name || '',
+              role: person.role || '',
+              email: person.email || '',
+              phone: person.phone || '',
+            }))
+            if (!cancel && !sealing.current) {
+              setSite((prev) => {
+                const known = loadedSites.find((item) => item.id === prev.activeSiteId)
+                  || loadedSites.find((item) => item.name === prev.siteName)
+                  || loadedSites[0]
+                const next = withActive(prev, {
+                  orgName: orgRes.data?.name || prev.orgName || '',
+                  sites: loadedSites.map((item) => ({
+                    ...item,
+                    logoDataUrl: item.logoDataUrl || prev.sites?.find((local) => local.id === item.id)?.logoDataUrl || '',
+                  })),
+                  people: loadedPeople || prev.people || [],
+                  activeSiteId: known.id,
+                  setupDone: true,
+                })
+                saveSite(next).catch(() => {})
+                return next
+              })
+            }
+          }
         }
-        const { data, error } = await supabase.from('hse_records').select('id,kind,payload,updated_at')
+        const { data, error } = await supabase.from('hse_records').select('id,kind,payload,updated_at,site_id')
         if (cancel || sealing.current) return
         if (error) {
           setCloudNote('Cloud register is not on this project yet. Records stay on this device until the beta hse_records migration is applied.')
@@ -173,6 +242,7 @@ export function AppState({ children }) {
           ...(row.payload || {}),
           id: row.id,
           kind: row.kind || row.payload?.kind,
+          siteId: row.site_id || row.payload?.siteId || '',
           updatedAt: row.payload?.updatedAt || row.updated_at,
         }))
         setRows((prev) => {
@@ -181,8 +251,8 @@ export function AppState({ children }) {
           return merged
         })
         const [indexRes, privateRes] = await Promise.all([
-          supabase.from('injury_case_index').select('id,case_code,event_id,classification,status,restricted_from,rtw_on,review_on,created_at'),
-          supabase.from('injury_cases').select('id,case_code,event_id,classification,status,restricted_from,rtw_on,review_on,person_name,body_part,treatment,mechanism,duties,case_notes,note,user_id,created_at'),
+          supabase.from('injury_case_index').select('id,case_code,event_id,classification,status,restricted_from,rtw_on,review_on,created_at,site_id'),
+          supabase.from('injury_cases').select('id,case_code,event_id,classification,status,restricted_from,rtw_on,review_on,person_name,body_part,treatment,mechanism,duties,case_notes,note,user_id,created_at,site_id'),
         ])
         if (!cancel && !indexRes.error) {
           const remoteInjury = mergeInjury(indexRes.data || [], privateRes.error ? [] : (privateRes.data || []))
@@ -275,6 +345,7 @@ export function AppState({ children }) {
       id: row.id,
       org_id: orgId,
       user_id: user.id,
+      site_id: isUuid(row.siteId) ? row.siteId : null,
       kind: row.kind,
       payload: slimForCloud(row),
       updated_at: row.updatedAt,
@@ -286,7 +357,7 @@ export function AppState({ children }) {
     ready,
     user,
     recovery,
-    rows,
+    rows: rowsForSite(rows, site.activeSiteId),
     modules,
     site,
     cloudNote,
@@ -433,13 +504,14 @@ export function AppState({ children }) {
       window.location.hash = '#/'
     },
     addRecord(row) {
-      const next = [row, ...rows.filter((item) => item.id !== row.id)]
+      const stamped = { ...row, siteId: row.siteId || site.activeSiteId || '' }
+      const next = [stamped, ...rows.filter((item) => item.id !== stamped.id)]
       persist(next)
-      push(row)
+      push(stamped)
     },
     saveRecords(list) {
       const now = new Date().toISOString()
-      const incoming = new Map((list || []).filter((row) => row?.id).map((row) => [row.id, { ...row, updatedAt: now }]))
+      const incoming = new Map((list || []).filter((row) => row?.id).map((row) => [row.id, { ...row, siteId: row.siteId || site.activeSiteId || '', updatedAt: now }]))
       const existing = new Set(rows.map((row) => row.id))
       const added = []
       for (const row of incoming.values()) {
@@ -522,8 +594,10 @@ export function AppState({ children }) {
       const problem = injuryError(fields)
       if (problem) throw new Error(problem)
       const id = fields.id || generateId()
+      const siteId = fields.siteId || site.activeSiteId || ''
       const localCase = toPrivateCase({
         id,
+        siteId,
         caseCode: nextCaseCode(injuryCases),
         eventId: fields.eventId,
         classification: fields.classification,
@@ -550,8 +624,8 @@ export function AppState({ children }) {
       }
       writeLocal(localCase)
       if (!supabase || !user || user.local || mfaGate !== 'ready') return localCase
-      const { data, error } = await supabase.from('injury_cases').insert({ id, ...injuryPayload(fields) })
-        .select('id,case_code,event_id,classification,status,restricted_from,rtw_on,review_on,person_name,body_part,treatment,mechanism,duties,case_notes,note,user_id,created_at')
+      const { data, error } = await supabase.from('injury_cases').insert({ id, ...injuryPayload({ ...fields, siteId }) })
+        .select('id,case_code,event_id,classification,status,restricted_from,rtw_on,review_on,person_name,body_part,treatment,mechanism,duties,case_notes,note,user_id,created_at,site_id')
         .maybeSingle()
       if (error || !data) {
         setCloudNote('Saved on this device. The injury case could not be stored for the organisation yet.')
@@ -566,10 +640,12 @@ export function AppState({ children }) {
       if (!existing?.private) throw new Error('This case is not open for you to edit.')
       const problem = injuryError(fields)
       if (problem) throw new Error(problem)
+      const siteId = fields.siteId || existing.siteId || site.activeSiteId || ''
       const localCase = toPrivateCase({
         ...existing,
         ...fields,
         id,
+        siteId,
         caseCode: existing.caseCode,
         userId: existing.userId,
       })
@@ -579,10 +655,10 @@ export function AppState({ children }) {
         return next
       })
       if (!supabase || !user || user.local || mfaGate !== 'ready') return localCase
-      let query = supabase.from('injury_cases').update(injuryPayload(fields)).eq('id', id)
+      let query = supabase.from('injury_cases').update(injuryPayload({ ...fields, siteId })).eq('id', id)
       if (orgIdRef.current) query = query.eq('org_id', orgIdRef.current)
       const { data, error } = await query
-        .select('id,case_code,event_id,classification,status,restricted_from,rtw_on,review_on,person_name,body_part,treatment,mechanism,duties,case_notes,note,user_id,created_at')
+        .select('id,case_code,event_id,classification,status,restricted_from,rtw_on,review_on,person_name,body_part,treatment,mechanism,duties,case_notes,note,user_id,created_at,site_id')
         .maybeSingle()
       if (error || !data) {
         setCloudNote('Saved on this device. The injury case could not be updated for the organisation yet.')
@@ -603,11 +679,182 @@ export function AppState({ children }) {
       saveModulePrefs(next).catch(() => {})
     },
     setSite(patch) {
-      const next = { ...site, ...patch }
-      setSite(next)
-      saveSite(next).catch(() => {})
+      setSite((prev) => {
+        let sites = prev.sites || []
+        if (patch.siteName != null || patch.ruleset != null || patch.clientName != null) {
+          sites = sites.map((item) => (item.id === prev.activeSiteId ? {
+            ...item,
+            name: patch.siteName ?? item.name,
+            ruleset: patch.ruleset ?? item.ruleset,
+            clientName: patch.clientName ?? item.clientName,
+          } : item))
+        }
+        const next = withActive({ ...prev, sites }, patch)
+        saveSite(next).catch(() => {})
+        return next
+      })
     },
-    injuryCases,
+    selectSite(id) {
+      setSite((prev) => {
+        const next = withActive(prev, { activeSiteId: id, setupDone: true })
+        saveSite(next).catch(() => {})
+        return next
+      })
+    },
+    async addSite({ name, ruleset = 'general', clientName = '' } = {}) {
+      const cleanName = String(name || '').trim()
+      if (!cleanName) throw new Error('Add the site name.')
+      const draft = {
+        id: crypto.randomUUID(),
+        name: cleanName,
+        clientName: String(clientName || '').trim(),
+        ruleset: ruleset || 'general',
+        logoPath: '',
+        logoDataUrl: '',
+      }
+      const remember = (item) => {
+        setSite((prev) => {
+          const sites = [...(prev.sites || []).filter((siteRow) => siteRow.id !== item.id), item]
+          const next = withActive(prev, { sites, activeSiteId: item.id, setupDone: true })
+          saveSite(next).catch(() => {})
+          return next
+        })
+      }
+      if (!supabase || !user || user.local || mfaGate !== 'ready') {
+        remember(draft)
+        return draft
+      }
+      const { data, error } = await supabase.from('sites').insert({
+        name: draft.name,
+        client_name: draft.clientName,
+        ruleset: draft.ruleset,
+      }).select('id,name,client_name,logo_path,ruleset').single()
+      if (error) throw new Error(error.message || 'Could not add that site.')
+      const saved = {
+        id: data.id,
+        name: data.name,
+        clientName: data.client_name || '',
+        ruleset: data.ruleset || 'general',
+        logoPath: data.logo_path || '',
+        logoDataUrl: '',
+      }
+      remember(saved)
+      return saved
+    },
+    async updateSite(id, patch) {
+      setSite((prev) => {
+        const sites = (prev.sites || []).map((item) => (item.id === id ? { ...item, ...patch } : item))
+        const next = withActive(prev, { sites })
+        saveSite(next).catch(() => {})
+        return next
+      })
+      if (!supabase || !user || user.local || mfaGate !== 'ready') return
+      const row = {}
+      if (patch.name != null) row.name = patch.name
+      if (patch.clientName != null) row.client_name = patch.clientName
+      if (patch.ruleset != null) row.ruleset = patch.ruleset
+      if (patch.logoPath != null) row.logo_path = patch.logoPath
+      if (!Object.keys(row).length) return
+      const { error } = await supabase.from('sites').update(row).eq('id', id)
+      if (error) throw new Error(error.message || 'Could not save that site.')
+    },
+    async removeSite(id) {
+      if ((site.sites || []).length <= 1) throw new Error('Keep at least one site.')
+      if (supabase && user && !user.local && mfaGate === 'ready') {
+        const { error } = await supabase.from('sites').delete().eq('id', id)
+        if (error) throw new Error('This site still has records, or it could not be removed.')
+      }
+      setSite((prev) => {
+        const sites = (prev.sites || []).filter((item) => item.id !== id)
+        const active = sites.find((item) => item.id === prev.activeSiteId) || sites[0]
+        const next = withActive(prev, { sites, activeSiteId: active?.id || '' })
+        saveSite(next).catch(() => {})
+        return next
+      })
+    },
+    async uploadLogo(id, file) {
+      const problem = logoError(file)
+      if (problem) throw new Error(problem)
+      const dataUrl = await readImageFile(file)
+      if (!supabase || !user || user.local || mfaGate !== 'ready') {
+        setSite((prev) => {
+          const sites = (prev.sites || []).map((item) => (item.id === id ? { ...item, logoDataUrl: dataUrl, logoPath: '' } : item))
+          const next = withActive(prev, { sites })
+          saveSite(next).catch(() => {})
+          return next
+        })
+        return
+      }
+      const orgId = await orgIdForUser()
+      if (!orgId) throw new Error('Your account has no organisation yet.')
+      const path = `${orgId}/${id}/logo`
+      const { error } = await supabase.storage.from('site-logos').upload(path, file, {
+        upsert: true,
+        contentType: file.type,
+        cacheControl: '3600',
+      })
+      if (error) throw new Error(error.message || 'Could not store the logo.')
+      const { error: rowError } = await supabase.from('sites').update({ logo_path: path }).eq('id', id)
+      if (rowError) throw new Error(rowError.message || 'Could not save the logo on this site.')
+      setSite((prev) => {
+        const sites = (prev.sites || []).map((item) => (item.id === id ? { ...item, logoPath: path, logoDataUrl: dataUrl } : item))
+        const next = withActive(prev, { sites })
+        saveSite(next).catch(() => {})
+        return next
+      })
+    },
+    async saveOrgName(name) {
+      const clean = String(name || '').trim()
+      if (!clean) throw new Error('Add the company name.')
+      setSite((prev) => {
+        const next = { ...prev, orgName: clean }
+        saveSite(next).catch(() => {})
+        return next
+      })
+      if (!supabase || !user || user.local || mfaGate !== 'ready') return
+      const orgId = await orgIdForUser()
+      if (!orgId) throw new Error('Your account has no organisation yet.')
+      const { error } = await supabase.from('organisations').update({ name: clean }).eq('id', orgId)
+      if (error) throw new Error(error.message || 'Could not save the company name.')
+    },
+    async commitImport({ records = [], people = [] } = {}) {
+      if (records.length) {
+        const now = new Date().toISOString()
+        const stamped = records.map((row) => ({
+          ...row,
+          siteId: row.siteId || site.activeSiteId || '',
+          updatedAt: now,
+        }))
+        const ids = new Set(stamped.map((row) => row.id))
+        persist([...stamped, ...rows.filter((row) => !ids.has(row.id))])
+        for (const row of stamped) push(row)
+      }
+      if (!people.length) return
+      setSite((prev) => {
+        const incoming = new Map(people.map((person) => [person.id, person]))
+        const nextPeople = [...people, ...(prev.people || []).filter((person) => !incoming.has(person.id))]
+        const next = { ...prev, people: nextPeople }
+        saveSite(next).catch(() => {})
+        return next
+      })
+      if (!supabase || !user || user.local || mfaGate !== 'ready') return
+      const payload = people
+        .filter((person) => isUuid(person.id) && isUuid(person.siteId))
+        .map((person) => ({
+          id: person.id,
+          site_id: person.siteId,
+          full_name: person.fullName,
+          role: person.role || '',
+          email: person.email || '',
+          phone: person.phone || '',
+        }))
+      if (!payload.length) return
+      const { error } = await supabase.from('people').upsert(payload, { onConflict: 'id' })
+      if (error) setCloudNote('Saved on this device. People could not be stored for the organisation yet.')
+    },
+    injuryCases: rowsForSite(injuryCases, site.activeSiteId),
+    people: (site.people || []).filter((person) => person.siteId === site.activeSiteId),
+    canManageSites: Boolean(user?.local) || !isBackendEnabled || orgRole === 'admin',
     orgMembers,
     orgRole,
     wording: resolveWording(remoteConfig.wording?.value),

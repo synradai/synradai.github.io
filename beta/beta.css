@@ -85,6 +85,7 @@ a { color: var(--blue); }
   top: 0;
   z-index: 20;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
@@ -92,6 +93,15 @@ a { color: var(--blue); }
   background: rgba(7, 11, 20, 0.86);
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(16px);
+}
+.site-switch { flex: 1 1 100%; min-width: 0; }
+.site-switch select { width: 100%; }
+.import-map { display: grid; gap: 0.75rem; }
+.import-preview { overflow-x: auto; }
+.row-error { color: #ffb4b4; }
+@media (min-width: 800px) {
+  .site-switch { flex: 0 1 16rem; margin-left: auto; }
+  .import-map { grid-template-columns: 1fr 1fr; }
 }
 .brand {
   display: flex;
