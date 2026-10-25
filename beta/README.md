@@ -19,7 +19,7 @@ Open `http://localhost:4174/beta/`.
 
 To put it on GitHub Pages later, copy the contents of `dist-beta/` into the site at `/beta/` and deploy **with** the service-worker change on this branch (`/beta` is excluded from the live app shell). Do not merge until that is intended. The live site does not change until `main` is updated.
 
-Sign-in and sign-up are the same screen. Enter an email and choose **Email me a 6-digit code**. That calls `signInWithOtp` with `shouldCreateUser: true`, so a new address creates an `auth.users` row and an existing address signs in. There is no separate `#/join` page. Password sign-in stays behind **Use a password instead**. A returning browser session skips the email step and asks only for the authenticator code. A new address is sent the Confirm signup email. A later code is sent with the Magic Link template. Both templates must contain `{{ .Token }}` and must not contain `{{ .ConfirmationURL }}`, or the message is a link instead of a code. Dashboard: Authentication → Emails → Templates → Confirm signup, and the same for Magic Link. Subject: `Your Safe Intelligence code`. Body: `Your Safe Intelligence code is {{ .Token }}`. It expires in an hour. Add these to the beta project's Auth redirect allow list (needed if a link is still in a template):
+Sign-in and sign-up are the same screen. Enter an email and choose **Email me a 6-digit code**. That calls `signInWithOtp` with `shouldCreateUser: true`, so a new address creates an `auth.users` row and an existing address signs in. There is no separate `#/join` page. Password sign-in stays behind **Use a password instead**. The emailed code is the whole sign-in. There is no authenticator step. A new address is sent the Confirm signup email. A later code is sent with the Magic Link template. Both templates must contain `{{ .Token }}` and must not contain `{{ .ConfirmationURL }}`, or the message is a link instead of a code. Dashboard: Authentication → Emails → Templates → Confirm signup, and the same for Magic Link. Subject: `Your Safe Intelligence code`. Body: `Your Safe Intelligence code is {{ .Token }}`. It expires in an hour. Add these to the beta project's Auth redirect allow list (needed if a link is still in a template):
 
 - `https://synradai.github.io/beta/`
 - `http://localhost:4174/beta/`
@@ -47,7 +47,7 @@ supabase functions deploy generate-grok --project-ref <beta-ref>
 
 Secrets: `XAI_API_KEY`. Optional: `XAI_TEXT_MODEL` and `XAI_VISION_MODEL` (both default `grok-4.7`), `AI_PROVIDER` (`xai` default, or `anthropic`), `AI_FALLBACK` (`none` default, or `anthropic`), `ANTHROPIC_API_KEY`, `CLAUDE_MODEL`, `AI_DAILY_LIMIT`.
 
-`generate-grok` calls the xAI Responses API (`grok-4.7`, reasoning effort `low`). It checks the signed-in user with `auth.getUser()` and does not check subscription or trial. `supabase/config.toml` sets `verify_jwt = false` for this function, because the beta project signs ES256 tokens. The daily cap uses the existing `bump_ai_usage` function. Redeploy `generate-grok` after pulling these changes.
+`generate-grok` calls the xAI Responses API (`grok-4.7`, reasoning effort `low`). It checks the signed-in user with `auth.getUser()` and does not require an authenticator. It does not check subscription or trial. `supabase/config.toml` sets `verify_jwt = false` for this function, because the beta project signs ES256 tokens. The daily cap uses the existing `bump_ai_usage` function. Redeploy `generate-grok` after pulling these changes.
 
 Deploy **`submit-form`** to the beta project as well. It is public: a worker has no session. `verify_jwt` is false and the function checks the QR token itself. It does not call `requireAal2`. Photo and signature files go in the private `form-evidence` bucket. A stop-the-job action is stored in the app. Email is left as `emailHook: pending` until `RESEND_API_KEY` and `RESEND_FROM` are set; this function does not send mail.
 
@@ -119,7 +119,7 @@ On an incident (`#/hse/record/<id>`), flag it as notifiable to WorkSafe. That se
 
 https://synradai.github.io/beta/#/admin
 
-Trent opens https://synradai.github.io/beta/, enters `trentrwood@outlook.com` or `nextlevelaccess@outlook.com`, and requests the 6-digit code. The signup trigger adds that user to `beta_admins`. He then enrols an authenticator. Configuration saves only after the session is authenticator-verified (aal2). Anyone else sees a closed page.
+Trent opens https://synradai.github.io/beta/, enters `trentrwood@outlook.com` or `nextlevelaccess@outlook.com`, and requests the 6-digit code. That code signs him in. The signup trigger adds that user to `beta_admins`. Configuration saves for a listed beta admin. Anyone else sees a closed page.
 
 Labels, form fields, module order, inspection templates, and training-matrix columns are stored per organisation. The app reads them at startup, refreshes when the window regains focus, and listens on Supabase realtime. Reset to default removes that key so the built-in copy is used again. Each save or reset writes an audit event with the before and after values.
 

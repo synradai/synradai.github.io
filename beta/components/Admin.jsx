@@ -3,8 +3,6 @@ import QrFormEditor from './QrFormEditor.jsx'
 import { CONFIG_KEYS, addCustomField, initialDraft, prepareConfig } from '../lib/config.js'
 import { supabase } from '../lib/supabase.js'
 import { formatWhen } from '../lib/time.js'
-import TwoFactorChallenge from './TwoFactorChallenge.jsx'
-import TwoFactorEnroll from './TwoFactorEnroll.jsx'
 import { Button } from './ui.jsx'
 
 function move(list, index, dir) {
@@ -17,20 +15,15 @@ function move(list, index, dir) {
 }
 
 export default function Admin({ app }) {
-  if (!app.user?.local && app.mfaGate && app.mfaGate !== 'ready') {
-    if (app.mfaGate === 'enroll') return <TwoFactorEnroll onVerified={app.refreshMfa} onSignOut={app.signOut} />
-    if (app.mfaGate === 'challenge') return <TwoFactorChallenge onVerified={app.refreshMfa} onSignOut={app.signOut} />
-    return <p className="muted">Checking two-factor authentication…</p>
-  }
   if (app.backend && !app.adminChecked) return <p className="muted">Checking access…</p>
   if (!app.isAdmin) {
     return (
       <>
         <p className="eyebrow">Admin</p>
         <h1>Admin is closed</h1>
-        <p className="lede">This page is only for a listed beta admin on a verified two-factor session.</p>
+        <p className="lede">This page is only for a listed beta admin.</p>
         <div className="panel">
-          <p>Sign in on the beta project. Confirm the email if the account is new, then finish authenticator enrolment when the app asks.</p>
+          <p>Sign in on the beta project with the emailed code. A listed admin can edit the configuration.</p>
           <p className="muted">Device-only mode has no admin list.</p>
         </div>
       </>
