@@ -55,20 +55,54 @@ export async function saveModulePrefs(prefs) {
   return safeSetItem(MODULE_KEY, JSON.stringify({ ...prefs, hse: true }))
 }
 
+function cleanSites(list) {
+  if (!Array.isArray(list)) return []
+  return list.filter((item) => item && item.id).map((item) => ({
+    id: item.id,
+    name: item.name || 'Main site',
+    clientName: item.clientName || '',
+    ruleset: item.ruleset || 'general',
+    logoPath: item.logoPath || '',
+    logoDataUrl: typeof item.logoDataUrl === 'string' && item.logoDataUrl.startsWith('data:image/') ? item.logoDataUrl : '',
+  }))
+}
+
 export function loadSite() {
   const saved = loadJson(SITE_KEY, {}) || {}
-  const ruleset = saved.ruleset || (saved.mine ? 'mines' : 'general')
+  const fallbackRuleset = saved.ruleset || (saved.mine ? 'mines' : 'general')
+  let sites = cleanSites(saved.sites)
+  if (!sites.length) {
+    sites = [{
+      id: 'local-main',
+      name: saved.siteName || 'Main site',
+      clientName: '',
+      ruleset: fallbackRuleset || 'general',
+      logoPath: '',
+      logoDataUrl: '',
+    }]
+  }
+  const active = sites.find((item) => item.id === saved.activeSiteId) || sites[0]
   return {
-    siteName: '',
-    setupDone: false,
-    ...saved,
-    ruleset,
-    mine: ruleset === 'mines',
+    orgName: saved.orgName || '',
+    setupDone: Boolean(saved.setupDone),
+    sites,
+    people: Array.isArray(saved.people) ? saved.people : [],
+    activeSiteId: active.id,
+    siteName: active.name,
+    ruleset: active.ruleset || 'general',
+    mine: (active.ruleset || 'general') === 'mines',
   }
 }
 
 export async function saveSite(site) {
-  return safeSetItem(SITE_KEY, JSON.stringify(site))
+  const copy = {
+    ...site,
+    sites: (site?.sites || []).map((item) => ({
+      ...item,
+      logoDataUrl: item.logoDataUrl && item.logoDataUrl.length < 350000 ? item.logoDataUrl : '',
+    })),
+  }
+  return safeSetItem(SITE_KEY, JSON.stringify(copy))
 }
 
 function hasDevicePhotos(list) {

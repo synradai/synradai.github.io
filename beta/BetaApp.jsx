@@ -21,6 +21,7 @@ import RecordView from './components/RecordView.jsx'
 import Register from './components/Register.jsx'
 import SceneCheck from './components/SceneCheck.jsx'
 import Shell from './components/Shell.jsx'
+import Import from './components/Import.jsx'
 import SiteSetup from './components/SiteSetup.jsx'
 import { FORMS } from './config/forms.js'
 import { routeFromHash } from './lib/routes.js'
@@ -100,6 +101,7 @@ function Screen({ route }) {
 
   let body = <Home app={app} />
   if (route.screen === 'setup') body = <SiteSetup app={app} />
+  else if (route.screen === 'import') body = <Import app={app} />
   else if (route.screen === 'hse') body = <HseHome app={app} />
   else if (route.screen === 'dashboard') body = <Dashboard app={app} />
   else if (route.screen === 'day') body = <DailyRecord app={app} />

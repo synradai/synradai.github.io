@@ -9,6 +9,7 @@ export function routeFromHash(hash) {
   const parts = path.split('/').filter(Boolean)
   if (!parts.length) return { screen: 'home' }
   if (parts[0] === 'setup') return { screen: 'setup' }
+  if (parts[0] === 'import') return { screen: 'import' }
   if (parts[0] === 'admin') return { screen: 'admin' }
   if (parts[0] === 'hse') {
     if (parts[1] === 'dashboard') return { screen: 'dashboard' }

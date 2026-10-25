@@ -71,6 +71,12 @@ The daily record exports CSV and PDF for a day or a date range. Columns are day,
 
 `#/kpis` counts the selected week, Monday to Sunday in Western Australia: prestarts, toolbox talks, inspections, observations (hazard reports), and actions marked done on or before their due date. Each count has a starter target. Maintenance, stores, and scaffold stay previews.
 
+## Sites and import
+
+One company is one organisation. `#/setup` names the company and each site, including the client name and a logo stored in the private `site-logos` bucket. The header switches the active site. New records, injury cases, and imported people take that site id. Existing rows were backfilled onto a site named Main site. Organisation admins (`profiles.role = admin`) change sites, the company name, and the logo. PDF exports for the active site print that client name and logo.
+
+`#/import` copies a CSV into training records, people, actions, or incidents on the active site. Map the columns, preview the rows, import the valid ones, and download an error report for the rest. An Airtable import is a one-off copy: paste a personal access token and a base ID, pick a table, map fields, and import. The token is sent once to the `airtable-import` edge function and is not stored. There is no live sync.
+
 ## Training
 
 `#/training` stores a person, role, site, course or ticket, completed date, and expiry on an `hse_records` row (`kind` `training`), so the existing org RLS and audit trigger cover it. Expiring means the expiry falls within 30 days. The people matrix lists each person against the required courses: current, expiring, expired, or missing. Filter by site and role. A cell that has a record opens that record. Export CSV downloads the filtered grid and writes an audit event. The role matrix stays on the same page. Maintenance, stores, and scaffold stay previews.

@@ -19,7 +19,12 @@ export default function Home({ app }) {
         <a className="card" href="#/setup">
           <span className="tag">Site</span>
           <strong>Site setup</strong>
-          <span>Answer a few questions to show or hide modules.</span>
+          <span>Company, sites, client name, and the logo used on PDFs.</span>
+        </a>
+        <a className="card" href="#/import">
+          <span className="tag">Site</span>
+          <strong>Import</strong>
+          <span>Bring in a CSV, or a one-off copy from Airtable.</span>
         </a>
       </div>
       <p className="hint" style={{ marginTop: '1rem' }}>{REPEALED_LAW.name} is not used. {REPEALED_LAW.note}</p>
