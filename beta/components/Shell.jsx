@@ -4,9 +4,10 @@ import { go } from '../lib/routes.js'
 export default function Shell({ app, route, children }) {
   const { user, signOut, cloudNote, storageWarning, isAdmin } = app
   const enabled = app.navModules || MODULES.filter((mod) => app.modules[mod.id])
-  const active = route.screen === 'home' || route.screen === 'setup' || route.screen === 'import' || route.screen === 'admin'
-    ? route.screen
-    : (['capture', 'scan', 'scene', 'register', 'record', 'investigate', 'hse', 'day', 'audit', 'actions', 'injury', 'inspections', 'dashboard'].includes(route.screen) ? 'hse' : route.screen)
+  const screen = route.screen === 'form-codes' || route.screen === 'form-detail' ? 'forms' : route.screen
+  const active = screen === 'home' || screen === 'setup' || screen === 'import' || screen === 'admin' || screen === 'forms'
+    ? screen
+    : (['capture', 'scan', 'scene', 'register', 'record', 'investigate', 'hse', 'day', 'audit', 'actions', 'injury', 'inspections', 'dashboard'].includes(screen) ? 'hse' : screen)
   const sites = app.site?.sites || []
 
   const link = (mod) => (
@@ -51,6 +52,7 @@ export default function Shell({ app, route, children }) {
           </button>
         ))}
         <button className={`chip${active === 'setup' ? ' active' : ''}`} onClick={() => go('#/setup')}>Sites</button>
+        <button className={`chip${active === 'forms' ? ' active' : ''}`} onClick={() => go('#/hse/forms')}>QR forms</button>
         <button className={`chip${active === 'import' ? ' active' : ''}`} onClick={() => go('#/import')}>Import</button>
         {isAdmin && <button className={`chip${active === 'admin' ? ' active' : ''}`} onClick={() => go('#/admin')}>Admin</button>}
       </nav>
@@ -63,6 +65,7 @@ export default function Shell({ app, route, children }) {
           {enabled.filter((mod) => mod.group === 'register').map(link)}
           <div className="group">Site</div>
           <a href="#/setup" className={active === 'setup' ? 'active' : ''}>Site setup</a>
+          <a href="#/hse/forms" className={active === 'forms' ? 'active' : ''}>QR forms</a>
           <a href="#/import" className={active === 'import' ? 'active' : ''}>Import</a>
           {isAdmin && <a href="#/admin" className={active === 'admin' ? 'active' : ''}>Admin</a>}
           <button className="linkish" onClick={signOut}>Sign out</button>

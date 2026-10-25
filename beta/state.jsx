@@ -9,6 +9,7 @@ import { getMfaGate } from './lib/mfa.js'
 import { INJURY_KEY, LOCAL_KEY, MODULE_KEY, SITE_KEY, loadInjuryCases, loadModulePrefs, loadRows, loadSite, mergeRows, saveInjuryCases, saveModulePrefs, saveRows, saveSite, slimForCloud } from './lib/store.js'
 import { generateId } from '../src/utils/storage.js'
 import { canRemind, reminderPatch } from './lib/actions.js'
+import { loadLocalActions, loadLocalCodes, loadLocalSubmissions, mapQrCode, mapSubmission, newToken, rememberSupervisor, resolveQrForms, saveLocalCodes } from './lib/qrForms.js'
 import { perthDate } from './lib/time.js'
 import { authReturnUrl, getAccessToken, isBackendEnabled, liveProjectBlocked, supabase, supabaseKey, supabaseUrl } from './lib/supabase.js'
 import { openVault, pauseWrites, sealVault } from '../src/utils/secureStore.js'
@@ -91,6 +92,8 @@ export function AppState({ children }) {
   const [isAdmin, setIsAdmin] = useState(false)
   const [adminChecked, setAdminChecked] = useState(!isBackendEnabled)
   const [orgMembers, setOrgMembers] = useState([])
+  const [qrCodes, setQrCodes] = useState([])
+  const [submissions, setSubmissions] = useState([])
   const orgIdRef = useRef(null)
   const seenUser = useRef(undefined)
   const sealing = useRef(false)
@@ -141,6 +144,8 @@ export function AppState({ children }) {
       setVaultReady(false)
       setRows([])
       setInjuryCases([])
+      setQrCodes([])
+      setSubmissions([])
       setOrgRole('member')
       setOrgMembers([])
       setModules(defaultModulePrefs())
@@ -152,6 +157,26 @@ export function AppState({ children }) {
     }
     seenUser.current = userId
   }, [userId])
+
+  useEffect(() => {
+    if (isBackendEnabled && !localUser) return undefined
+    const sync = () => {
+      setQrCodes(loadLocalCodes())
+      setSubmissions(loadLocalSubmissions())
+      const actions = loadLocalActions()
+      if (!actions.length) return
+      setRows((prev) => {
+        const ids = new Set(prev.map((row) => row.id))
+        const extra = actions.filter((row) => row?.id && !ids.has(row.id))
+        if (!extra.length) return prev
+        const next = [...extra, ...prev]
+        saveRows(next).catch(() => {})
+        return next
+      })
+    }
+    window.addEventListener('si-qr-local', sync)
+    return () => window.removeEventListener('si-qr-local', sync)
+  }, [localUser])
 
   useEffect(() => {
     if (!userId || sealing.current || recovery) return
@@ -167,7 +192,13 @@ export function AppState({ children }) {
         await safeGetItem(STORAGE_KEYS.DEIDENT_TERMS)
         if (cancel || sealing.current) return
         const local = loadRows()
-        setRows(local)
+        const deviceActions = (!supabase || localUser) ? loadLocalActions() : []
+        const seen = new Set(local.map((row) => row.id))
+        setRows([...deviceActions.filter((row) => row?.id && !seen.has(row.id)), ...local])
+        if (!supabase || localUser) {
+          setQrCodes(loadLocalCodes())
+          setSubmissions(loadLocalSubmissions())
+        }
         setInjuryCases(loadInjuryCases())
         setModules(loadModulePrefs(defaultModulePrefs()))
         setSite(loadSite())
@@ -180,18 +211,19 @@ export function AppState({ children }) {
         setOrgRole(profile?.role === 'admin' ? 'admin' : 'member')
         if (profile?.org_id) {
           const { data: people } = await supabase.from('profiles').select('id, full_name').eq('org_id', profile.org_id)
+          let orgPeople = []
           if (!cancel && !sealing.current) {
             const selfName = session?.user?.email || 'You'
-            const members = (people || []).map((person) => ({
+            orgPeople = (people || []).map((person) => ({
               id: person.id,
               name: person.full_name || (person.id === userId ? selfName : 'Member'),
             }))
-            if (!members.some((person) => person.id === userId)) members.unshift({ id: userId, name: selfName })
-            setOrgMembers(members)
+            if (!orgPeople.some((person) => person.id === userId)) orgPeople.unshift({ id: userId, name: selfName })
+            setOrgMembers(orgPeople)
           }
           const [orgRes, siteRes, peopleRes] = await Promise.all([
             supabase.from('organisations').select('name').eq('id', profile.org_id).maybeSingle(),
-            supabase.from('sites').select('id,name,client_name,logo_path,ruleset,created_at').order('created_at'),
+            supabase.from('sites').select('id,name,client_name,logo_path,ruleset,supervisor_id,created_at').order('created_at'),
             supabase.from('people').select('id,site_id,full_name,role,email,phone'),
           ])
           if (!cancel && !sealing.current && !siteRes.error && siteRes.data?.length) {
@@ -202,6 +234,8 @@ export function AppState({ children }) {
               ruleset: row.ruleset || 'general',
               logoPath: row.logo_path || '',
               logoDataUrl: row.logo_path ? await downloadLogo(row.logo_path) : '',
+              supervisorId: row.supervisor_id || '',
+              supervisorName: orgPeople.find((person) => person.id === row.supervisor_id)?.name || '',
             })))
             const loadedPeople = peopleRes.error ? null : (peopleRes.data || []).map((person) => ({
               id: person.id,
@@ -229,6 +263,16 @@ export function AppState({ children }) {
                 saveSite(next).catch(() => {})
                 return next
               })
+            }
+          }
+          if (!cancel && !sealing.current) {
+            const [codeRes, subRes] = await Promise.all([
+              supabase.from('qr_codes').select('id,token,site_id,target_type,target_id,label,active,created_at').order('created_at', { ascending: false }),
+              supabase.from('form_submissions').select('id,site_id,qr_id,form_id,form_version,form_title,area_label,person_name,company,role,answers,failed,stopped,action_id,created_at').order('created_at', { ascending: false }).limit(400),
+            ])
+            if (!cancel && !sealing.current) {
+              if (!codeRes.error) setQrCodes((codeRes.data || []).map(mapQrCode))
+              if (!subRes.error) setSubmissions((subRes.data || []).map(mapSubmission))
             }
           }
         }
@@ -487,6 +531,8 @@ export function AppState({ children }) {
       setVaultReady(false)
       setRows([])
       setInjuryCases([])
+      setQrCodes([])
+      setSubmissions([])
       setOrgRole('member')
       setOrgMembers([])
       setModules(defaultModulePrefs())
@@ -748,12 +794,28 @@ export function AppState({ children }) {
         saveSite(next).catch(() => {})
         return next
       })
+      if (patch.supervisorId !== undefined || patch.supervisorName !== undefined) {
+        rememberSupervisor(id, patch.supervisorName, patch.supervisorId)
+        const stored = loadLocalCodes()
+        const next = (stored.length ? stored : qrCodes).map((code) => (
+          code.siteId === id
+            ? {
+                ...code,
+                supervisorId: patch.supervisorId !== undefined ? patch.supervisorId : code.supervisorId,
+                supervisorName: patch.supervisorName !== undefined ? patch.supervisorName : code.supervisorName,
+              }
+            : code
+        ))
+        if (!supabase || !user || user.local || mfaGate !== 'ready') saveLocalCodes(next)
+        setQrCodes(next)
+      }
       if (!supabase || !user || user.local || mfaGate !== 'ready') return
       const row = {}
       if (patch.name != null) row.name = patch.name
       if (patch.clientName != null) row.client_name = patch.clientName
       if (patch.ruleset != null) row.ruleset = patch.ruleset
       if (patch.logoPath != null) row.logo_path = patch.logoPath
+      if (Object.prototype.hasOwnProperty.call(patch, 'supervisorId')) row.supervisor_id = patch.supervisorId || null
       if (!Object.keys(row).length) return
       const { error } = await supabase.from('sites').update(row).eq('id', id)
       if (error) throw new Error(error.message || 'Could not save that site.')
@@ -852,6 +914,67 @@ export function AppState({ children }) {
       const { error } = await supabase.from('people').upsert(payload, { onConflict: 'id' })
       if (error) setCloudNote('Saved on this device. People could not be stored for the organisation yet.')
     },
+    qrCodes: (qrCodes || []).filter((code) => code.siteId === site.activeSiteId),
+    submissions: (submissions || []).filter((row) => row.siteId === site.activeSiteId),
+    qrForms: resolveQrForms(remoteConfig.qr_forms?.value),
+    async addQrCode({ targetId, label } = {}) {
+      const active = (site.sites || []).find((item) => item.id === site.activeSiteId) || {}
+      const row = {
+        id: crypto.randomUUID(),
+        token: newToken(),
+        siteId: site.activeSiteId,
+        targetType: 'form',
+        targetId,
+        label: String(label || '').trim(),
+        active: true,
+        createdAt: new Date().toISOString(),
+        siteName: active.name || site.siteName || '',
+        clientName: active.clientName || '',
+        supervisorId: active.supervisorId || '',
+        supervisorName: active.supervisorName || '',
+      }
+      rememberSupervisor(site.activeSiteId, active.supervisorName, active.supervisorId)
+      if (!supabase || !user || user.local || mfaGate !== 'ready') {
+        const next = [row, ...qrCodes.filter((code) => code.id !== row.id)]
+        setQrCodes(next)
+        saveLocalCodes(next)
+        return row
+      }
+      const { data, error } = await supabase.from('qr_codes').insert({
+        site_id: site.activeSiteId,
+        token: row.token,
+        target_type: 'form',
+        target_id: targetId,
+        label: row.label,
+      }).select('id,token,site_id,target_type,target_id,label,active,created_at').single()
+      if (error) throw new Error(error.message || 'Could not create that code.')
+      const saved = { ...mapQrCode(data), siteName: row.siteName, clientName: row.clientName, supervisorId: row.supervisorId, supervisorName: row.supervisorName }
+      setQrCodes((prev) => [saved, ...prev.filter((code) => code.id !== saved.id)])
+      return saved
+    },
+    async setQrActive(id, active) {
+      const next = qrCodes.map((code) => (code.id === id ? { ...code, active } : code))
+      setQrCodes(next)
+      if (!supabase || !user || user.local || mfaGate !== 'ready') {
+        saveLocalCodes(next)
+        return
+      }
+      const { error } = await supabase.from('qr_codes').update({ active }).eq('id', id)
+      if (error) throw new Error(error.message || 'Could not update that code.')
+    },
+    async refreshQr() {
+      if (!supabase || !user || user.local || mfaGate !== 'ready') {
+        setQrCodes(loadLocalCodes())
+        setSubmissions(loadLocalSubmissions())
+        return
+      }
+      const [codeRes, subRes] = await Promise.all([
+        supabase.from('qr_codes').select('id,token,site_id,target_type,target_id,label,active,created_at').order('created_at', { ascending: false }),
+        supabase.from('form_submissions').select('id,site_id,qr_id,form_id,form_version,form_title,area_label,person_name,company,role,answers,failed,stopped,action_id,created_at').order('created_at', { ascending: false }).limit(400),
+      ])
+      if (!codeRes.error) setQrCodes((codeRes.data || []).map(mapQrCode))
+      if (!subRes.error) setSubmissions((subRes.data || []).map(mapSubmission))
+    },
     injuryCases: rowsForSite(injuryCases, site.activeSiteId),
     people: (site.people || []).filter((person) => person.siteId === site.activeSiteId),
     canManageSites: Boolean(user?.local) || !isBackendEnabled || orgRole === 'admin',
@@ -869,8 +992,9 @@ export function AppState({ children }) {
       modules: remoteConfig.modules?.value ?? null,
       inspection_templates: remoteConfig.inspection_templates?.value ?? null,
       training_matrix: remoteConfig.training_matrix?.value ?? null,
+      qr_forms: remoteConfig.qr_forms?.value ?? null,
     },
-    configMeta: Object.fromEntries(['wording', 'forms', 'modules', 'inspection_templates', 'training_matrix'].map((key) => {
+    configMeta: Object.fromEntries(['wording', 'forms', 'modules', 'inspection_templates', 'training_matrix', 'qr_forms'].map((key) => {
       const row = remoteConfig[key]
       return [key, {
         version: row?.version || 0,
@@ -923,7 +1047,7 @@ export function AppState({ children }) {
         return next
       })
     },
-  }), [ready, user, recovery, rows, injuryCases, orgMembers, orgRole, modules, site, cloudNote, storageWarning, authError, authNotice, mfaGate, vaultReady, vaultError, remoteConfig, isAdmin, adminChecked])
+  }), [ready, user, recovery, rows, injuryCases, orgMembers, orgRole, modules, site, cloudNote, storageWarning, authError, authNotice, mfaGate, vaultReady, vaultError, remoteConfig, isAdmin, adminChecked, qrCodes, submissions])
 
   return <AppContext.Provider value={api}>{children}</AppContext.Provider>
 }

@@ -90,6 +90,22 @@ export function buildReportPdf({ title = 'Report', dateLabel = '', advisor = '',
         y += h + 12
       }
       y += 4
+    } else if (block.type === 'qr-grid') {
+      const items = (block.items || []).filter((item) => item?.image)
+      const colW = (CW - 16) / 2
+      items.forEach((item, index) => {
+        if (index % 2 === 0) ensure(170)
+        const col = index % 2
+        const x = M + col * (colW + 16)
+        const top = y
+        try { doc.addImage(item.image, imgFormat(item.image), x, top, 120, 120) } catch { /* skip a bad code */ }
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(10)
+        doc.setTextColor(...DARK)
+        const caption = doc.splitTextToSize(String(item.caption || ''), colW)
+        doc.text(caption, x, top + 136)
+        if (col === 1 || index === items.length - 1) y = top + 136 + (caption.length * 12) + 16
+      })
     }
   }
 

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import QrFormEditor from './QrFormEditor.jsx'
 import { CONFIG_KEYS, addCustomField, initialDraft, prepareConfig } from '../lib/config.js'
 import { supabase } from '../lib/supabase.js'
 import { formatWhen } from '../lib/time.js'
@@ -160,6 +161,7 @@ function Editor({ app }) {
       {key === 'modules' && <ModulesEditor draft={draft} setDraft={setDraft} />}
       {key === 'inspection_templates' && <TemplatesEditor draft={draft} setDraft={setDraft} />}
       {key === 'training_matrix' && <MatrixEditor draft={draft} setDraft={setDraft} />}
+      {key === 'qr_forms' && <QrFormEditor draft={draft} setDraft={setDraft} />}
       {error && <p className="note">{error}</p>}
       {notice && <p className="offline-banner">{notice}</p>}
       <div className="panel">

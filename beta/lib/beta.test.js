@@ -29,6 +29,7 @@ import { projectRecord, recordsInRange, recordsToCsv } from './exportRecords.js'
 import { injuryLabel, injuryPayload, mergeInjury, toPublicCase, absenceDays } from './injury.js'
 import { linkPair, unlinkPair } from './links.js'
 import { initialDraft, moduleRows, prepareConfig, resolveForm, resolveMatrix, resolveTemplates, resolveWording, visibleModules } from './config.js'
+import { assessSubmission, buildStopAction, resolveQrForms, submissionsCsv, tooManySubmissions } from './qrForms.js'
 import { routeFromHash } from './routes.js'
 import { redact } from './redact.js'
 import { ENC_PREFIX, openVault, sealVault } from '../../src/utils/secureStore.js'
@@ -749,4 +750,81 @@ test('sites scope records and a csv import reports the bad rows', () => {
   assert.match(fn, /not saved/)
   const fnConfig = readFileSync(new URL('../../supabase/config.toml', import.meta.url), 'utf8')
   assert.match(fnConfig, /\[functions\.airtable-import\]/)
+})
+
+test('a critical No on a QR form stops the job and N/A does not', () => {
+  assert.equal(routeFromHash('#/f/abc').screen, 'public-form')
+  assert.equal(routeFromHash('#/f/abc').token, 'abc')
+  assert.equal(routeFromHash('#/hse/forms').screen, 'forms')
+  assert.equal(routeFromHash('#/hse/forms/codes').screen, 'form-codes')
+  assert.equal(routeFromHash('#/hse/forms/sub-1').screen, 'form-detail')
+
+  const forms = resolveQrForms(null)
+  const take5 = forms.find((form) => form.id === 'take5')
+  const prestart = forms.find((form) => form.id === 'prestart')
+  assert.equal(prestart.questions.some((question) => question.label === 'Odometer (km)' && question.required === false), true)
+  assert.equal(prestart.questions.some((question) => question.label === 'Engine hours' && question.required === false), true)
+  assert.match(prestart.questions.find((question) => question.id === 'km').help, /kilometres, engine hours, or both/)
+
+  const answers = {}
+  for (const question of take5.questions) {
+    if (question.type === 'ynna') answers[question.id] = 'yes'
+    else if (question.required) answers[question.id] = 'Weld'
+  }
+  answers.stopped = 'no'
+  const stopped = assessSubmission(take5, answers, 'Sam')
+  assert.equal(stopped.stopped, true)
+  assert.equal(stopped.failed.some((item) => item.id === 'stopped'), true)
+  answers.stopped = 'na'
+  const cleared = assessSubmission(take5, answers, 'Sam')
+  assert.equal(cleared.stopped, false)
+  assert.equal(cleared.errors.length, 0)
+  assert.match(assessSubmission(take5, answers, '  ').errors[0], /name/)
+  delete answers.task
+  assert.match(assessSubmission(take5, answers, 'Sam').errors[0], /task/i)
+
+  const saved = prepareConfig('qr_forms', initialDraft('qr_forms', null))
+  assert.equal(saved.find((form) => form.id === 'prestart').questions.some((question) => question.label === 'Engine hours'), true)
+  const again = prepareConfig('qr_forms', initialDraft('qr_forms', saved))
+  assert.deepEqual(again, saved)
+  assert.throws(() => prepareConfig('qr_forms', [{ id: 'x', title: 'Blank', questions: [] }]), /question/)
+
+  const action = buildStopAction({
+    submissionId: 's1',
+    formTitle: 'Take 5',
+    label: 'Yard',
+    personName: 'Sam',
+    failed: stopped.failed,
+    supervisorName: 'Alex',
+    siteId: 'site-1',
+  })
+  assert.equal(action.kind, 'action')
+  assert.equal(action.fields.owner, 'Alex')
+  assert.equal(action.fields.emailHook, 'pending')
+  assert.match(action.fields.title, /Stop the job/)
+  assert.equal(tooManySubmissions([{ qrId: 'q', createdAt: new Date().toISOString() }], 'q'), false)
+  assert.match(submissionsCsv([{ ...action, formTitle: 'Take 5', personName: 'Sam', stopped: true, failed: stopped.failed, createdAt: '2026-10-25' }]), /stopped/)
+
+  const sql = readFileSync(new URL('../../supabase/migrations/20261025043000_qr_forms.sql', import.meta.url), 'utf8')
+  assert.match(sql, /create table if not exists public\.qr_codes/)
+  assert.match(sql, /'form', 'register', 'vehicle', 'document'/)
+  assert.match(sql, /qr_forms/)
+  assert.match(sql, /supervisor_id/)
+  assert.match(sql, /form-evidence/)
+  assert.match(sql, /auth\.role\(\) = 'service_role'/)
+  assert.equal(sql.includes('rgkiagqexoafmtxhrlqo'), false)
+
+  const fn = readFileSync(new URL('../../supabase/functions/submit-form/index.ts', import.meta.url), 'utf8')
+  assert.match(fn, /rgkiagqexoafmtxhrlqo/)
+  assert.equal(fn.includes('requireAal2'), false)
+  assert.equal(fn.includes('console.log'), false)
+  assert.match(fn, /RESEND_API_KEY/)
+  assert.match(fn, /emailHook/)
+  assert.match(fn, /Odometer \(km\)/)
+  assert.match(fn, /Engine hours/)
+  assert.equal(fn.includes('api.resend.com'), false)
+  const toml = readFileSync(new URL('../../supabase/config.toml', import.meta.url), 'utf8')
+  assert.match(toml, /\[functions\.submit-form\]\s+verify_jwt = false/)
+  const livePdf = readFileSync(new URL('../../src/utils/pdf.js', import.meta.url), 'utf8')
+  assert.equal(livePdf.includes('clientName'), false)
 })

@@ -64,6 +64,8 @@ function cleanSites(list) {
     ruleset: item.ruleset || 'general',
     logoPath: item.logoPath || '',
     logoDataUrl: typeof item.logoDataUrl === 'string' && item.logoDataUrl.startsWith('data:image/') ? item.logoDataUrl : '',
+    supervisorId: item.supervisorId || '',
+    supervisorName: item.supervisorName || '',
   }))
 }
 

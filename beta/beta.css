@@ -430,3 +430,35 @@ th { color: var(--faint); font-weight: 600; font-size: 0.75rem; letter-spacing: 
   padding: 0.7rem;
   font-size: 0.75rem;
 }
+.public-form {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 3rem;
+}
+.public-form.is-stop h1 { color: #ffb4b4; font-size: 2.2rem; }
+.public-logo { width: 72px; height: 72px; object-fit: contain; background: #fff; border-radius: 8px; }
+.public-photo { width: 100%; max-height: 240px; object-fit: contain; background: #fff; border-radius: 8px; }
+.ynna { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+.ynna button {
+  min-height: 3.2rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  font-weight: 700;
+  font-size: 1rem;
+}
+.ynna button.on { color: #07101f; background: linear-gradient(135deg, var(--cyan), var(--blue)); border-color: transparent; }
+.sign-pad { width: 100%; height: 140px; background: #fff; border-radius: 12px; touch-action: none; }
+.stop-screen { border: 1px solid #ffb4b4; border-radius: 16px; padding: 1rem; }
+.checkline { display: flex; gap: 0.5rem; align-items: center; margin: 0.4rem 0; }
+.qr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.qr-grid article { display: flex; flex-direction: column; gap: 0.25rem; align-items: flex-start; }
+.qr-grid img { width: 100%; max-width: 220px; height: auto; background: #fff; border-radius: 8px; }
+@media (max-width: 520px) {
+  .qr-grid { grid-template-columns: 1fr; }
+}
+@media print {
+  .topbar, .phone-nav, .rail, .local-strip, .no-print { display: none !important; }
+  .qr-grid { grid-template-columns: 1fr 1fr; }
+}
