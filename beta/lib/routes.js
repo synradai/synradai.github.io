@@ -8,6 +8,7 @@ export function routeFromHash(hash) {
   const path = raw.replace(/^#/, '').split('?')[0]
   const parts = path.split('/').filter(Boolean)
   if (!parts.length) return { screen: 'home' }
+  if (parts[0] === 'f' && parts[1]) return { screen: 'public-form', token: decodeURIComponent(parts[1]) }
   if (parts[0] === 'setup') return { screen: 'setup' }
   if (parts[0] === 'import') return { screen: 'import' }
   if (parts[0] === 'admin') return { screen: 'admin' }
@@ -24,6 +25,11 @@ export function routeFromHash(hash) {
     if (parts[1] === 'register') return { screen: 'register' }
     if (parts[1] === 'record') return { screen: 'record', id: parts[2] || '' }
     if (parts[1] === 'investigate') return { screen: 'investigate', id: parts[2] || '' }
+    if (parts[1] === 'forms') {
+      if (parts[2] === 'codes') return { screen: 'form-codes' }
+      if (parts[2]) return { screen: 'form-detail', id: decodeURIComponent(parts[2]) }
+      return { screen: 'forms' }
+    }
     return { screen: 'hse' }
   }
   if (MOCKS.includes(parts[0])) return { screen: parts[0] }

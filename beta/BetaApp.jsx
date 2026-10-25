@@ -22,6 +22,8 @@ import Register from './components/Register.jsx'
 import SceneCheck from './components/SceneCheck.jsx'
 import Shell from './components/Shell.jsx'
 import Import from './components/Import.jsx'
+import PublicForm from './components/PublicForm.jsx'
+import { QrCodeSheet, QrFormList, QrSubmission } from './components/QrForms.jsx'
 import SiteSetup from './components/SiteSetup.jsx'
 import { FORMS } from './config/forms.js'
 import { routeFromHash } from './lib/routes.js'
@@ -70,6 +72,7 @@ function Screen({ route }) {
   }
 
   if (!app.ready) return <div className="login"><p className="muted">Opening beta…</p></div>
+  if (route.screen === 'public-form') return <PublicForm token={route.token} />
   if (app.recovery || !app.user) return <Login />
   if (!app.user.local && app.mfaGate !== 'ready') {
     if (app.mfaGate === 'enroll') return <TwoFactorEnroll onVerified={app.refreshMfa} onSignOut={app.signOut} />
@@ -120,6 +123,9 @@ function Screen({ route }) {
   else if (route.screen === 'kpis') body = app.modules.kpis ? <Leads app={app} /> : <Hidden name="KPIs & Forms" />
   else if (route.screen === 'stores') body = app.modules.stores ? <StoresPreview /> : <Hidden name="Stores" />
   else if (route.screen === 'scaffold') body = app.modules.scaffold ? <ScaffoldPreview /> : <Hidden name="Scaffold Register" />
+  else if (route.screen === 'forms') body = <QrFormList app={app} />
+  else if (route.screen === 'form-codes') body = <QrCodeSheet app={app} />
+  else if (route.screen === 'form-detail') body = <QrSubmission key={route.id} app={app} id={route.id} />
   else if (route.screen === 'admin') body = <Admin app={app} />
 
   return <Shell app={app} route={route}>{body}</Shell>

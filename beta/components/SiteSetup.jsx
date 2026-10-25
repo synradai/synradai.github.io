@@ -6,10 +6,13 @@ function SiteCard({ app, item, locked, busy, run }) {
   const [name, setName] = useState(item.name || '')
   const [clientName, setClientName] = useState(item.clientName || '')
   const [ruleset, setRuleset] = useState(item.ruleset || 'general')
+  const [supervisorId, setSupervisorId] = useState(item.supervisorId || '')
+  const [supervisorName, setSupervisorName] = useState(item.supervisorName || '')
   const many = (app.site.sites || []).length > 1
 
   return (
     <div className="panel">
+      {item.id === app.site.activeSiteId && <p className="eyebrow">Header site</p>}
       <Field label="Site name">
         <input value={name} disabled={locked || busy} onChange={(event) => setName(event.target.value)} />
       </Field>
@@ -22,6 +25,33 @@ function SiteCard({ app, item, locked, busy, run }) {
             <option key={rule.id} value={rule.id}>{rule.label} — {rule.instrument}</option>
           ))}
         </select>
+      </Field>
+      <Field label="Site supervisor" hint="A failed critical check on a QR form opens an action for this person.">
+        {app.orgMembers?.length ? (
+          <select
+            aria-label={`Supervisor for ${item.name}`}
+            value={supervisorId}
+            disabled={locked || busy}
+            onChange={(event) => {
+              const id = event.target.value
+              setSupervisorId(id)
+              setSupervisorName(app.orgMembers.find((member) => member.id === id)?.name || '')
+            }}
+          >
+            <option value="">No supervisor yet</option>
+            {app.orgMembers.map((member) => (
+              <option key={member.id} value={member.id}>{member.name}</option>
+            ))}
+          </select>
+        ) : (
+          <input
+            value={supervisorName}
+            disabled={locked || busy}
+            placeholder="Name"
+            aria-label={`Supervisor for ${item.name}`}
+            onChange={(event) => setSupervisorName(event.target.value)}
+          />
+        )}
       </Field>
       <Field label="Logo" hint="PNG, JPEG, or WebP. Under 1 MB. Shown on PDF exports for this site.">
         {item.logoDataUrl ? <img src={item.logoDataUrl} alt="" style={{ width: 72, height: 72, objectFit: 'contain', background: '#fff', borderRadius: 8 }} /> : <p className="muted">No logo yet.</p>}
@@ -42,7 +72,13 @@ function SiteCard({ app, item, locked, busy, run }) {
           <Button
             type="button"
             disabled={busy}
-            onClick={() => run(() => app.updateSite(item.id, { name: name.trim(), clientName: clientName.trim(), ruleset }))}
+            onClick={() => run(() => app.updateSite(item.id, {
+              name: name.trim(),
+              clientName: clientName.trim(),
+              ruleset,
+              supervisorId,
+              supervisorName: supervisorName.trim(),
+            }))}
           >
             Save site
           </Button>

@@ -47,7 +47,9 @@ supabase functions deploy generate-grok --project-ref <beta-ref>
 
 Secrets: `XAI_API_KEY`. Optional: `XAI_TEXT_MODEL` and `XAI_VISION_MODEL` (both default `grok-4.7`), `AI_PROVIDER` (`xai` default, or `anthropic`), `AI_FALLBACK` (`none` default, or `anthropic`), `ANTHROPIC_API_KEY`, `CLAUDE_MODEL`, `AI_DAILY_LIMIT`.
 
-`generate-grok` calls the xAI Responses API (`grok-4.7`, reasoning effort `low`). It checks the signed-in user with `auth.getUser()` and does not check subscription or trial. `supabase/config.toml` sets `verify_jwt = false` for this function only, because the beta project signs ES256 tokens. The daily cap uses the existing `bump_ai_usage` function. Redeploy `generate-grok` after pulling these changes.
+`generate-grok` calls the xAI Responses API (`grok-4.7`, reasoning effort `low`). It checks the signed-in user with `auth.getUser()` and does not check subscription or trial. `supabase/config.toml` sets `verify_jwt = false` for this function, because the beta project signs ES256 tokens. The daily cap uses the existing `bump_ai_usage` function. Redeploy `generate-grok` after pulling these changes.
+
+Deploy **`submit-form`** to the beta project as well. It is public: a worker has no session. `verify_jwt` is false and the function checks the QR token itself. It does not call `requireAal2`. Photo and signature files go in the private `form-evidence` bucket. A stop-the-job action is stored in the app. Email is left as `emailHook: pending` until `RESEND_API_KEY` and `RESEND_FROM` are set; this function does not send mail.
 
 ## Register table
 
@@ -76,6 +78,10 @@ The daily record exports CSV and PDF for a day or a date range. Columns are day,
 One company is one organisation. `#/setup` names the company and each site, including the client name and a logo stored in the private `site-logos` bucket. The header switches the active site. New records, injury cases, and imported people take that site id. Existing rows were backfilled onto a site named Main site. Organisation admins (`profiles.role = admin`) change sites, the company name, and the logo. PDF exports for the active site print that client name and logo.
 
 `#/import` copies a CSV into training records, people, actions, or incidents on the active site. Map the columns, preview the rows, import the valid ones, and download an error report for the rest. An Airtable import is a one-off copy: paste a personal access token and a base ID, pick a table, map fields, and import. The token is sent once to the `airtable-import` edge function and is not stored. There is no live sync.
+
+## QR forms
+
+`#/hse/forms` lists submissions for the site in the header. Filter by form or by stop-the-job, open one submission, and export CSV or PDF. `#/hse/forms/codes` creates a code for Take 5, JHA, or a vehicle/plant prestart and prints a sheet with the site client name and logo. The code is a row in `qr_codes` (`target_type` `form` now; `register`, `vehicle`, and `document` are reserved). `#/f/<token>` is the public form: no login, the name is remembered on the device, and a critical No shows STOP THE JOB and files an action for the site supervisor. Set that supervisor on `#/setup`. Templates are edited on `#/admin` under QR forms, versioned in `app_config`, and audited. The prestart asks for odometer kilometres and engine hours, and either or both can be filled in.
 
 ## Training
 

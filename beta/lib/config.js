@@ -1,5 +1,6 @@
 import { FORMS, TAKE5_CHECKS, getForm } from '../config/forms.js'
 import { MODULES } from '../config/modules.js'
+import { prepareQrForms, qrFormsDraft } from './qrForms.js'
 
 export const CONFIG_KEYS = [
   { id: 'wording', label: 'Labels and wording', blurb: 'Titles and the sentences people read.' },
@@ -7,6 +8,7 @@ export const CONFIG_KEYS = [
   { id: 'modules', label: 'Modules', blurb: 'Which modules show, their names, and their order.' },
   { id: 'inspection_templates', label: 'Inspection templates', blurb: 'Checklist templates. Failed items become actions when inspections are filed.' },
   { id: 'training_matrix', label: 'Training matrix columns', blurb: 'Courses and tickets across the top of the matrix.' },
+  { id: 'qr_forms', label: 'QR forms', blurb: 'Take 5, JHA, and vehicle or plant prestart. A critical No stops the job.' },
 ]
 
 const ALWAYS_LOCKED = new Set([
@@ -284,6 +286,7 @@ export function initialDraft(key, stored) {
   if (key === 'modules') return modulesDraft(stored)
   if (key === 'inspection_templates') return templatesDraft(stored)
   if (key === 'training_matrix') return matrixDraft(stored)
+  if (key === 'qr_forms') return qrFormsDraft(stored)
   return {}
 }
 
@@ -337,6 +340,7 @@ export function prepareConfig(key, draft) {
     if (!columns.length) throw new Error('Add at least one training column.')
     return { columns }
   }
+  if (key === 'qr_forms') return prepareQrForms(draft)
   throw new Error('Unknown setting.')
 }
 

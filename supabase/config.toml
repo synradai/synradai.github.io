@@ -14,3 +14,8 @@ verify_jwt = false
 # The token in the body is used once and is not stored.
 [functions.airtable-import]
 verify_jwt = false
+
+# submit-form is public. Workers have no session. The function checks the
+# QR token itself and does not call requireAal2.
+[functions.submit-form]
+verify_jwt = false

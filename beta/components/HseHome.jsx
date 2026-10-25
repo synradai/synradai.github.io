@@ -46,6 +46,11 @@ export default function HseHome({ app }) {
           <strong>Scene photo check</strong>
           <span>Grok looks for missed hazards and possible breach areas.</span>
         </a>
+        <a className="card" href="#/hse/forms">
+          <span className="tag live">QR</span>
+          <strong>QR forms</strong>
+          <span>Take 5, JHA, and prestart. A code on the gate, no login to fill it in.</span>
+        </a>
         <a className="card" href="#/hse/inspections">
           <span className="tag live">Inspect</span>
           <strong>Inspections</strong>
