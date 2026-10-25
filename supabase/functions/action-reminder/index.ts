@@ -3,7 +3,8 @@
 // This function refuses to run if SUPABASE_URL contains the live ref.
 //
 // Gateway verify_jwt is off (supabase/config.toml) because the beta project
-// signs ES256 tokens. auth.getUser() and an aal2 check still run.
+// signs ES256 tokens. auth.getUser() still runs. The action read is the
+// caller's own organisation through row level security.
 //
 // The signed-in user updates the action, so the hse_records audit trigger
 // records the caller. Email uses Resend only when RESEND_API_KEY and
@@ -14,7 +15,6 @@
 //   RESEND_FROM     verified sender, e.g. Safe Intelligence <notifications@example.com>
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { requireAal2 } from "../_shared/aal.ts";
 
 const LIVE_PROJECT_REF = "rgkiagqexoafmtxhrlqo";
 
@@ -94,7 +94,6 @@ Deno.serve(async (req) => {
     });
     const { data: userData, error: authErr } = await userClient.auth.getUser();
     if (authErr || !userData.user) return json({ error: "Not authenticated" }, 401);
-    if (!requireAal2(authHeader)) return json({ error: "Two-factor authentication required." }, 401);
 
     let body: { actionId?: string };
     try {

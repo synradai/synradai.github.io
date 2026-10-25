@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 
-const STEPS = ['Email', 'Code', 'Authenticator']
+const STEPS = ['Email', 'Code']
 
 export function AuthSteps({ step }) {
   return (

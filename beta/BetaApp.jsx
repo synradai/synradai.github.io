@@ -11,8 +11,6 @@ import Injury from './components/Injury.jsx'
 import Inspections from './components/Inspections.jsx'
 import Investigate from './components/Investigate.jsx'
 import Login from './components/Login.jsx'
-import TwoFactorChallenge from './components/TwoFactorChallenge.jsx'
-import TwoFactorEnroll from './components/TwoFactorEnroll.jsx'
 import Leads from './components/Leads.jsx'
 import { MaintenancePreview, ScaffoldPreview, StoresPreview } from './components/Mocks.jsx'
 import Training from './components/Training.jsx'
@@ -39,58 +37,13 @@ function useRoute() {
   return routeFromHash(hash)
 }
 
-const PREVIEW_QR = 'data:image/svg+xml,' + encodeURIComponent(
-  '<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 29 29">' +
-  '<rect width="29" height="29" fill="#fff"/>' +
-  '<g fill="#111">' +
-  '<path d="M2 2h7v7H2zm2 2v3h3V4zM20 2h7v7h-7zm2 2v3h3V4zM2 20h7v7H2zm2 2v3h3v-3z"/>' +
-  '<path d="M12 2h2v2h-2zm4 0h2v2h-2zM12 6h5v2h-5zM18 6h1v2h-1zM12 10h2v2h-2zm4 0h3v2h-3zm4 0h2v2h-2zm4 0h3v2h-3z"/>' +
-  '<path d="M2 12h2v2H2zm4 0h3v2H6zm4 0h2v5h-2zm4 0h2v2h-2zm6 0h3v2h-3zm4 0h2v3h-2z"/>' +
-  '<path d="M12 16h7v2h-7zm8 0h3v2h-3zM2 16h2v2H2zm6 2h3v2H8zm12 2h5v2h-5zM12 20h2v3h-2zm4 0h3v2h-3zm4 2h2v3h-2z"/>' +
-  '<path d="M12 24h5v3h-5zm6 0h2v2h-2zm4 0h5v3h-5z"/>' +
-  '</g></svg>'
-)
-
 function Screen({ route }) {
   const app = useApp()
   useEffect(() => { window.scrollTo(0, 0) }, [route.screen, route.id, route.kind])
 
-  if (import.meta.env.DEV && typeof window !== 'undefined') {
-    const preview = new URLSearchParams(window.location.search).get('mfa')
-    if (preview === 'enroll') {
-      return (
-        <TwoFactorEnroll
-          preview={{ factorId: 'preview', secret: 'JBSWY3DPEHPK3PXP', qrCode: PREVIEW_QR }}
-          onVerified={() => {}}
-          onSignOut={() => {}}
-        />
-      )
-    }
-    if (preview === 'challenge') {
-      return <TwoFactorChallenge onVerified={() => {}} onSignOut={() => {}} />
-    }
-  }
-
   if (!app.ready) return <div className="login"><p className="muted">Opening beta…</p></div>
   if (route.screen === 'public-form') return <PublicForm token={route.token} />
   if (app.recovery || !app.user) return <Login />
-  if (!app.user.local && app.mfaGate !== 'ready') {
-    if (app.mfaGate === 'enroll') return <TwoFactorEnroll onVerified={app.refreshMfa} onSignOut={app.signOut} />
-    if (app.mfaGate === 'challenge') return <TwoFactorChallenge onVerified={app.refreshMfa} onSignOut={app.signOut} />
-    if (app.mfaGate === 'error') {
-      return (
-        <div className="login">
-          <div className="card login-card">
-            <h1>Two-factor check failed</h1>
-            <p className="lede">Records stay closed until the authenticator check succeeds.</p>
-            <button className="btn" type="button" onClick={app.refreshMfa}>Try again</button>
-            <button className="btn ghost" type="button" onClick={app.signOut}>Sign out</button>
-          </div>
-        </div>
-      )
-    }
-    return <div className="login"><p className="muted">Checking two-factor authentication…</p></div>
-  }
   if (!app.vaultReady) {
     return (
       <div className="login">

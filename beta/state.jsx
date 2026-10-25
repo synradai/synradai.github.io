@@ -5,7 +5,6 @@ import { moduleRows, resolveMatrix, resolveTemplates, resolveWording, visibleMod
 import { isUuid, rowsForSite } from './lib/ids.js'
 import { injuryError, injuryPayload, mergeInjury, nextCaseCode, toPrivateCase } from './lib/injury.js'
 import { logoError, readImageFile } from './lib/logo.js'
-import { getMfaGate } from './lib/mfa.js'
 import { INJURY_KEY, LOCAL_KEY, MODULE_KEY, SITE_KEY, loadInjuryCases, loadModulePrefs, loadRows, loadSite, mergeRows, saveInjuryCases, saveModulePrefs, saveRows, saveSite, slimForCloud } from './lib/store.js'
 import { generateId } from '../src/utils/storage.js'
 import { canRemind, reminderPatch } from './lib/actions.js'
@@ -84,7 +83,6 @@ export function AppState({ children }) {
   const [storageWarning, setStorageWarning] = useState('')
   const [authError, setAuthError] = useState('')
   const [authNotice, setAuthNotice] = useState('')
-  const [mfaGate, setMfaGate] = useState(isBackendEnabled ? 'pending' : 'ready')
   const [vaultReady, setVaultReady] = useState(false)
   const [vaultError, setVaultError] = useState('')
   const [sealTick, setSealTick] = useState(0)
@@ -118,23 +116,6 @@ export function AppState({ children }) {
     ? { id: session.user.id, email: session.user.email || 'Signed in', local: false }
     : localUser
   const userId = session?.user?.id || localUser?.id || null
-
-  useEffect(() => {
-    if (!isBackendEnabled || localUser) {
-      setMfaGate('ready')
-      return
-    }
-    if (!session?.user || recovery) {
-      setMfaGate('pending')
-      setVaultReady(false)
-      return
-    }
-    let cancel = false
-    getMfaGate()
-      .then((gate) => { if (!cancel) setMfaGate(gate) })
-      .catch(() => { if (!cancel) setMfaGate('error') })
-    return () => { cancel = true }
-  }, [session?.user?.id, recovery, localUser])
 
   useEffect(() => {
     const prev = seenUser.current
@@ -180,7 +161,6 @@ export function AppState({ children }) {
 
   useEffect(() => {
     if (!userId || sealing.current || recovery) return
-    if (isBackendEnabled && !localUser && mfaGate !== 'ready') return
     let cancel = false
     ;(async () => {
       try {
@@ -317,11 +297,11 @@ export function AppState({ children }) {
       }
     })()
     return () => { cancel = true }
-  }, [mfaGate, userId, localUser, recovery, sealTick, session?.user?.email])
+  }, [userId, localUser, recovery, sealTick, session?.user?.email])
 
   useEffect(() => {
     if (!userId || !vaultReady) return undefined
-    if (!supabase || localUser || mfaGate !== 'ready') {
+    if (!supabase || localUser) {
       setIsAdmin(false)
       setAdminChecked(true)
       setRemoteConfig({})
@@ -359,7 +339,7 @@ export function AppState({ children }) {
       document.removeEventListener('visibilitychange', onWake)
       supabase.removeChannel(channel)
     }
-  }, [userId, localUser, mfaGate, vaultReady])
+  }, [userId, localUser, vaultReady])
 
   const persist = (next) => {
     setRows(next)
@@ -379,7 +359,7 @@ export function AppState({ children }) {
   }
 
   const push = async (row) => {
-    if (!supabase || !user || user.local || mfaGate !== 'ready' || !vaultReady) return
+    if (!supabase || !user || user.local || !vaultReady) return
     const orgId = await orgIdForUser()
     if (!orgId) {
       setCloudNote('Saved on this device. Cloud sync is waiting for your organisation.')
@@ -408,7 +388,6 @@ export function AppState({ children }) {
     storageWarning,
     authError,
     authNotice,
-    mfaGate,
     vaultReady,
     vaultError,
     liveProjectBlocked,
@@ -517,13 +496,6 @@ export function AppState({ children }) {
       sessionStorage.setItem(LOCAL_USER_KEY, JSON.stringify(next))
       setLocalUser(next)
     },
-    async refreshMfa() {
-      try {
-        setMfaGate(await getMfaGate())
-      } catch {
-        setMfaGate('error')
-      }
-    },
     async signOut() {
       pauseWrites()
       sealing.current = true
@@ -537,7 +509,6 @@ export function AppState({ children }) {
       setOrgMembers([])
       setModules(defaultModulePrefs())
       setSite(loadSite())
-      setMfaGate(isBackendEnabled ? 'pending' : 'ready')
       setIsAdmin(false)
       setAdminChecked(!isBackendEnabled)
       setRemoteConfig({})
@@ -586,7 +557,7 @@ export function AppState({ children }) {
         const saved = next.find((item) => item.id === id)
         if (saved) push(saved)
       }
-      if (!supabase || !user || user.local || mfaGate !== 'ready') {
+      if (!supabase || !user || user.local) {
         recordLocal()
         return { reminded: true, sent: false, reason: 'Reminder recorded on this device.' }
       }
@@ -603,7 +574,7 @@ export function AppState({ children }) {
         })
         const data = await response.json().catch(() => ({}))
         if (response.status === 401) {
-          return { reminded: false, sent: false, reason: data.error || 'Finish two-factor authentication, then try the reminder again.' }
+          return { reminded: false, sent: false, reason: data.error || 'Sign in again, then try the reminder.' }
         }
         recordLocal()
         if (data.sent) return { reminded: true, sent: true, reason: 'Reminder emailed to the owner.' }
@@ -630,7 +601,7 @@ export function AppState({ children }) {
       }
       persist(next)
       for (const row of touched) push(row)
-      if (!supabase || !user || user.local || mfaGate !== 'ready' || !vaultReady) return
+      if (!supabase || !user || user.local || !vaultReady) return
       let query = supabase.from('hse_records').delete().eq('id', id)
       if (orgIdRef.current) query = query.eq('org_id', orgIdRef.current)
       const { error } = await query
@@ -669,7 +640,7 @@ export function AppState({ children }) {
         })
       }
       writeLocal(localCase)
-      if (!supabase || !user || user.local || mfaGate !== 'ready') return localCase
+      if (!supabase || !user || user.local) return localCase
       const { data, error } = await supabase.from('injury_cases').insert({ id, ...injuryPayload({ ...fields, siteId }) })
         .select('id,case_code,event_id,classification,status,restricted_from,rtw_on,review_on,person_name,body_part,treatment,mechanism,duties,case_notes,note,user_id,created_at,site_id')
         .maybeSingle()
@@ -700,7 +671,7 @@ export function AppState({ children }) {
         saveInjuryCases(next).catch(() => {})
         return next
       })
-      if (!supabase || !user || user.local || mfaGate !== 'ready') return localCase
+      if (!supabase || !user || user.local) return localCase
       let query = supabase.from('injury_cases').update(injuryPayload({ ...fields, siteId })).eq('id', id)
       if (orgIdRef.current) query = query.eq('org_id', orgIdRef.current)
       const { data, error } = await query
@@ -766,7 +737,7 @@ export function AppState({ children }) {
           return next
         })
       }
-      if (!supabase || !user || user.local || mfaGate !== 'ready') {
+      if (!supabase || !user || user.local) {
         remember(draft)
         return draft
       }
@@ -806,10 +777,10 @@ export function AppState({ children }) {
               }
             : code
         ))
-        if (!supabase || !user || user.local || mfaGate !== 'ready') saveLocalCodes(next)
+        if (!supabase || !user || user.local) saveLocalCodes(next)
         setQrCodes(next)
       }
-      if (!supabase || !user || user.local || mfaGate !== 'ready') return
+      if (!supabase || !user || user.local) return
       const row = {}
       if (patch.name != null) row.name = patch.name
       if (patch.clientName != null) row.client_name = patch.clientName
@@ -822,7 +793,7 @@ export function AppState({ children }) {
     },
     async removeSite(id) {
       if ((site.sites || []).length <= 1) throw new Error('Keep at least one site.')
-      if (supabase && user && !user.local && mfaGate === 'ready') {
+      if (supabase && user && !user.local) {
         const { error } = await supabase.from('sites').delete().eq('id', id)
         if (error) throw new Error('This site still has records, or it could not be removed.')
       }
@@ -838,7 +809,7 @@ export function AppState({ children }) {
       const problem = logoError(file)
       if (problem) throw new Error(problem)
       const dataUrl = await readImageFile(file)
-      if (!supabase || !user || user.local || mfaGate !== 'ready') {
+      if (!supabase || !user || user.local) {
         setSite((prev) => {
           const sites = (prev.sites || []).map((item) => (item.id === id ? { ...item, logoDataUrl: dataUrl, logoPath: '' } : item))
           const next = withActive(prev, { sites })
@@ -873,7 +844,7 @@ export function AppState({ children }) {
         saveSite(next).catch(() => {})
         return next
       })
-      if (!supabase || !user || user.local || mfaGate !== 'ready') return
+      if (!supabase || !user || user.local) return
       const orgId = await orgIdForUser()
       if (!orgId) throw new Error('Your account has no organisation yet.')
       const { error } = await supabase.from('organisations').update({ name: clean }).eq('id', orgId)
@@ -899,7 +870,7 @@ export function AppState({ children }) {
         saveSite(next).catch(() => {})
         return next
       })
-      if (!supabase || !user || user.local || mfaGate !== 'ready') return
+      if (!supabase || !user || user.local) return
       const payload = people
         .filter((person) => isUuid(person.id) && isUuid(person.siteId))
         .map((person) => ({
@@ -934,7 +905,7 @@ export function AppState({ children }) {
         supervisorName: active.supervisorName || '',
       }
       rememberSupervisor(site.activeSiteId, active.supervisorName, active.supervisorId)
-      if (!supabase || !user || user.local || mfaGate !== 'ready') {
+      if (!supabase || !user || user.local) {
         const next = [row, ...qrCodes.filter((code) => code.id !== row.id)]
         setQrCodes(next)
         saveLocalCodes(next)
@@ -955,7 +926,7 @@ export function AppState({ children }) {
     async setQrActive(id, active) {
       const next = qrCodes.map((code) => (code.id === id ? { ...code, active } : code))
       setQrCodes(next)
-      if (!supabase || !user || user.local || mfaGate !== 'ready') {
+      if (!supabase || !user || user.local) {
         saveLocalCodes(next)
         return
       }
@@ -963,7 +934,7 @@ export function AppState({ children }) {
       if (error) throw new Error(error.message || 'Could not update that code.')
     },
     async refreshQr() {
-      if (!supabase || !user || user.local || mfaGate !== 'ready') {
+      if (!supabase || !user || user.local) {
         setQrCodes(loadLocalCodes())
         setSubmissions(loadLocalSubmissions())
         return
@@ -1006,7 +977,6 @@ export function AppState({ children }) {
     adminChecked,
     async saveConfig(key, value) {
       if (!supabase || !user || user.local) throw new Error('Sign in to the beta project to edit configuration.')
-      if (mfaGate !== 'ready') throw new Error('Finish two-factor authentication before editing.')
       const orgId = await orgIdForUser()
       if (!orgId) throw new Error('Your account has no organisation yet.')
       const { error } = await supabase.from('app_config').upsert({
@@ -1019,7 +989,7 @@ export function AppState({ children }) {
       if (data) setRemoteConfig((prev) => ({ ...prev, [key]: data }))
     },
     async logExport({ entity, entityId, summary, detail }) {
-      if (!supabase || !user || user.local || mfaGate !== 'ready') return
+      if (!supabase || !user || user.local) return
       const orgId = await orgIdForUser()
       if (!orgId) return
       const { error } = await supabase.from('audit_events').insert({
@@ -1035,7 +1005,6 @@ export function AppState({ children }) {
     },
     async resetConfig(key) {
       if (!supabase || !user || user.local) throw new Error('Sign in to the beta project to edit configuration.')
-      if (mfaGate !== 'ready') throw new Error('Finish two-factor authentication before editing.')
       const orgId = orgIdRef.current
       let query = supabase.from('app_config').delete().eq('key', key)
       if (orgId) query = query.eq('org_id', orgId)
@@ -1047,7 +1016,7 @@ export function AppState({ children }) {
         return next
       })
     },
-  }), [ready, user, recovery, rows, injuryCases, orgMembers, orgRole, modules, site, cloudNote, storageWarning, authError, authNotice, mfaGate, vaultReady, vaultError, remoteConfig, isAdmin, adminChecked, qrCodes, submissions])
+  }), [ready, user, recovery, rows, injuryCases, orgMembers, orgRole, modules, site, cloudNote, storageWarning, authError, authNotice, vaultReady, vaultError, remoteConfig, isAdmin, adminChecked, qrCodes, submissions])
 
   return <AppContext.Provider value={api}>{children}</AppContext.Provider>
 }

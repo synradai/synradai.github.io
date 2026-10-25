@@ -5,12 +5,13 @@
 [functions.generate-grok]
 verify_jwt = false
 
-# action-reminder checks the caller with auth.getUser() and requires aal2.
+# action-reminder checks the caller with auth.getUser(). The action read is
+# limited to that caller's organisation by row level security.
 # The gateway verify_jwt check rejects the beta project's ES256 tokens.
 [functions.action-reminder]
 verify_jwt = false
 
-# airtable-import checks the caller with auth.getUser() and requires aal2.
+# airtable-import checks the caller with auth.getUser().
 # The token in the body is used once and is not stored.
 [functions.airtable-import]
 verify_jwt = false

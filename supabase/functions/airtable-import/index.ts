@@ -7,10 +7,9 @@
 // storage, or logs.
 //
 // Gateway verify_jwt is off (supabase/config.toml) because the beta project
-// signs ES256 tokens. auth.getUser() and an aal2 check still run.
+// signs ES256 tokens. auth.getUser() still runs.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { requireAal2 } from "../_shared/aal.ts";
 
 const LIVE_PROJECT_REF = "rgkiagqexoafmtxhrlqo";
 const PAGE_SIZE = 100;
@@ -120,7 +119,6 @@ Deno.serve(async (req) => {
     });
     const { data: userData, error: authErr } = await userClient.auth.getUser();
     if (authErr || !userData.user) return json({ error: "Not authenticated" }, 401);
-    if (!requireAal2(authHeader)) return json({ error: "Two-factor authentication required." }, 401);
 
     let body: { token?: string; baseId?: string; tableName?: string };
     try {
