@@ -21,6 +21,11 @@ export default function Home({ app }) {
           <strong>Site setup</strong>
           <span>Company, sites, client name, and the logo used on PDFs.</span>
         </a>
+        <a className="card" href="#/registers">
+          <span className="tag live">Working</span>
+          <strong>Registers</strong>
+          <span>Company bases, tabs, and spreadsheet rows. Scaffold and equipment inspection are ready to open.</span>
+        </a>
         <a className="card" href="#/import">
           <span className="tag">Site</span>
           <strong>Import</strong>

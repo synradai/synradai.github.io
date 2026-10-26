@@ -85,7 +85,9 @@ One company is one organisation. `#/setup` names the company and each site, incl
 
 ## Training
 
-`#/training` stores a person, role, site, course or ticket, completed date, and expiry on an `hse_records` row (`kind` `training`), so the existing org RLS and audit trigger cover it. Expiring means the expiry falls within 30 days. The people matrix lists each person against the required courses: current, expiring, expired, or missing. Filter by site and role. A cell that has a record opens that record. Export CSV downloads the filtered grid and writes an audit event. The role matrix stays on the same page. Maintenance, stores, and scaffold stay previews.
+`#/training` stores a person, role, site, one or more courses or tickets, a completed date, and an expiry on an `hse_records` row (`kind` `training`). The course field is a multi-select: tick several tickets, or import them separated by commas. The people matrix marks each ticked course. Expiring means the expiry falls within 30 days. Filter by site and role. A cell that has a record opens that record. Export CSV downloads the filtered grid and writes an audit event.
+
+`#/registers` is the company register builder. Each base is a tile (two-letter colour, name, when it was opened). A base has tabs, a spreadsheet grid, and saved views for filter, group, sort, hidden fields, and row colour. Click a row to edit the whole record, which is the way to edit on a phone. The first visit seeds a Scaffold Register and an Equipment Inspection Register. QR Codes is a forms library: title, link, and a QR image for each code. Row changes are written to the audit trail. CSV import on a tab splits multi-select cells on commas. The older `#/hse/register` list of HSE records stays as it is.
 
 ## Inspections
 

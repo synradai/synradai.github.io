@@ -3,11 +3,27 @@ import { shiftDate } from './time.js'
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/
 
+export function courseList(value) {
+  const source = Array.isArray(value) ? value : String(value || '').split(/[,;|\n]/)
+  const seen = []
+  for (const item of source) {
+    const text = String(item || '').trim()
+    if (text && !seen.some((existing) => existing.toLowerCase() === text.toLowerCase())) seen.push(text)
+  }
+  return seen
+}
+
+export function coursesOn(fields) {
+  const many = courseList(fields?.courses)
+  if (many.length) return many
+  return courseList(fields?.course)
+}
+
 export function trainingError(fields) {
   if (!String(fields?.person || '').trim()) return 'Add the person.'
   if (!String(fields?.role || '').trim()) return 'Add the role.'
   if (!String(fields?.siteArea || '').trim()) return 'Add the site.'
-  if (!String(fields?.course || '').trim()) return 'Add the course or ticket.'
+  if (!coursesOn(fields).length) return 'Add the course or ticket.'
   if (fields?.completed && !DATE.test(fields.completed)) return 'Completed date is not a date.'
   if (fields?.expiry && !DATE.test(fields.expiry)) return 'Expiry is not a date.'
   if (!fields?.completed && !fields?.expiry) return 'Add a completed date or an expiry.'
@@ -20,7 +36,8 @@ export function buildTrainingRecord({ id, ruleset = 'general', fields }) {
   const now = new Date().toISOString()
   const person = String(fields.person).trim()
   const role = String(fields.role).trim()
-  const course = String(fields.course).trim()
+  const courses = coursesOn(fields)
+  const course = courses.join(', ')
   return {
     id: id || generateId(),
     kind: 'training',
@@ -36,6 +53,7 @@ export function buildTrainingRecord({ id, ruleset = 'general', fields }) {
       person,
       role,
       course,
+      courses,
       siteArea: String(fields.siteArea || '').trim(),
       completed: fields.completed || '',
       expiry: fields.expiry || '',
@@ -88,7 +106,7 @@ export function personMatrix(records, columns, today, filter = {}) {
   return people.map((person) => ({
     person,
     cells: (columns || []).map((course) => {
-      const matches = training.filter((row) => row.fields?.person === person && row.fields?.course === course)
+      const matches = training.filter((row) => row.fields?.person === person && coursesOn(row.fields).some((item) => item.toLowerCase() === String(course).toLowerCase()))
       if (!matches.length) return { state: 'missing', id: '' }
       const best = matches.slice().sort((a, b) => {
         const diff = STATE_RANK[trainingState(b, today)] - STATE_RANK[trainingState(a, today)]
@@ -116,7 +134,7 @@ export function matrixRows(records, columns, today) {
   return roles.map((role) => ({
     role,
     cells: (columns || []).map((course) => {
-      const matches = training.filter((row) => row.fields?.role === role && row.fields?.course === course)
+      const matches = training.filter((row) => row.fields?.role === role && coursesOn(row.fields).some((item) => item.toLowerCase() === String(course).toLowerCase()))
       if (!matches.length || matches.every((row) => trainingState(row, today) === 'expired')) return 'gap'
       if (matches.some((row) => trainingState(row, today) === 'current')) return 'covered'
       return 'expiring'

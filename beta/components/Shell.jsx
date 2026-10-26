@@ -8,6 +8,7 @@ export default function Shell({ app, route, children }) {
   const active = screen === 'home' || screen === 'setup' || screen === 'import' || screen === 'admin' || screen === 'forms'
     ? screen
     : (['capture', 'scan', 'scene', 'register', 'record', 'investigate', 'hse', 'day', 'audit', 'actions', 'injury', 'inspections', 'dashboard'].includes(screen) ? 'hse' : screen)
+  const wide = screen === 'registers' || screen === 'register-base' || screen === 'register-row'
   const sites = app.site?.sites || []
 
   const link = (mod) => (
@@ -52,6 +53,7 @@ export default function Shell({ app, route, children }) {
           </button>
         ))}
         <button className={`chip${active === 'setup' ? ' active' : ''}`} onClick={() => go('#/setup')}>Sites</button>
+        <button className={`chip${active === 'registers' || active === 'register-base' || active === 'register-row' ? ' active' : ''}`} onClick={() => go('#/registers')}>Registers</button>
         <button className={`chip${active === 'forms' ? ' active' : ''}`} onClick={() => go('#/hse/forms')}>QR forms</button>
         <button className={`chip${active === 'import' ? ' active' : ''}`} onClick={() => go('#/import')}>Import</button>
         {isAdmin && <button className={`chip${active === 'admin' ? ' active' : ''}`} onClick={() => go('#/admin')}>Admin</button>}
@@ -62,6 +64,7 @@ export default function Shell({ app, route, children }) {
           <div className="group">Pillars</div>
           {enabled.filter((mod) => mod.group === 'pillar').map(link)}
           <div className="group">Registers</div>
+          <a href="#/registers" className={wide ? 'active' : ''}>Registers</a>
           {enabled.filter((mod) => mod.group === 'register').map(link)}
           <div className="group">Site</div>
           <a href="#/setup" className={active === 'setup' ? 'active' : ''}>Site setup</a>
@@ -70,7 +73,7 @@ export default function Shell({ app, route, children }) {
           {isAdmin && <a href="#/admin" className={active === 'admin' ? 'active' : ''}>Admin</a>}
           <button className="linkish" onClick={signOut}>Sign out</button>
         </aside>
-        <main className="page">
+        <main className={wide ? 'page wide' : 'page'}>
           {user?.local && <div className="local-strip">Local preview — records stay on this device until the beta Supabase project is connected.</div>}
           {cloudNote && <div className="note">{cloudNote}</div>}
           {storageWarning && <div className="note">{storageWarning}</div>}

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { buildTrainingRecord, matrixRows, personMatrix, personMatrixCsv, trainingError, trainingFilters, trainingState } from '../lib/training.js'
+import { buildTrainingRecord, coursesOn, matrixRows, personMatrix, personMatrixCsv, trainingError, trainingFilters, trainingState } from '../lib/training.js'
 import { perthDate } from '../lib/time.js'
 import { Button, Field } from './ui.jsx'
 
@@ -23,7 +23,7 @@ export default function Training({ app }) {
   const [person, setPerson] = useState('')
   const [role, setRole] = useState('')
   const [siteArea, setSiteArea] = useState(app.site.siteName || '')
-  const [course, setCourse] = useState(columns[0] || '')
+  const [courses, setCourses] = useState([])
   const [other, setOther] = useState('')
   const [completed, setCompleted] = useState(today)
   const [expiry, setExpiry] = useState('')
@@ -31,7 +31,6 @@ export default function Training({ app }) {
   const [exportNote, setExportNote] = useState('')
   const [siteFilter, setSiteFilter] = useState('')
   const [roleFilter, setRoleFilter] = useState('')
-  const chosen = course === '__other' ? other : course
   const records = app.rows.filter((row) => row.kind === 'training')
   const filters = trainingFilters(records)
   const grid = matrixRows(app.rows, columns, today)
@@ -39,13 +38,21 @@ export default function Training({ app }) {
 
   const save = (event) => {
     event.preventDefault()
-    const fields = { person, role, course: chosen, completed, expiry, siteArea }
+    const extra = other.trim()
+    const picked = extra && !courses.some((item) => item.toLowerCase() === extra.toLowerCase()) ? [...courses, extra] : courses
+    const fields = { person, role, courses: picked, completed, expiry, siteArea }
     const problem = trainingError(fields)
     if (problem) { setError(problem); return }
     app.addRecord(buildTrainingRecord({ ruleset: app.site.ruleset || 'general', fields }))
     setPerson('')
+    setCourses([])
+    setOther('')
     setExpiry('')
     setError('')
+  }
+
+  const toggleCourse = (item) => {
+    setCourses((prev) => (prev.includes(item) ? prev.filter((value) => value !== item) : [...prev, item]))
   }
 
   const exportCsv = async () => {
@@ -78,17 +85,20 @@ export default function Training({ app }) {
         <Field label="Site" hint="Saved on the training record so the matrix can filter by site.">
           <input value={siteArea} onChange={(event) => setSiteArea(event.target.value)} />
         </Field>
-        <Field label="Course or ticket">
-          <select value={course} onChange={(event) => setCourse(event.target.value)}>
-            {columns.map((item) => <option key={item} value={item}>{item}</option>)}
-            <option value="__other">Other</option>
-          </select>
+        <fieldset className="multi-select">
+          <legend>Courses or tickets</legend>
+          <p className="hint">Tick every ticket this record covers. They share the completed date and expiry below.</p>
+          {columns.map((item) => (
+            <label className="checkline" key={item}>
+              <input type="checkbox" checked={courses.includes(item)} onChange={() => toggleCourse(item)} />
+              <span>{item}</span>
+            </label>
+          ))}
+          {columns.length === 0 && <p className="muted">No matrix columns yet. Type a ticket below, or add columns in Admin.</p>}
+        </fieldset>
+        <Field label="Other ticket" hint="Optional. Added to the ticked list when you save.">
+          <input value={other} onChange={(event) => setOther(event.target.value)} />
         </Field>
-        {course === '__other' && (
-          <Field label="Other course">
-            <input value={other} onChange={(event) => setOther(event.target.value)} />
-          </Field>
-        )}
         <Field label="Completed">
           <input type="date" value={completed} onChange={(event) => setCompleted(event.target.value)} />
         </Field>
@@ -176,7 +186,7 @@ export default function Training({ app }) {
           return (
             <a className="card record" href={`#/hse/record/${row.id}`} key={row.id}>
               <span className={`tag ${state === 'current' ? 'live' : 'preview'}`}>{STATE_LABEL[state]}</span>
-              <strong>{row.fields?.person} · {row.fields?.course}</strong>
+              <strong>{row.fields?.person} · {coursesOn(row.fields).join(', ') || row.fields?.course}</strong>
               <span>{row.fields?.role}{row.fields?.expiry ? ` · expires ${row.fields.expiry}` : ' · no expiry'}</span>
             </a>
           )
