@@ -30,6 +30,7 @@ import { injuryLabel, injuryPayload, mergeInjury, toPublicCase, absenceDays } fr
 import { linkPair, unlinkPair } from './links.js'
 import { initialDraft, moduleRows, prepareConfig, resolveForm, resolveMatrix, resolveTemplates, resolveWording, visibleModules } from './config.js'
 import { assessSubmission, buildStopAction, resolveQrForms, submissionsCsv, tooManySubmissions } from './qrForms.js'
+import { authFlowForLocation, BETA_EMAIL_REDIRECT } from './supabase.js'
 import { routeFromHash } from './routes.js'
 import { redact } from './redact.js'
 import { ENC_PREFIX, openVault, sealVault } from '../../src/utils/secureStore.js'
@@ -311,6 +312,11 @@ test('beta build is separate from the live app', () => {
   assert.equal(state.includes('getMfaGate'), false)
   assert.match(state, /signInWithOtp/)
   assert.match(state, /shouldCreateUser: true/)
+  assert.match(state, /emailRedirectTo: BETA_EMAIL_REDIRECT/)
+  assert.equal(BETA_EMAIL_REDIRECT, 'https://synradai.github.io/beta/')
+  assert.equal(authFlowForLocation('', '#access_token=abc&refresh_token=r&type=magiclink'), 'implicit')
+  assert.equal(authFlowForLocation('?code=34e770dd-9ff9-416c-87fa-43b31d7ef225', ''), 'pkce')
+  assert.equal(authFlowForLocation('', '#/'), 'implicit')
   assert.match(state, /verifyOtp/)
   assert.match(state, /from\('app_config'\)/)
   assert.match(state, /from\('beta_admins'\)/)

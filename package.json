@@ -10,8 +10,8 @@
     "dev:beta": "vite --config vite.beta.config.js --mode beta",
     "build:beta": "vite build --config vite.beta.config.js --mode beta",
     "preview:beta": "vite preview --config vite.beta.config.js --mode beta --host",
-    "test": "node --test src/utils/aal.test.js src/utils/secureStore.test.js src/utils/pdf.test.js",
-    "test:beta": "node --test beta/lib/beta.test.js supabase/functions/generate-grok/convert.test.js src/utils/aal.test.js src/utils/secureStore.test.js src/utils/pdf.test.js"
+    "test": "node --test src/utils/aal.test.js src/utils/foreignAuth.test.js src/utils/secureStore.test.js src/utils/pdf.test.js",
+    "test:beta": "node --test beta/lib/beta.test.js supabase/functions/generate-grok/convert.test.js src/utils/aal.test.js src/utils/foreignAuth.test.js src/utils/secureStore.test.js src/utils/pdf.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",

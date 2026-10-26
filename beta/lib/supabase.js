@@ -12,6 +12,21 @@ export const supabaseKey = key
 export const liveProjectBlocked = Boolean(url && url.includes(LIVE_PROJECT_REF))
 export const isBackendEnabled = Boolean(url && key) && !liveProjectBlocked
 export const proxyUrl = import.meta.env?.VITE_AI_PROXY_URL || ''
+// Magic-link emails must return to beta, not the site-root Site URL.
+export const BETA_EMAIL_REDIRECT = 'https://synradai.github.io/beta/'
+
+export function authFlowForLocation(search = '', hash = '') {
+  const hashParams = new URLSearchParams(String(hash || '').replace(/^#/, ''))
+  if (hashParams.get('access_token')) return 'implicit'
+  const query = new URLSearchParams(String(search || '').replace(/^\?/, ''))
+  if (query.get('code')) return 'pkce'
+  return 'implicit'
+}
+
+const authFlow = authFlowForLocation(
+  typeof window === 'undefined' ? '' : window.location.search,
+  typeof window === 'undefined' ? '' : window.location.hash,
+)
 
 export const supabase = isBackendEnabled
   ? createClient(url, key, {
@@ -19,6 +34,7 @@ export const supabase = isBackendEnabled
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
+        flowType: authFlow,
       },
     })
   : null
