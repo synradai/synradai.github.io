@@ -10,7 +10,7 @@ import { generateId } from '../src/utils/storage.js'
 import { canRemind, reminderPatch } from './lib/actions.js'
 import { loadLocalActions, loadLocalCodes, loadLocalSubmissions, mapQrCode, mapSubmission, newToken, rememberSupervisor, resolveQrForms, saveLocalCodes } from './lib/qrForms.js'
 import { perthDate } from './lib/time.js'
-import { authReturnUrl, getAccessToken, isBackendEnabled, liveProjectBlocked, supabase, supabaseKey, supabaseUrl } from './lib/supabase.js'
+import { BETA_EMAIL_REDIRECT, authReturnUrl, getAccessToken, isBackendEnabled, liveProjectBlocked, supabase, supabaseKey, supabaseUrl } from './lib/supabase.js'
 import { openVault, pauseWrites, sealVault } from '../src/utils/secureStore.js'
 import { safeGetItem } from '../src/utils/storage.js'
 
@@ -105,7 +105,10 @@ export function AppState({ children }) {
     const { data: sub } = supabase.auth.onAuthStateChange((event, next) => {
       setSession(next)
       if (event === 'PASSWORD_RECOVERY') setRecovery(true)
-      if (next && window.location.hash.includes('access_token')) {
+      if (next && (window.location.hash.includes('access_token') || new URLSearchParams(window.location.search).has('code'))) {
+        const landed = new URL(window.location.href)
+        landed.searchParams.delete('code')
+        window.history.replaceState(window.history.state, '', `${landed.pathname}${landed.search}`)
         window.location.hash = '#/'
       }
     })
@@ -417,7 +420,7 @@ export function AppState({ children }) {
       try {
         const { error } = await supabase.auth.signInWithOtp({
           email: address,
-          options: { shouldCreateUser: true },
+          options: { shouldCreateUser: true, emailRedirectTo: BETA_EMAIL_REDIRECT },
         })
         if (error) {
           setAuthError(emailCodeMessage(error))

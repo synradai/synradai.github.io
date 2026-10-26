@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { forwardForeignAuth } from './foreignAuth.js'
 
 // Reads from .env (see .env.example). Both values are safe to ship in the
 // frontend — the anon key only works through row-level security, which limits
@@ -14,7 +15,9 @@ const anonKey = import.meta.env?.VITE_SUPABASE_ANON_KEY || ''
 // activate in a production build.
 const demoMode = import.meta.env?.DEV && typeof window !== 'undefined' &&
   new URLSearchParams(window.location.search).has('demo')
-export const isBackendEnabled = Boolean(url && anonKey) && !demoMode
+// Run before the client is created so a beta token in the URL is not consumed here.
+export const authRedirecting = typeof window !== 'undefined' && forwardForeignAuth(window.location, window.localStorage, url)
+export const isBackendEnabled = Boolean(url && anonKey) && !demoMode && !authRedirecting
 
 export const supabase = isBackendEnabled ? createClient(url, anonKey) : null
 
