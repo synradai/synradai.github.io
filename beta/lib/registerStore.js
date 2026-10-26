@@ -13,6 +13,36 @@ function registerPayload(base) {
   }
 }
 
+const pendingSeeds = new Map()
+
+function isDuplicate(err) {
+  const message = `${err?.code || ''} ${err?.message || ''}`
+  return message.includes('23505') || /duplicate key/i.test(message)
+}
+
+export function seedBases(supabase) {
+  const key = supabase?.supabaseUrl || 'remote'
+  if (!pendingSeeds.has(key)) {
+    const job = (async () => {
+      let list = await pullBases(supabase)
+      if (list.length) return list
+      const { starterBases } = await import('./registers.js')
+      try {
+        await pushBases(supabase, starterBases())
+      } catch (err) {
+        if (!isDuplicate(err)) throw err
+        list = await pullBases(supabase)
+        if (list.length) return list
+        await pushBases(supabase, starterBases())
+      }
+      return pullBases(supabase)
+    })()
+    pendingSeeds.set(key, job)
+    job.catch(() => { pendingSeeds.delete(key) })
+  }
+  return pendingSeeds.get(key)
+}
+
 export async function pullBases(supabase) {
   const [registers, tables, fields, views, rows] = await Promise.all([
     supabase.from('registers').select('id,name,abbr,color,starred,kind,opened_at'),
@@ -118,7 +148,12 @@ export async function pushBases(supabase, bases) {
       if (error.code === '23505') continue
       throw error
     }
-    await insertChildren(supabase, base)
+    try {
+      await insertChildren(supabase, base)
+    } catch (err) {
+      await supabase.from('registers').delete().eq('id', base.id)
+      throw err
+    }
   }
 }
 
