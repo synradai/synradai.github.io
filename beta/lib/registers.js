@@ -131,31 +131,36 @@ const SAMPLE_PHOTO = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http:
 
 export function starterBases(now = new Date().toISOString()) {
   const at = new Date(now).getTime()
+  const id = {
+    tag: newId(), location: newId(), photos: newId(), oc: newId(), building: newId(),
+    status: newId(), description: newId(), po: newId(), date: newId(), workType: newId(),
+    scaffoldType: newId(), size: newId(), m3: newId(),
+  }
   const scaffoldFields = [
-    field('Scaffold tag', 'text', [], { id: 'tag', position: 0 }),
-    field('Location', 'single_select', locationChoices(), { id: 'location', position: 1 }),
-    field('Photos', 'attachment', [], { id: 'photos', position: 2 }),
-    field('OC', 'single_select', choiceList(['OC1', 'OC2', 'OC5']), { id: 'oc', position: 3 }),
-    field('Building', 'single_select', choiceList(['LIME', 'BLD 42', 'BLD 110']), { id: 'building', position: 4 }),
+    field('Scaffold tag', 'text', [], { id: id.tag, position: 0 }),
+    field('Location', 'single_select', locationChoices(), { id: id.location, position: 1 }),
+    field('Photos', 'attachment', [], { id: id.photos, position: 2 }),
+    field('OC', 'single_select', choiceList(['OC1', 'OC2', 'OC5']), { id: id.oc, position: 3 }),
+    field('Building', 'single_select', choiceList(['LIME', 'BLD 42', 'BLD 110']), { id: id.building, position: 4 }),
     field('Status', 'single_select', [
       { id: 'erected', label: 'ERECTED', color: '#1f8a4c' },
       { id: 'planned', label: 'PLANNED', color: '#c45c26' },
       { id: 'dismantled', label: 'DISMANTLED', color: '#5c6b82' },
-    ], { id: 'status', position: 5 }),
-    field('Description', 'text', [], { id: 'description', position: 6 }),
-    field('PO', 'text', [], { id: 'po', position: 7 }),
-    field('Date', 'date', [], { id: 'date', position: 8 }),
+    ], { id: id.status, position: 5 }),
+    field('Description', 'text', [], { id: id.description, position: 6 }),
+    field('PO', 'text', [], { id: id.po, position: 7 }),
+    field('Date', 'date', [], { id: id.date, position: 8 }),
     field('Work type', 'single_select', [
       { id: 'capital', label: 'Capital', color: '#b42318' },
       { id: 'maintenance', label: 'Maintenance', color: '#1f8a4c' },
       { id: 'moh', label: 'MOH', color: '#6b4c9a' },
-    ], { id: 'workType', position: 9 }),
+    ], { id: id.workType, position: 9 }),
     field('Scaffold type', 'single_select', [
       { id: 'tube', label: 'TUBE & CLIP', color: '#b42318' },
       { id: 'ring', label: 'RING LOCK', color: '#1f8a4c' },
-    ], { id: 'scaffoldType', position: 10 }),
-    field('Size', 'single_select', choiceList(['MEDIUM', 'HEAVY']), { id: 'size', position: 11 }),
-    field('m3', 'number', [], { id: 'm3', position: 12 }),
+    ], { id: id.scaffoldType, position: 10 }),
+    field('Size', 'single_select', choiceList(['MEDIUM', 'HEAVY']), { id: id.size, position: 11 }),
+    field('m3', 'number', [], { id: id.m3, position: 12 }),
   ]
   return [
     {
@@ -173,20 +178,20 @@ export function starterBases(now = new Date().toISOString()) {
           position: 0,
           fields: scaffoldFields,
           views: [
-            view('Master Register', { rowColor: 'status' }, 0),
-            view('Wagerup', { filter: [{ fieldId: 'location', op: 'is', value: 'Wagerup' }], rowColor: 'status' }, 1),
-            view('Pinjarra', { filter: [{ fieldId: 'location', op: 'is', value: 'Pinjarra' }], rowColor: 'status' }, 2),
+            view('Master Register', { rowColor: id.status }, 0),
+            view('Wagerup', { filter: [{ fieldId: id.location, op: 'is', value: 'Wagerup' }], rowColor: id.status }, 1),
+            view('Pinjarra', { filter: [{ fieldId: id.location, op: 'is', value: 'Pinjarra' }], rowColor: id.status }, 2),
           ],
           rows: [
             row({
-              tag: 'WGR088', location: 'Wagerup', photos: [{ name: 'scaffold.jpg', dataUrl: SAMPLE_PHOTO }],
-              oc: 'OC2', building: 'LIME', status: 'ERECTED', description: 'Hard barricade to access roof valve.',
-              po: 'PO7208665', date: '2026-05-21', workType: 'Capital', scaffoldType: 'TUBE & CLIP', size: 'MEDIUM', m3: 198,
+              [id.tag]: 'WGR088', [id.location]: 'Wagerup', [id.photos]: [{ name: 'scaffold.jpg', dataUrl: SAMPLE_PHOTO }],
+              [id.oc]: 'OC2', [id.building]: 'LIME', [id.status]: 'ERECTED', [id.description]: 'Hard barricade to access roof valve.',
+              [id.po]: 'PO7208665', [id.date]: '2026-05-21', [id.workType]: 'Capital', [id.scaffoldType]: 'TUBE & CLIP', [id.size]: 'MEDIUM', [id.m3]: 198,
             }),
             row({
-              tag: 'WGR100', location: 'Wagerup', photos: [], oc: 'OC1', building: 'BLD 42', status: 'ERECTED',
-              description: 'Access to ground floor elbow.', po: 'PO7700930', date: '2026-08-14', workType: 'Maintenance',
-              scaffoldType: 'RING LOCK', size: 'HEAVY', m3: 657,
+              [id.tag]: 'WGR100', [id.location]: 'Wagerup', [id.photos]: [], [id.oc]: 'OC1', [id.building]: 'BLD 42', [id.status]: 'ERECTED',
+              [id.description]: 'Access to ground floor elbow.', [id.po]: 'PO7700930', [id.date]: '2026-08-14', [id.workType]: 'Maintenance',
+              [id.scaffoldType]: 'RING LOCK', [id.size]: 'HEAVY', [id.m3]: 657,
             }),
           ],
         },

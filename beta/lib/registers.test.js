@@ -52,9 +52,14 @@ test('starter registers match the scaffold and equipment bases', () => {
   ])
   assert.equal(main.fields.find((field) => field.name === 'Photos').type, 'attachment')
   assert.equal(main.fields.find((field) => field.name === 'Status').type, 'single_select')
+  const fieldId = (table, name) => table.fields.find((field) => field.name === name).id
+  const locationId = fieldId(main, 'Location')
+  const statusId = fieldId(main, 'Status')
+  const poId = fieldId(main, 'PO')
+  const m3Id = fieldId(main, 'm3')
   const wagerup = applyView(main, main.views.find((view) => view.name === 'Wagerup').config, '')
   assert.equal(wagerup.rows.length, 2)
-  assert.equal(wagerup.rows.every((row) => row.values.location === 'Wagerup'), true)
+  assert.equal(wagerup.rows.every((row) => row.values[locationId] === 'Wagerup'), true)
   const pinjarra = applyView(main, main.views.find((view) => view.name === 'Pinjarra').config, '')
   assert.equal(pinjarra.rows.length, 0)
   const employees = scaffold.tables.find((table) => table.name === 'Employees')
@@ -72,12 +77,23 @@ test('starter registers match the scaffold and equipment bases', () => {
   const harnessPinjarra = applyView(harness, harness.views.find((view) => view.name === 'Pinjarra').config, '')
   assert.equal(harnessPinjarra.rows.length, 1)
   assert.equal(harnessPinjarra.rows[0].values[harness.fields.find((field) => field.name === 'OEM technical info').id], true)
-  const grouped = applyView(main, { group: ['location', 'status'], sort: [{ fieldId: 'm3', dir: 'desc' }] }, 'barricade')
+  const grouped = applyView(main, { group: [locationId, statusId], sort: [{ fieldId: m3Id, dir: 'desc' }] }, 'barricade')
   assert.equal(grouped.rows.length, 1)
   assert.equal(grouped.groups[0].label, 'Wagerup')
   assert.equal(grouped.groups[0].children[0].label, 'ERECTED')
-  const hidden = visibleFields(main, new Set(['po', 'm3']))
-  assert.equal(hidden.some((field) => field.id === 'po'), false)
+  const hidden = visibleFields(main, new Set([poId, m3Id]))
+  assert.equal(hidden.some((field) => field.id === poId), false)
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  const storedIds = (items) => items.flatMap((base) => [base.id, ...base.tables.flatMap((table) => [
+    table.id,
+    ...table.fields.map((field) => field.id),
+    ...table.views.map((view) => view.id),
+    ...table.rows.map((row) => row.id),
+  ])])
+  const ids = storedIds(bases)
+  assert.equal(new Set(ids).size, ids.length)
+  assert.equal(ids.every((item) => uuid.test(item)), true)
+  assert.equal(ids.some((item) => storedIds(starterBases('2026-10-26T00:00:00.000Z')).includes(item)), false)
   assert.match(openedAgo(scaffold.openedAt, new Date('2026-10-26T08:00:00.000Z')), /hour/)
   assert.equal(sortBases(bases)[0].name, 'Scaffold Register')
   const forms = formsLibrary([{ id: 'c1', token: 'abcdefghijklmnopqrst', label: 'Harness Inspection Form', active: true, createdAt: '2026-10-01T00:00:00.000Z' }])

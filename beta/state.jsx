@@ -11,7 +11,7 @@ import { canRemind, reminderPatch } from './lib/actions.js'
 import { loadLocalActions, loadLocalCodes, loadLocalSubmissions, mapQrCode, mapSubmission, newToken, rememberSupervisor, resolveQrForms, saveLocalCodes } from './lib/qrForms.js'
 import { perthDate } from './lib/time.js'
 import { blankBase, newId, starterBases, withBasePatch, withField, withRow, withTable, withView, withoutRow } from './lib/registers.js'
-import { pullBases, pushBases, pushField, pushRegisterPatch, pushRow, pushTable, pushView, removeRow } from './lib/registerStore.js'
+import { pushBases, pushField, pushRegisterPatch, pushRow, pushTable, pushView, removeRow, seedBases } from './lib/registerStore.js'
 import { authReturnUrl, getAccessToken, isBackendEnabled, liveProjectBlocked, supabase, supabaseKey, supabaseUrl } from './lib/supabase.js'
 import { openVault, pauseWrites, sealVault } from '../src/utils/secureStore.js'
 import { safeGetItem } from '../src/utils/storage.js'
@@ -309,11 +309,7 @@ export function AppState({ children }) {
           }
           return
         }
-        let list = await pullBases(supabase)
-        if (!list.length) {
-          await pushBases(supabase, starterBases())
-          list = await pullBases(supabase)
-        }
+        const list = await seedBases(supabase)
         if (!cancel) {
           setBases(list)
           setBasesNote('')
