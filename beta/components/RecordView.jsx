@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { actionError, buildActionRecord, canRemind, isOverdue, selectedOwner, statusPatch } from '../lib/actions.js'
-import { trainingState } from '../lib/training.js'
+import { coursesOn, trainingState } from '../lib/training.js'
 import { resolveForm } from '../lib/config.js'
 import { rewriteActions } from '../lib/ai.js'
 import { timelineTitle, TIMELINE_LABELS } from '../lib/day.js'
@@ -175,7 +175,7 @@ export default function RecordView({ app, id }) {
       <div className="panel">
         {record.kind === 'training' && (
           <>
-            <p><strong>{fields.course || fields.title || 'Training'}. </strong>{trainingState(record, today) === 'current' ? 'Current' : trainingState(record, today) === 'expiring' ? 'Expiring' : trainingState(record, today) === 'expired' ? 'Expired' : ''}</p>
+            <p><strong>{coursesOn(fields).join(', ') || fields.course || fields.title || 'Training'}. </strong>{trainingState(record, today) === 'current' ? 'Current' : trainingState(record, today) === 'expiring' ? 'Expiring' : trainingState(record, today) === 'expired' ? 'Expired' : ''}</p>
             <p>{fields.person || '—'} · {fields.role || '—'}</p>
             <p>Site {fields.siteArea || '—'}.</p>
             <p>{fields.completed ? `Completed ${fields.completed}. ` : ''}{fields.expiry ? `Expires ${fields.expiry}.` : 'No expiry.'}</p>

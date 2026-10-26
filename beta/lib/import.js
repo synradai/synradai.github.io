@@ -215,8 +215,14 @@ export function errorReportCsv(headers, planned) {
   return lines.map((line) => line.map(csvCell).join(',')).join('\n')
 }
 
+function airtableCell(value) {
+  if (Array.isArray(value)) return value.map((item) => airtableCell(item)).filter(Boolean).join(', ')
+  if (value && typeof value === 'object') return String(value.name || value.url || value.email || '')
+  return String(value ?? '')
+}
+
 export function tableFromAirtable(payload) {
   const headers = Array.isArray(payload?.fields) ? payload.fields.map((field) => String(field)) : []
-  const rows = (payload?.rows || []).map((row) => headers.map((header) => String(row?.fields?.[header] ?? '')))
+  const rows = (payload?.rows || []).map((row) => headers.map((header) => airtableCell(row?.fields?.[header])))
   return { headers, rows }
 }

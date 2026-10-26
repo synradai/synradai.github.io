@@ -9,6 +9,12 @@ export function routeFromHash(hash) {
   const parts = path.split('/').filter(Boolean)
   if (!parts.length) return { screen: 'home' }
   if (parts[0] === 'f' && parts[1]) return { screen: 'public-form', token: decodeURIComponent(parts[1]) }
+  if (parts[0] === 'registers') {
+    if (parts[1] && parts[2] && parts[3]) return { screen: 'register-row', id: decodeURIComponent(parts[1]), tableId: decodeURIComponent(parts[2]), rowId: decodeURIComponent(parts[3]) }
+    if (parts[1] && parts[2]) return { screen: 'register-base', id: decodeURIComponent(parts[1]), tableId: decodeURIComponent(parts[2]) }
+    if (parts[1]) return { screen: 'register-base', id: decodeURIComponent(parts[1]), tableId: '' }
+    return { screen: 'registers' }
+  }
   if (parts[0] === 'setup') return { screen: 'setup' }
   if (parts[0] === 'import') return { screen: 'import' }
   if (parts[0] === 'admin') return { screen: 'admin' }

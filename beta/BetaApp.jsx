@@ -11,6 +11,7 @@ import Injury from './components/Injury.jsx'
 import Inspections from './components/Inspections.jsx'
 import Investigate from './components/Investigate.jsx'
 import Login from './components/Login.jsx'
+import { RegisterBase, RegisterRecord, RegistersHome } from './components/Registers.jsx'
 import Leads from './components/Leads.jsx'
 import { MaintenancePreview, ScaffoldPreview, StoresPreview } from './components/Mocks.jsx'
 import Training from './components/Training.jsx'
@@ -76,6 +77,9 @@ function Screen({ route }) {
   else if (route.screen === 'kpis') body = app.modules.kpis ? <Leads app={app} /> : <Hidden name="KPIs & Forms" />
   else if (route.screen === 'stores') body = app.modules.stores ? <StoresPreview /> : <Hidden name="Stores" />
   else if (route.screen === 'scaffold') body = app.modules.scaffold ? <ScaffoldPreview /> : <Hidden name="Scaffold Register" />
+  else if (route.screen === 'registers') body = <RegistersHome app={app} />
+  else if (route.screen === 'register-base') body = <RegisterBase app={app} id={route.id} tableId={route.tableId} />
+  else if (route.screen === 'register-row') body = <RegisterRecord app={app} id={route.id} tableId={route.tableId} rowId={route.rowId} />
   else if (route.screen === 'forms') body = <QrFormList app={app} />
   else if (route.screen === 'form-codes') body = <QrCodeSheet app={app} />
   else if (route.screen === 'form-detail') body = <QrSubmission key={route.id} app={app} id={route.id} />

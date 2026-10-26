@@ -10,6 +10,8 @@ import { generateId } from '../src/utils/storage.js'
 import { canRemind, reminderPatch } from './lib/actions.js'
 import { loadLocalActions, loadLocalCodes, loadLocalSubmissions, mapQrCode, mapSubmission, newToken, rememberSupervisor, resolveQrForms, saveLocalCodes } from './lib/qrForms.js'
 import { perthDate } from './lib/time.js'
+import { blankBase, newId, starterBases, withBasePatch, withField, withRow, withTable, withView, withoutRow } from './lib/registers.js'
+import { pullBases, pushBases, pushField, pushRegisterPatch, pushRow, pushTable, pushView, removeRow } from './lib/registerStore.js'
 import { authReturnUrl, getAccessToken, isBackendEnabled, liveProjectBlocked, supabase, supabaseKey, supabaseUrl } from './lib/supabase.js'
 import { openVault, pauseWrites, sealVault } from '../src/utils/secureStore.js'
 import { safeGetItem } from '../src/utils/storage.js'
@@ -76,6 +78,9 @@ export function AppState({ children }) {
   const [orgMembers, setOrgMembers] = useState([])
   const [qrCodes, setQrCodes] = useState([])
   const [submissions, setSubmissions] = useState([])
+  const [bases, setBases] = useState([])
+  const [basesReady, setBasesReady] = useState(false)
+  const [basesNote, setBasesNote] = useState('')
   const orgIdRef = useRef(null)
   const seenUser = useRef(undefined)
   const sealing = useRef(false)
@@ -287,6 +292,43 @@ export function AppState({ children }) {
 
   useEffect(() => {
     if (!userId || !vaultReady) return undefined
+    let cancel = false
+    const writeLocal = (next) => {
+      try { localStorage.setItem('si-beta-bases', JSON.stringify(next)) } catch { /* the device may be full */ }
+    }
+    ;(async () => {
+      try {
+        if (!supabase || localUser) {
+          let list = []
+          try { list = JSON.parse(localStorage.getItem('si-beta-bases') || '[]') } catch { list = [] }
+          if (!Array.isArray(list) || !list.length) list = starterBases()
+          if (!cancel) {
+            setBases(list)
+            writeLocal(list)
+            setBasesNote('')
+          }
+          return
+        }
+        let list = await pullBases(supabase)
+        if (!list.length) {
+          await pushBases(supabase, starterBases())
+          list = await pullBases(supabase)
+        }
+        if (!cancel) {
+          setBases(list)
+          setBasesNote('')
+        }
+      } catch (err) {
+        if (!cancel) setBasesNote(err?.message || 'Registers are not on this project yet.')
+      } finally {
+        if (!cancel) setBasesReady(true)
+      }
+    })()
+    return () => { cancel = true }
+  }, [userId, localUser, vaultReady])
+
+  useEffect(() => {
+    if (!userId || !vaultReady) return undefined
     if (!supabase || localUser) {
       setIsAdmin(false)
       setAdminChecked(true)
@@ -446,6 +488,8 @@ export function AppState({ children }) {
       setLocalUser(null)
       setSession(null)
       setRecovery(false)
+      setBases([])
+      setBasesReady(false)
       sealing.current = false
       window.location.hash = '#/'
     },
@@ -904,6 +948,99 @@ export function AppState({ children }) {
     })),
     isAdmin,
     adminChecked,
+    bases,
+    basesReady,
+    basesNote,
+    async createBase(name) {
+      const base = blankBase(String(name || '').trim())
+      const next = [...bases, base]
+      setBases(next)
+      if (supabase && !user?.local) await pushBases(supabase, [base])
+      else {
+        try { localStorage.setItem('si-beta-bases', JSON.stringify(next)) } catch { /* ignore */ }
+      }
+      return base.id
+    },
+    starBase(id) {
+      const current = bases.find((item) => item.id === id)
+      if (!current || current.virtual) return
+      const next = withBasePatch(bases, id, { starred: !current.starred })
+      setBases(next)
+      if (supabase && !user?.local) pushRegisterPatch(supabase, id, { starred: !current.starred }).catch((err) => setBasesNote(err.message || 'Could not update the star.'))
+      else {
+        try { localStorage.setItem('si-beta-bases', JSON.stringify(next)) } catch { /* ignore */ }
+      }
+    },
+    touchBase(id) {
+      const openedAt = new Date().toISOString()
+      const next = withBasePatch(bases, id, { openedAt })
+      setBases(next)
+      if (supabase && !user?.local) pushRegisterPatch(supabase, id, { openedAt }).catch(() => {})
+      else {
+        try { localStorage.setItem('si-beta-bases', JSON.stringify(next)) } catch { /* ignore */ }
+      }
+    },
+    async addRegisterTable(registerId, name) {
+      const base = bases.find((item) => item.id === registerId)
+      const table = {
+        id: newId(),
+        name: String(name || '').trim() || 'New tab',
+        position: base?.tables?.length || 0,
+        fields: [{ id: newId(), name: 'Title', type: 'text', options: [], position: 0 }],
+        views: [{ id: newId(), name: 'All records', position: 0, config: {} }],
+        rows: [],
+      }
+      const next = withTable(bases, registerId, table)
+      setBases(next)
+      if (supabase && !user?.local) await pushTable(supabase, registerId, table)
+      else {
+        try { localStorage.setItem('si-beta-bases', JSON.stringify(next)) } catch { /* ignore */ }
+      }
+      return table.id
+    },
+    async addRegisterField(tableId, field) {
+      const next = withField(bases, tableId, field)
+      setBases(next)
+      const position = next.flatMap((item) => item.tables || []).find((item) => item.id === tableId)?.fields?.length - 1
+      if (supabase && !user?.local) await pushField(supabase, tableId, field, position)
+      else {
+        try { localStorage.setItem('si-beta-bases', JSON.stringify(next)) } catch { /* ignore */ }
+      }
+    },
+    async saveRegisterView(tableId, view) {
+      const next = withView(bases, tableId, view)
+      setBases(next)
+      if (supabase && !user?.local) await pushView(supabase, tableId, view)
+      else {
+        try { localStorage.setItem('si-beta-bases', JSON.stringify(next)) } catch { /* ignore */ }
+      }
+    },
+    async saveRegisterRow(tableId, row) {
+      const next = withRow(bases, tableId, row)
+      setBases(next)
+      if (supabase && !user?.local) await pushRow(supabase, tableId, row)
+      else {
+        try { localStorage.setItem('si-beta-bases', JSON.stringify(next)) } catch { /* ignore */ }
+      }
+    },
+    async deleteRegisterRow(tableId, rowId) {
+      const next = withoutRow(bases, tableId, rowId)
+      setBases(next)
+      if (supabase && !user?.local) await removeRow(supabase, rowId)
+      else {
+        try { localStorage.setItem('si-beta-bases', JSON.stringify(next)) } catch { /* ignore */ }
+      }
+    },
+    async importRegisterRows(tableId, rows) {
+      let next = bases
+      for (const item of rows || []) next = withRow(next, tableId, item)
+      setBases(next)
+      if (supabase && !user?.local) {
+        for (const item of rows || []) await pushRow(supabase, tableId, item)
+      } else {
+        try { localStorage.setItem('si-beta-bases', JSON.stringify(next)) } catch { /* ignore */ }
+      }
+    },
     async saveConfig(key, value) {
       if (!supabase || !user || user.local) throw new Error('Sign in to the beta project to edit configuration.')
       const orgId = await orgIdForUser()
@@ -945,7 +1082,7 @@ export function AppState({ children }) {
         return next
       })
     },
-  }), [ready, user, recovery, rows, injuryCases, orgMembers, orgRole, modules, site, cloudNote, storageWarning, authError, authNotice, vaultReady, vaultError, remoteConfig, isAdmin, adminChecked, qrCodes, submissions])
+  }), [ready, user, recovery, rows, injuryCases, orgMembers, orgRole, modules, site, cloudNote, storageWarning, authError, authNotice, vaultReady, vaultError, remoteConfig, isAdmin, adminChecked, qrCodes, submissions, bases, basesReady, basesNote])
 
   return <AppContext.Provider value={api}>{children}</AppContext.Provider>
 }
