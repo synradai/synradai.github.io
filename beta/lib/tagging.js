@@ -138,3 +138,47 @@ export function matchesUse(table, values, use, now = new Date()) {
   if (use === 'off_hire') return check?.state === 'off'
   return true
 }
+
+function daysUntil(iso, now) {
+  const target = String(iso || '').slice(0, 10)
+  const today = perthDate(now)
+  if (!target || !today) return null
+  const start = Date.parse(`${today}T00:00:00Z`)
+  const end = Date.parse(`${target}T00:00:00Z`)
+  if (Number.isNaN(start) || Number.isNaN(end)) return null
+  return Math.round((end - start) / 86400000)
+}
+
+// Due soon: service overdue or due inside 30 days, a hire ending inside 14 days,
+// or an in-date tag whose quarter ends inside 14 days. Locked-out rows are not due soon.
+export function dueSoon(table, values, now = new Date()) {
+  const check = rowUse(table, values, now)
+  if (!check || check.state === 'locked') return false
+  if (check.state === 'due') return true
+  if (check.state === 'ok' && check.next) {
+    const days = daysUntil(check.next, now)
+    return days != null && days >= 0 && days <= 30
+  }
+  if (check.state === 'in_date') {
+    const days = daysUntil(quarterBounds(now).end, now)
+    return days != null && days >= 0 && days <= 14
+  }
+  if (check.state === 'on') {
+    const off = String(values?.[fieldByName(table, 'Off hire')?.id] || '').slice(0, 10)
+    const days = daysUntil(off, now)
+    return days != null && days >= 0 && days <= 14
+  }
+  return false
+}
+
+export function registerStats(base, now = new Date()) {
+  const stats = { total: 0, locked: 0, dueSoon: 0 }
+  for (const table of base?.tables || []) {
+    for (const row of table.rows || []) {
+      stats.total += 1
+      if (rowUse(table, row.values, now)?.state === 'locked') stats.locked += 1
+      if (dueSoon(table, row.values, now)) stats.dueSoon += 1
+    }
+  }
+  return stats
+}

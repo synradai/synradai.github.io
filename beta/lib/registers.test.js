@@ -15,7 +15,7 @@ import {
   visibleFields,
 } from './registers.js'
 import { moveOutOfService, returnToService, withoutExamples } from './phaseOne.js'
-import { addMonths, quarterBounds, quarterTag, rowUse } from './tagging.js'
+import { addMonths, dueSoon, quarterBounds, quarterTag, registerStats, rowUse } from './tagging.js'
 import { buildTrainingRecord, courseList, personMatrix } from './training.js'
 
 test('a training record keeps several tickets and the matrix marks each one', () => {
@@ -180,4 +180,27 @@ test('phase 1 registers tag the quarter, lock out the wrong colour, and keep out
   const kinds = readFileSync(new URL('../../supabase/migrations/20261027041000_register_kinds.sql', import.meta.url), 'utf8')
   assert.match(kinds, /out_of_service/)
   assert.equal(kinds.includes('rgkiagqexoafmtxhrlqo'), false)
+
+  const wahStats = registerStats(wah, now)
+  assert.deepEqual(wahStats, { total: 4, locked: 3, dueSoon: 0 })
+  const plantStats = registerStats(bases.find((item) => item.name === 'Owned plant'), now)
+  assert.deepEqual(plantStats, { total: 2, locked: 0, dueSoon: 1 })
+  assert.deepEqual(registerStats(bases.find((item) => item.name === 'Hired equipment'), now), { total: 2, locked: 0, dueSoon: 0 })
+
+  const late = new Date('2026-11-20T04:00:00.000Z')
+  assert.equal(registerStats(wah, late).dueSoon, 1)
+  const service = { fields: [{ id: 'last', name: 'Last service', type: 'date' }] }
+  assert.equal(dueSoon(service, { last: '2026-06-01' }, late), true)
+  assert.equal(rowUse(service, { last: '2026-06-01' }, late).state, 'ok')
+  assert.equal(dueSoon(service, { last: '2026-08-20' }, now), false)
+  const hireSoon = {
+    fields: [
+      { id: 'on', name: 'On hire', type: 'date' },
+      { id: 'off', name: 'Off hire', type: 'date' },
+    ],
+  }
+  assert.equal(dueSoon(hireSoon, { on: '2026-10-01', off: '2026-11-05' }, now), true)
+  assert.equal(dueSoon(hireSoon, { on: '2026-10-01', off: '2026-12-20' }, now), false)
+  assert.equal(dueSoon(table, open.rows[0].values, now), false)
+  assert.equal(dueSoon(table, locked.rows[0].values, now), false)
 })

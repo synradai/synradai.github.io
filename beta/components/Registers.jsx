@@ -3,10 +3,8 @@ import QRCode from 'qrcode'
 import { parseCsv } from '../lib/import.js'
 import {
   FIELD_TYPES,
-  abbrFor,
   applyView,
   choiceList,
-  fieldIcon,
   findBase,
   findTable,
   formsLibrary,
@@ -14,12 +12,11 @@ import {
   openedAgo,
   rowTint,
   sortBases,
-  tint,
   valuesFromHeaderRow,
   visibleFields,
 } from '../lib/registers.js'
 import { exampleCount } from '../lib/phaseOne.js'
-import { quarterTag, rowUse, tableCheck } from '../lib/tagging.js'
+import { quarterTag, registerStats, rowUse, tableCheck } from '../lib/tagging.js'
 import { go } from '../lib/routes.js'
 import { Button, Field } from './ui.jsx'
 
@@ -48,10 +45,38 @@ function choiceFor(field, value) {
   return (field?.options || []).find((item) => item.label === value || item.id === value)
 }
 
+function chipInk(color) {
+  const hex = /^#[0-9a-fA-F]{6}$/.test(String(color || '')) ? String(color) : '#2458a8'
+  const n = parseInt(hex.slice(1), 16)
+  const channel = (shift) => {
+    const value = ((n >> shift) & 255) / 255
+    return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4
+  }
+  const lum = 0.2126 * channel(16) + 0.7152 * channel(8) + 0.0722 * channel(0)
+  return (1.05 / (lum + 0.05)) >= 4.5 ? '#ffffff' : '#141414'
+}
+
 function Pill({ field, value }) {
   const choice = choiceFor(field, value)
   const color = choice?.color || '#2458a8'
-  return <span className="reg-pill" style={{ background: color }}>{choice?.label || value}</span>
+  return <span className="reg-chip" style={{ background: color, color: chipInk(color) }}>{choice?.label || value}</span>
+}
+
+function plainValue(value) {
+  if (Array.isArray(value)) return value.filter(Boolean).join(', ')
+  if (value === true) return 'Yes'
+  if (value === false) return 'No'
+  if (value && typeof value === 'object') return ''
+  return value == null ? '' : String(value)
+}
+
+function briefValue(field, value) {
+  if (field.type === 'attachment') {
+    const count = Array.isArray(value) ? value.length : 0
+    return count ? `${count} photo${count === 1 ? '' : 's'}` : ''
+  }
+  if (field.type === 'qr') return value ? 'QR' : ''
+  return plainValue(value)
 }
 
 function QrThumb({ link }) {
@@ -73,11 +98,11 @@ function Cell({ field, value, row }) {
   if (field.type === 'multi_select') {
     const items = Array.isArray(value) ? value : []
     if (!items.length) return null
-    return <span className="reg-pills">{items.map((item) => <Pill key={item} field={field} value={item} />)}</span>
+    return <span className="reg-chips">{items.map((item) => <Pill key={item} field={field} value={item} />)}</span>
   }
   if (field.type === 'checkbox') {
-    if (value === true) return <span className="reg-pill" style={{ background: '#1f8a4c' }}>Yes</span>
-    if (value === false) return <span className="reg-pill" style={{ background: '#5c6b82' }}>No</span>
+    if (value === true) return <span className="reg-chip plain">Yes</span>
+    if (value === false) return <span className="reg-chip plain off">No</span>
     return null
   }
   if (field.type === 'attachment') {
@@ -111,9 +136,10 @@ function kindLabel(kind) {
   return 'Register'
 }
 
-function BaseTile({ base, app }) {
+function RegisterCard({ base, app }) {
+  const stats = registerStats(base)
   return (
-    <article className={`base-tile${base.kind === 'out_of_service' ? ' hazard' : ''}`}>
+    <article className={`reg-card${base.kind === 'out_of_service' ? ' hazard' : ''}`}>
       <button
         type="button"
         className={`base-star${base.starred ? ' on' : ''}`}
@@ -123,11 +149,15 @@ function BaseTile({ base, app }) {
       >
         {base.starred ? '★' : '☆'}
       </button>
-      <a href={`#/registers/${base.id}`}>
-        <span className="base-icon" style={{ background: base.color }}>{base.abbr || abbrFor(base.name)}</span>
+      <a href={`#/registers/${base.id}`} aria-label={`${base.name}, ${stats.total} total, ${stats.locked} locked out, ${stats.dueSoon} due soon`}>
+        <span className="reg-card-kicker">{kindLabel(base.kind)}</span>
         <strong>{base.name}</strong>
-        <span className="base-kind">{kindLabel(base.kind)}</span>
-        <span>{openedAgo(base.openedAt)}</span>
+        <span className="reg-counts">
+          <span><b>{stats.total}</b> total</span>
+          <span className={stats.locked ? 'is-alert' : ''}><b>{stats.locked}</b> locked out</span>
+          <span className={stats.dueSoon ? 'is-due' : ''}><b>{stats.dueSoon}</b> due soon</span>
+        </span>
+        <span className="reg-card-meta">{openedAgo(base.openedAt)}</span>
       </a>
     </article>
   )
@@ -178,7 +208,7 @@ export function RegistersHome({ app }) {
   }
 
   return (
-    <>
+    <div className="reg-home">
       <div className="reg-home-head">
         <div>
           <p className="eyebrow">Registers</p>
@@ -186,7 +216,7 @@ export function RegistersHome({ app }) {
         </div>
         <Button type="button" onClick={() => setCreating((value) => !value)}>Create</Button>
       </div>
-      <p className="lede">Each tile is a register for the company. This quarter’s tag colour is {due.label} ({due.season}). Gear with another colour, or a tag from before this quarter, is locked out.</p>
+      <p className="lede">Each card is a company register. The counts are total rows, locked out, and due soon. Due soon means a service inside 30 days or already overdue, a hire ending inside 14 days, or a tag whose quarter ends inside 14 days.</p>
       <p className="quarter-banner"><span className="swatch" style={{ background: due.color }} />Due this quarter: {due.label} ({due.season}). Gear with another colour, or a tag from before this quarter, is locked out.</p>
       {examples > 0 && (
         <p className="example-banner">
@@ -209,7 +239,7 @@ export function RegistersHome({ app }) {
         <>
           <h2>Starred</h2>
           <div className="base-grid">
-            {starred.map((base) => <BaseTile key={`star-${base.id}`} base={base} app={app} />)}
+            {starred.map((base) => <RegisterCard key={`star-${base.id}`} base={base} app={app} />)}
           </div>
         </>
       )}
@@ -217,21 +247,23 @@ export function RegistersHome({ app }) {
         <section key={heading}>
           <h2>{heading}</h2>
           <div className="base-grid">
-            {items.map((base) => <BaseTile key={base.id} base={base} app={app} />)}
+            {items.map((base) => <RegisterCard key={base.id} base={base} app={app} />)}
           </div>
         </section>
       ))}
-    </>
+    </div>
   )
 }
 
 function CheckPill({ check }) {
   if (!check) return null
-  return <span className={`reg-pill check ${check.tone}`}>{check.label}</span>
+  const colour = check.state === 'in_date' ? check.due?.color : ''
+  const style = colour ? { background: colour, color: chipInk(colour) } : undefined
+  return <span className={`reg-chip status ${check.tone}`} style={style}>{check.label}</span>
 }
 
 function DataRows({ rows, fields, table, rowColor, baseId, showUse, now }) {
-  return rows.map((item, index) => {
+  return rows.map((item) => {
     const check = showUse ? rowUse(table, item.values, now) : null
     return (
       <tr
@@ -244,15 +276,14 @@ function DataRows({ rows, fields, table, rowColor, baseId, showUse, now }) {
         }}
         tabIndex={0}
       >
-        <td className="frozen num">{index + 1}</td>
         {showUse && (
           <td className="check-cell">
             <CheckPill check={check} />
-            {item.values?._example && <span className="reg-pill example">Example</span>}
+            {item.values?._example && <span className="reg-chip example">Example</span>}
           </td>
         )}
         {fields.map((field, fieldIndex) => (
-          <td key={field.id} className={fieldIndex === 0 ? 'frozen second' : ''}>
+          <td key={field.id} className={fieldIndex === 0 ? 'lead' : ''}>
             <Cell field={field} value={item.values?.[field.id]} row={item} />
           </td>
         ))}
@@ -278,7 +309,7 @@ function GroupBlock({ group, depth, fields, table, rowColor, baseId, showUse, no
     return <DataRows rows={group.rows} fields={fields} table={table} rowColor={rowColor} baseId={baseId} showUse={showUse} now={now} />
   }
   const count = group.children ? group.children.reduce((sum, child) => sum + leafCount(child), 0) : (group.rows?.length || 0)
-  const span = fields.length + 1 + (showUse ? 1 : 0)
+  const span = Math.max(fields.length, 1) + (showUse ? 1 : 0)
   return (
     <>
       {group.label && (
@@ -290,6 +321,75 @@ function GroupBlock({ group, depth, fields, table, rowColor, baseId, showUse, no
         ? <GroupBlocks groups={group.children} depth={depth + 1} fields={fields} table={table} rowColor={rowColor} baseId={baseId} showUse={showUse} now={now} />
         : <DataRows rows={group.rows} fields={fields} table={table} rowColor={rowColor} baseId={baseId} showUse={showUse} now={now} />}
     </>
+  )
+}
+
+function cardTitle(fields, row) {
+  const named = fields.find((field) => ['Item', 'Unique ID', 'Scaffold tag', 'Title', 'Name'].includes(field.name))
+  const field = named || fields.find((item) => item.type === 'text') || fields[0]
+  const text = field ? (plainValue(row.values?.[field.id]) || 'Untitled') : 'Untitled'
+  return { field, text }
+}
+
+function tagChoice(table, row) {
+  const field = (table.fields || []).find((item) => item.name === 'Tag colour')
+  if (!field) return null
+  return choiceFor(field, row.values?.[field.id])
+}
+
+function ItemCard({ row, fields, table, baseId, showUse, now, hazard }) {
+  const check = showUse ? rowUse(table, row.values, now) : null
+  const tagged = tagChoice(table, row)
+  const title = cardTitle(fields, row)
+  const meta = fields
+    .filter((field) => field.id !== title.field?.id && field.name !== 'Tag colour')
+    .map((field) => ({ field, text: briefValue(field, row.values?.[field.id]) }))
+    .filter((item) => item.text)
+    .slice(0, 3)
+  const bandStyle = !hazard && tagged?.color ? { background: tagged.color, color: chipInk(tagged.color) } : undefined
+  return (
+    <a className={`gear-card${hazard ? ' hazard' : ''}`} href={`#/registers/${baseId}/${table.id}/${row.id}`} aria-label={`${title.text}${check ? `, ${check.label}` : ''}`}>
+      <span className={`gear-band${hazard ? ' hazard' : ''}`} style={bandStyle} aria-hidden="true">
+        {hazard ? <span>Out of service</span> : (tagged?.label || 'No tag')}
+      </span>
+      <span className="gear-body">
+        <span className="gear-title">{title.text}</span>
+        <span className="gear-badges">
+          {check && <CheckPill check={check} />}
+          {row.values?._example && <span className="reg-chip example">Example</span>}
+        </span>
+        {meta.length > 0 && (
+          <span className="gear-meta">
+            {meta.map((item) => <span key={item.field.id}>{item.field.name}: {item.text}</span>)}
+          </span>
+        )}
+      </span>
+    </a>
+  )
+}
+
+function GearGroups({ groups, depth, fields, table, baseId, showUse, now, hazard }) {
+  return groups.map((group) => (
+    <div key={group.key} className="gear-group">
+      {group.label && <p className="gear-group-label" style={{ paddingLeft: `${depth * 0.6}rem` }}>{group.label}</p>}
+      {group.children
+        ? <GearGroups groups={group.children} depth={depth + 1} fields={fields} table={table} baseId={baseId} showUse={showUse} now={now} hazard={hazard} />
+        : group.rows.map((row) => (
+          <ItemCard key={row.id} row={row} fields={fields} table={table} baseId={baseId} showUse={showUse} now={now} hazard={hazard || row.values?._oos} />
+        ))}
+    </div>
+  ))
+}
+
+function GearList({ grouped, groups, rows, fields, table, baseId, showUse, now, hazard }) {
+  return (
+    <div className="gear-list">
+      {grouped
+        ? <GearGroups groups={groups} depth={0} fields={fields} table={table} baseId={baseId} showUse={showUse} now={now} hazard={hazard} />
+        : rows.map((row) => (
+          <ItemCard key={row.id} row={row} fields={fields} table={table} baseId={baseId} showUse={showUse} now={now} hazard={hazard || row.values?._oos} />
+        ))}
+    </div>
   )
 }
 
@@ -442,7 +542,7 @@ export function RegisterBase({ app, id, tableId }) {
       )}
       <div className="reg-layout">
         <aside className="reg-views">
-          <p className="group">Views</p>
+          <p className="group">Sites and lists</p>
           {table.views.map((item) => (
             <button key={item.id} type="button" className={item.id === view?.id ? 'active' : ''} onClick={() => setViewId(item.id)}>{item.name}</button>
           ))}
@@ -553,17 +653,24 @@ export function RegisterBase({ app, id, tableId }) {
               </Field>
             </div>
           )}
+          <GearList
+            grouped={grouped}
+            groups={applied.groups}
+            rows={applied.rows}
+            fields={fields}
+            table={table}
+            baseId={base.id}
+            showUse={showUse}
+            now={now}
+            hazard={base.kind === 'out_of_service'}
+          />
           <div className="reg-scroll">
             <table className="reg-grid">
               <thead>
                 <tr>
-                  <th className="frozen num">#</th>
-                  {showUse && <th>Check</th>}
+                  {showUse && <th>Status</th>}
                   {fields.map((field, index) => (
-                    <th key={field.id} className={index === 0 ? 'frozen second' : ''}>
-                      <span className="reg-type" title={field.type}>{fieldIcon(field.type)}</span>
-                      {field.name}
-                    </th>
+                    <th key={field.id} className={index === 0 ? 'lead' : ''}>{field.name}</th>
                   ))}
                 </tr>
               </thead>
@@ -703,6 +810,11 @@ export function RegisterRecord({ app, id, tableId, rowId }) {
   const oosBase = bases.find((item) => item.kind === 'out_of_service')
   const status = table.fields.find((item) => item.name === 'Status')
   const stillOut = base.kind === 'out_of_service' && values[status?.id] !== 'Returned'
+  const tagged = tagChoice(table, { values })
+  const hazard = base.kind === 'out_of_service'
+  const titleField = table.fields.find((field) => ['Item', 'Unique ID', 'Scaffold tag', 'Title', 'Name'].includes(field.name)) || table.fields[0]
+  const title = plainValue(values[titleField?.id]) || 'Record'
+  const bandStyle = !hazard && tagged?.color ? { background: tagged.color, color: chipInk(tagged.color) } : undefined
 
   const takeOut = async () => {
     setBusy(true)
@@ -732,9 +844,11 @@ export function RegisterRecord({ app, id, tableId, rowId }) {
   }
 
   return (
-    <form className={`reg-record${base.kind === 'out_of_service' ? ' hazard' : ''}`} onSubmit={save}>
+    <form className={`reg-record${hazard ? ' hazard' : ''}`} onSubmit={save}>
       <p className="eyebrow"><a href={`#/registers/${base.id}/${table.id}`}>{base.name} · {table.name}</a></p>
-      <h1>Record</h1>
+      <div className={`record-band${hazard ? ' hazard' : ''}`} style={bandStyle}>{hazard ? <span>Out of service</span> : (tagged?.label || check?.label || 'Record')}</div>
+      <h1>{title}</h1>
+      {check && <p className="record-status"><CheckPill check={check} /></p>}
       <p className="lede">Edit the whole record here. On a phone this is the way to change a row.</p>
       {check?.state === 'locked' && (
         <p className="lockout-banner">
