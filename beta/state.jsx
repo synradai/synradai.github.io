@@ -10,8 +10,9 @@ import { generateId } from '../src/utils/storage.js'
 import { canRemind, reminderPatch } from './lib/actions.js'
 import { loadLocalActions, loadLocalCodes, loadLocalSubmissions, mapQrCode, mapSubmission, newToken, rememberSupervisor, resolveQrForms, saveLocalCodes } from './lib/qrForms.js'
 import { perthDate } from './lib/time.js'
-import { blankBase, newId, starterBases, withBasePatch, withField, withRow, withTable, withView, withoutRow } from './lib/registers.js'
-import { pushBases, pushField, pushRegisterPatch, pushRow, pushTable, pushView, removeRow, seedBases } from './lib/registerStore.js'
+import { blankBase, missingStarters, newId, withBasePatch, withField, withRow, withTable, withView, withoutRow } from './lib/registers.js'
+import { moveOutOfService, returnToService, withoutExamples } from './lib/phaseOne.js'
+import { pushBases, pushField, pushRegisterPatch, pushRow, pushTable, pushView, removeExampleRows, removeRow, resetSeedLock, seedBases } from './lib/registerStore.js'
 import { authReturnUrl, getAccessToken, isBackendEnabled, liveProjectBlocked, supabase, supabaseKey, supabaseUrl } from './lib/supabase.js'
 import { openVault, pauseWrites, sealVault } from '../src/utils/secureStore.js'
 import { safeGetItem } from '../src/utils/storage.js'
@@ -301,7 +302,9 @@ export function AppState({ children }) {
         if (!supabase || localUser) {
           let list = []
           try { list = JSON.parse(localStorage.getItem('si-beta-bases') || '[]') } catch { list = [] }
-          if (!Array.isArray(list) || !list.length) list = starterBases()
+          if (!Array.isArray(list)) list = []
+          const missing = missingStarters(list)
+          if (missing.length) list = [...list, ...missing]
           if (!cancel) {
             setBases(list)
             writeLocal(list)
@@ -309,7 +312,7 @@ export function AppState({ children }) {
           }
           return
         }
-        const list = await seedBases(supabase)
+        const list = await seedBases(supabase, userId)
         if (!cancel) {
           setBases(list)
           setBasesNote('')
@@ -486,6 +489,7 @@ export function AppState({ children }) {
       setRecovery(false)
       setBases([])
       setBasesReady(false)
+      resetSeedLock()
       sealing.current = false
       window.location.hash = '#/'
     },
@@ -1036,6 +1040,36 @@ export function AppState({ children }) {
       } else {
         try { localStorage.setItem('si-beta-bases', JSON.stringify(next)) } catch { /* ignore */ }
       }
+    },
+    async clearExampleRows() {
+      const next = withoutExamples(bases)
+      setBases(next)
+      if (supabase && !user?.local) await removeExampleRows(supabase)
+      else {
+        try { localStorage.setItem('si-beta-bases', JSON.stringify(next)) } catch { /* ignore */ }
+      }
+    },
+    async moveOutOfService(tableId, rowId, reason) {
+      const moved = moveOutOfService(bases, { tableId, rowId, reason, now: new Date() })
+      setBases(moved.bases)
+      if (supabase && !user?.local) {
+        await pushRow(supabase, tableId, moved.source)
+        await pushRow(supabase, moved.oosTableId, moved.oosRow)
+      } else {
+        try { localStorage.setItem('si-beta-bases', JSON.stringify(moved.bases)) } catch { /* ignore */ }
+      }
+      return moved
+    },
+    async returnToService(tableId, rowId) {
+      const returned = returnToService(bases, { tableId, rowId, now: new Date() })
+      setBases(returned.bases)
+      if (supabase && !user?.local) {
+        await pushRow(supabase, tableId, returned.oosRow)
+        if (returned.source && returned.sourceTableId) await pushRow(supabase, returned.sourceTableId, returned.source)
+      } else {
+        try { localStorage.setItem('si-beta-bases', JSON.stringify(returned.bases)) } catch { /* ignore */ }
+      }
+      return returned
     },
     async saveConfig(key, value) {
       if (!supabase || !user || user.local) throw new Error('Sign in to the beta project to edit configuration.')

@@ -1,6 +1,9 @@
 // Company registers: bases, tabs, fields, saved views, and rows.
 // Field values stay in one jsonb object so a new column does not need a migration.
 
+import { phaseOneBases } from './phaseOne.js'
+import { matchesUse } from './tagging.js'
+
 export const FIELD_TYPES = [
   { id: 'text', label: 'Text', icon: 'Aa' },
   { id: 'number', label: 'Number', icon: '#' },
@@ -162,7 +165,7 @@ export function starterBases(now = new Date().toISOString()) {
     field('Size', 'single_select', choiceList(['MEDIUM', 'HEAVY']), { id: id.size, position: 11 }),
     field('m3', 'number', [], { id: id.m3, position: 12 }),
   ]
-  return [
+  const legacy = [
     {
       id: newId(),
       name: 'Scaffold Register',
@@ -311,6 +314,7 @@ export function starterBases(now = new Date().toISOString()) {
       ],
     },
   ]
+  return [...legacy, ...phaseOneBases(now)]
 }
 
 export function blankBase(name, now = new Date().toISOString()) {
@@ -470,7 +474,12 @@ export function groupRows(rows, fields, keys) {
   }))
 }
 
-export function applyView(table, viewConfig, search = '') {
+export function missingStarters(existing, now = new Date().toISOString()) {
+  const names = new Set((existing || []).map((item) => item.name))
+  return starterBases(now).filter((item) => item.name && !names.has(item.name))
+}
+
+export function applyView(table, viewConfig, search = '', now = new Date()) {
   const fields = table?.fields || []
   let rows = table?.rows || []
   const query = String(search || '').trim().toLowerCase()
@@ -479,6 +488,7 @@ export function applyView(table, viewConfig, search = '') {
     const fieldDef = fields.find((item) => item.id === rule.fieldId)
     rows = rows.filter((item) => matchFilter(fieldDef, item.values?.[rule.fieldId], rule))
   }
+  if (viewConfig?.use) rows = rows.filter((item) => matchesUse(table, item.values, viewConfig.use, now))
   rows = sortRows(rows, fields, viewConfig?.sort)
   return {
     rows,

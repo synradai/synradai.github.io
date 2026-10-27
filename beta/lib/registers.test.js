@@ -6,6 +6,7 @@ import { routeFromHash } from './routes.js'
 import {
   applyView,
   formsLibrary,
+  missingStarters,
   openedAgo,
   sortBases,
   splitMulti,
@@ -13,6 +14,8 @@ import {
   valuesFromHeaderRow,
   visibleFields,
 } from './registers.js'
+import { moveOutOfService, returnToService, withoutExamples } from './phaseOne.js'
+import { addMonths, quarterBounds, quarterTag, rowUse } from './tagging.js'
 import { buildTrainingRecord, courseList, personMatrix } from './training.js'
 
 test('a training record keeps several tickets and the matrix marks each one', () => {
@@ -110,4 +113,71 @@ test('starter registers match the scaffold and equipment bases', () => {
   assert.match(sql, /multi_select/)
   assert.match(sql, /audit_register_row/)
   assert.equal(sql.includes('rgkiagqexoafmtxhrlqo'), false)
+})
+
+test('phase 1 registers tag the quarter, lock out the wrong colour, and keep out-of-service history', () => {
+  const now = new Date('2026-10-27T04:00:00.000Z')
+  assert.equal(quarterTag(now).label, 'Yellow')
+  assert.equal(quarterTag('2026-01-15').label, 'Red')
+  assert.equal(quarterTag('2026-03-01').label, 'Green')
+  assert.equal(quarterTag('2026-06-30').label, 'Blue')
+  assert.equal(quarterTag('2026-12-01').label, 'Red')
+  const summer = quarterBounds('2027-01-10')
+  assert.equal(summer.start, '2026-12-01')
+  assert.equal(summer.end, '2027-02-28')
+  assert.equal(addMonths('2026-02-01', 6), '2026-08-01')
+  assert.equal(addMonths('2026-08-20', 6), '2027-02-20')
+
+  const bases = starterBases('2026-10-27T00:00:00.000Z')
+  const names = bases.map((item) => item.name)
+  for (const name of ['Scaffold gear', 'WAH equipment', 'Harnesses', 'Lanyards', 'Ladders', 'Electrical', 'Fire extinguishers', 'PPE', 'Tools and store', 'Owned plant', 'Hired equipment', 'Out of service']) {
+    assert.equal(names.includes(name), true, name)
+  }
+  const wah = bases.find((item) => item.name === 'WAH equipment')
+  assert.equal(wah.kind, 'gear')
+  const table = wah.tables[0]
+  const locked = applyView(table, { use: 'locked' }, '', now)
+  const open = applyView(table, { use: 'in_date' }, '', now)
+  assert.equal(locked.rows.length, 3)
+  assert.equal(open.rows.length, 1)
+  assert.equal(rowUse(table, open.rows[0].values, now).label, 'In date')
+  assert.equal(locked.rows.every((row) => rowUse(table, row.values, now).label === 'LOCKED OUT'), true)
+  assert.equal(table.fields.some((field) => field.type === 'qr'), false)
+
+  const plant = bases.find((item) => item.name === 'Owned plant').tables[0]
+  const due = plant.rows.find((row) => Object.values(row.values).includes('LT-04'))
+  const current = plant.rows.find((row) => Object.values(row.values).includes('CP-02'))
+  assert.equal(rowUse(plant, due.values, now).state, 'due')
+  assert.equal(rowUse(plant, current.values, now).state, 'ok')
+  const hire = bases.find((item) => item.name === 'Hired equipment').tables[0]
+  assert.equal(applyView(hire, { use: 'on_hire' }, '', now).rows.length, 1)
+  assert.equal(applyView(hire, { use: 'off_hire' }, '', now).rows.length, 1)
+
+  const oos = bases.find((item) => item.name === 'Out of service')
+  assert.equal(oos.kind, 'out_of_service')
+  assert.equal(applyView(oos.tables[0], oos.tables[0].views[0].config, '', now).rows.length, 1)
+  assert.equal(applyView(oos.tables[0], oos.tables[0].views[1].config, '', now).rows.length, 2)
+
+  const kept = bases.filter((item) => item.name === 'Scaffold Register')
+  const missing = missingStarters(kept, '2026-10-27T00:00:00.000Z')
+  assert.equal(missing.some((item) => item.name === 'Scaffold Register'), false)
+  assert.equal(missing.some((item) => item.name === 'WAH equipment'), true)
+
+  const gear = bases.find((item) => item.name === 'Harnesses')
+  const source = gear.tables[0].rows[0]
+  const moved = moveOutOfService(bases, { tableId: gear.tables[0].id, rowId: source.id, reason: 'Failed inspection', now })
+  const history = moved.bases.find((item) => item.kind === 'out_of_service').tables[0]
+  assert.equal(history.rows.length, 3)
+  assert.equal(moved.source.values._oos, true)
+  const back = returnToService(moved.bases, { tableId: history.id, rowId: moved.oosRow.id, now })
+  assert.equal(back.bases.find((item) => item.kind === 'out_of_service').tables[0].rows.length, 3)
+  assert.equal(back.source.values._oos, undefined)
+  assert.equal(Object.values(back.oosRow.values).includes('Returned'), true)
+  const cleared = withoutExamples(bases)
+  assert.equal(cleared.find((item) => item.name === 'WAH equipment').tables[0].rows.length, 0)
+  assert.equal(cleared.find((item) => item.name === 'Scaffold Register').tables[0].rows.length, 2)
+
+  const kinds = readFileSync(new URL('../../supabase/migrations/20261027041000_register_kinds.sql', import.meta.url), 'utf8')
+  assert.match(kinds, /out_of_service/)
+  assert.equal(kinds.includes('rgkiagqexoafmtxhrlqo'), false)
 })
