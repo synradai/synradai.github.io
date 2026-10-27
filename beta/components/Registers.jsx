@@ -18,6 +18,8 @@ import {
   valuesFromHeaderRow,
   visibleFields,
 } from '../lib/registers.js'
+import { exampleCount } from '../lib/phaseOne.js'
+import { quarterTag, rowUse, tableCheck } from '../lib/tagging.js'
 import { go } from '../lib/routes.js'
 import { Button, Field } from './ui.jsx'
 
@@ -100,13 +102,55 @@ function useBases(app) {
   return useMemo(() => sortBases([...stored, formsLibrary(app.qrCodes)]), [stored, app.qrCodes])
 }
 
+function kindLabel(kind) {
+  if (kind === 'gear') return 'Gear'
+  if (kind === 'plant') return 'Owned plant'
+  if (kind === 'hire') return 'Hired'
+  if (kind === 'out_of_service') return 'Out of service'
+  if (kind === 'forms') return 'Forms'
+  return 'Register'
+}
+
+function BaseTile({ base, app }) {
+  return (
+    <article className={`base-tile${base.kind === 'out_of_service' ? ' hazard' : ''}`}>
+      <button
+        type="button"
+        className={`base-star${base.starred ? ' on' : ''}`}
+        aria-label={base.starred ? 'Unstar' : 'Star'}
+        disabled={base.virtual}
+        onClick={() => app.starBase(base.id)}
+      >
+        {base.starred ? '★' : '☆'}
+      </button>
+      <a href={`#/registers/${base.id}`}>
+        <span className="base-icon" style={{ background: base.color }}>{base.abbr || abbrFor(base.name)}</span>
+        <strong>{base.name}</strong>
+        <span className="base-kind">{kindLabel(base.kind)}</span>
+        <span>{openedAgo(base.openedAt)}</span>
+      </a>
+    </article>
+  )
+}
+
 export function RegistersHome({ app }) {
   const bases = useBases(app)
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
   const [error, setError] = useState('')
+  const [clearing, setClearing] = useState(false)
   const title = app.site?.orgName || 'Registers'
+  const due = quarterTag(new Date())
+  const examples = exampleCount(app.bases)
   const starred = bases.filter((item) => item.starred)
+  const sections = [
+    ['Gear', bases.filter((item) => item.kind === 'gear')],
+    ['Owned plant', bases.filter((item) => item.kind === 'plant')],
+    ['Hired and client-owned', bases.filter((item) => item.kind === 'hire')],
+    ['Out of service', bases.filter((item) => item.kind === 'out_of_service')],
+    ['Other registers', bases.filter((item) => !item.virtual && (!item.kind || item.kind === 'base'))],
+    ['Forms', bases.filter((item) => item.virtual || item.kind === 'forms')],
+  ].filter(([, items]) => items.length)
 
   const create = async (event) => {
     event.preventDefault()
@@ -121,6 +165,18 @@ export function RegistersHome({ app }) {
     }
   }
 
+  const clearExamples = async () => {
+    setClearing(true)
+    setError('')
+    try {
+      await app.clearExampleRows()
+    } catch (err) {
+      setError(err.message || 'Could not clear the example rows.')
+    } finally {
+      setClearing(false)
+    }
+  }
+
   return (
     <>
       <div className="reg-home-head">
@@ -130,63 +186,80 @@ export function RegistersHome({ app }) {
         </div>
         <Button type="button" onClick={() => setCreating((value) => !value)}>Create</Button>
       </div>
-      <p className="lede">Each tile is a register for the company. Open one to see its tabs, saved views, and rows.</p>
+      <p className="lede">Each tile is a register for the company. This quarter’s tag colour is {due.label} ({due.season}). Gear with another colour, or a tag from before this quarter, is locked out.</p>
+      <p className="quarter-banner"><span className="swatch" style={{ background: due.color }} />Due this quarter: {due.label} ({due.season}). Gear with another colour, or a tag from before this quarter, is locked out.</p>
+      {examples > 0 && (
+        <p className="example-banner">
+          Sample rows are marked Example and can be cleared in one click.
+          <Button type="button" kind="ghost" onClick={clearExamples} disabled={clearing}>{clearing ? 'Clearing…' : 'Clear example data'}</Button>
+        </p>
+      )}
       {app.basesNote && <p className="note">{app.basesNote}</p>}
+      {error && <p className="note">{error}</p>}
       {creating && (
         <form className="panel" onSubmit={create}>
           <Field label="Register name">
             <input value={name} onChange={(event) => setName(event.target.value)} required placeholder="Plant register" />
           </Field>
-          {error && <p className="note">{error}</p>}
           <Button type="submit">Create register</Button>
         </form>
       )}
       {!app.basesReady && <p className="muted">Opening registers…</p>}
-      {starred.length > 0 && <h2>Starred</h2>}
-      <div className="base-grid">
-        {bases.map((base) => (
-          <article className="base-tile" key={base.id}>
-            <button
-              type="button"
-              className={`base-star${base.starred ? ' on' : ''}`}
-              aria-label={base.starred ? 'Unstar' : 'Star'}
-              disabled={base.virtual}
-              onClick={() => app.starBase(base.id)}
-            >
-              {base.starred ? '★' : '☆'}
-            </button>
-            <a href={`#/registers/${base.id}`}>
-              <span className="base-icon" style={{ background: base.color }}>{base.abbr || abbrFor(base.name)}</span>
-              <strong>{base.name}</strong>
-              <span>{openedAgo(base.openedAt)}</span>
-            </a>
-          </article>
-        ))}
-      </div>
+      {starred.length > 0 && (
+        <>
+          <h2>Starred</h2>
+          <div className="base-grid">
+            {starred.map((base) => <BaseTile key={`star-${base.id}`} base={base} app={app} />)}
+          </div>
+        </>
+      )}
+      {sections.map(([heading, items]) => (
+        <section key={heading}>
+          <h2>{heading}</h2>
+          <div className="base-grid">
+            {items.map((base) => <BaseTile key={base.id} base={base} app={app} />)}
+          </div>
+        </section>
+      ))}
     </>
   )
 }
 
-function DataRows({ rows, fields, table, hidden, rowColor, baseId }) {
-  return rows.map((item, index) => (
-    <tr
-      key={item.id}
-      style={{ background: rowTint(table, rowColor, item.values) }}
-      onClick={() => go(`#/registers/${baseId}/${table.id}/${item.id}`)}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter') go(`#/registers/${baseId}/${table.id}/${item.id}`)
-      }}
-      tabIndex={0}
-    >
-      <td className="frozen num">{index + 1}</td>
-      {fields.map((field, fieldIndex) => (
-        <td key={field.id} className={fieldIndex === 0 ? 'frozen second' : ''}>
-          <Cell field={field} value={item.values?.[field.id]} row={item} />
-        </td>
-      ))}
-      {fields.length === 0 && <td />}
-    </tr>
-  ))
+function CheckPill({ check }) {
+  if (!check) return null
+  return <span className={`reg-pill check ${check.tone}`}>{check.label}</span>
+}
+
+function DataRows({ rows, fields, table, rowColor, baseId, showUse, now }) {
+  return rows.map((item, index) => {
+    const check = showUse ? rowUse(table, item.values, now) : null
+    return (
+      <tr
+        key={item.id}
+        className={`${check?.state === 'locked' || check?.state === 'due' ? 'is-locked' : ''}${item.values?._example ? ' is-example' : ''}`}
+        style={{ background: rowTint(table, rowColor, item.values) }}
+        onClick={() => go(`#/registers/${baseId}/${table.id}/${item.id}`)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') go(`#/registers/${baseId}/${table.id}/${item.id}`)
+        }}
+        tabIndex={0}
+      >
+        <td className="frozen num">{index + 1}</td>
+        {showUse && (
+          <td className="check-cell">
+            <CheckPill check={check} />
+            {item.values?._example && <span className="reg-pill example">Example</span>}
+          </td>
+        )}
+        {fields.map((field, fieldIndex) => (
+          <td key={field.id} className={fieldIndex === 0 ? 'frozen second' : ''}>
+            <Cell field={field} value={item.values?.[field.id]} row={item} />
+          </td>
+        ))}
+        {fields.length === 0 && <td />}
+      </tr>
+    )
+  })
 }
 
 function leafCount(group) {
@@ -194,27 +267,28 @@ function leafCount(group) {
   return group.rows?.length || 0
 }
 
-function GroupBlocks({ groups, depth, fields, table, hidden, rowColor, baseId }) {
+function GroupBlocks({ groups, depth, fields, table, rowColor, baseId, showUse, now }) {
   return groups.map((group) => (
-    <GroupBlock key={group.key} group={group} depth={depth} fields={fields} table={table} hidden={hidden} rowColor={rowColor} baseId={baseId} />
+    <GroupBlock key={group.key} group={group} depth={depth} fields={fields} table={table} rowColor={rowColor} baseId={baseId} showUse={showUse} now={now} />
   ))
 }
 
-function GroupBlock({ group, depth, fields, table, hidden, rowColor, baseId }) {
+function GroupBlock({ group, depth, fields, table, rowColor, baseId, showUse, now }) {
   if (!group.label && !group.children) {
-    return <DataRows rows={group.rows} fields={fields} table={table} hidden={hidden} rowColor={rowColor} baseId={baseId} />
+    return <DataRows rows={group.rows} fields={fields} table={table} rowColor={rowColor} baseId={baseId} showUse={showUse} now={now} />
   }
   const count = group.children ? group.children.reduce((sum, child) => sum + leafCount(child), 0) : (group.rows?.length || 0)
+  const span = fields.length + 1 + (showUse ? 1 : 0)
   return (
     <>
       {group.label && (
         <tr className="reg-group">
-          <td colSpan={fields.length + 1} style={{ paddingLeft: `${0.6 + depth * 0.8}rem` }}>{group.label} · {count}</td>
+          <td colSpan={span} style={{ paddingLeft: `${0.6 + depth * 0.8}rem` }}>{group.label} · {count}</td>
         </tr>
       )}
       {group.children
-        ? <GroupBlocks groups={group.children} depth={depth + 1} fields={fields} table={table} hidden={hidden} rowColor={rowColor} baseId={baseId} />
-        : <DataRows rows={group.rows} fields={fields} table={table} hidden={hidden} rowColor={rowColor} baseId={baseId} />}
+        ? <GroupBlocks groups={group.children} depth={depth + 1} fields={fields} table={table} rowColor={rowColor} baseId={baseId} showUse={showUse} now={now} />
+        : <DataRows rows={group.rows} fields={fields} table={table} rowColor={rowColor} baseId={baseId} showUse={showUse} now={now} />}
     </>
   )
 }
@@ -232,6 +306,8 @@ export function RegisterBase({ app, id, tableId }) {
   const [fieldOptions, setFieldOptions] = useState('')
   const [tabName, setTabName] = useState('')
   const [error, setError] = useState('')
+  const [useFilter, setUseFilter] = useState('')
+  const [clearing, setClearing] = useState(false)
   const seen = useRef('')
 
   useEffect(() => {
@@ -245,6 +321,8 @@ export function RegisterBase({ app, id, tableId }) {
     if (table && !viewId) setViewId(table.views[0]?.id || '')
   }, [table, viewId])
 
+  useEffect(() => { setUseFilter('') }, [table?.id])
+
   if (!app.basesReady) return <p className="muted">Opening registers…</p>
   if (!base || !table) {
     return (
@@ -257,9 +335,22 @@ export function RegisterBase({ app, id, tableId }) {
 
   const view = table.views.find((item) => item.id === viewId) || table.views[0]
   const config = view?.config || {}
-  const applied = applyView(table, config, search)
+  const now = new Date()
+  const checkKind = tableCheck(table)
+  const activeUse = useFilter === 'all' ? '' : (useFilter || config.use || '')
+  const applied = applyView(table, { ...config, use: activeUse }, search, now)
   const fields = visibleFields(table, applied.hidden)
   const grouped = Boolean(config.group?.length)
+  const showUse = Boolean(checkKind)
+  const due = quarterTag(now)
+  const examples = (table.rows || []).some((row) => row.values?._example === true)
+  const useChips = checkKind === 'tag'
+    ? [['', 'All'], ['in_date', 'In date'], ['locked', 'Locked out']]
+    : checkKind === 'service'
+      ? [['', 'All'], ['due', 'Service due']]
+      : checkKind === 'hire'
+        ? [['', 'All'], ['on_hire', 'On hire'], ['off_hire', 'Off hire']]
+        : []
 
   const saveConfig = (patch) => {
     if (!view || base.virtual) return
@@ -317,12 +408,27 @@ export function RegisterBase({ app, id, tableId }) {
   }
 
   return (
-    <div className="reg-base">
+    <div className={`reg-base${base.kind === 'out_of_service' ? ' hazard' : ''}`}>
       <p className="eyebrow"><a href="#/registers">Registers</a></p>
       <div className="reg-home-head">
         <h1>{base.name}</h1>
         {!base.virtual && <Button type="button" onClick={addRow}>Add row</Button>}
       </div>
+      {base.virtual && <p className="lede">Form links for this company. Gear does not get a QR sticker.</p>}
+      {checkKind === 'tag' && <p className="quarter-banner"><span className="swatch" style={{ background: due.color }} />Due this quarter: {due.label} ({due.season}). A wrong or expired colour is locked out and can’t be used until it is re-tagged.</p>}
+      {checkKind === 'service' && <p className="lede">Owned heavy plant. Service is due 6 months after the last service.</p>}
+      {checkKind === 'hire' && <p className="lede">Hired and client-owned equipment, with the hire company and the on-hire and off-hire dates.</p>}
+      {base.kind === 'out_of_service' && <p className="lede">Black and yellow means out of service. Returning an item keeps the row in History.</p>}
+      {examples && (
+        <p className="example-banner">
+          These rows are example data.
+          <Button type="button" kind="ghost" disabled={clearing} onClick={async () => {
+            setClearing(true)
+            try { await app.clearExampleRows() } catch (err) { setError(err.message || 'Could not clear the example rows.') }
+            setClearing(false)
+          }}>{clearing ? 'Clearing…' : 'Clear example data'}</Button>
+        </p>
+      )}
       <div className="reg-tabs" role="tablist">
         {base.tables.map((item) => (
           <a key={item.id} role="tab" aria-selected={item.id === table.id} className={item.id === table.id ? 'active' : ''} href={`#/registers/${base.id}/${item.id}`}>{item.name}</a>
@@ -358,6 +464,9 @@ export function RegisterBase({ app, id, tableId }) {
               <span className="sr">Search</span>
               <input aria-label="Search rows" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search" />
             </label>
+            {useChips.map(([value, label]) => (
+              <button key={label} type="button" className={`chip${activeUse === value ? ' active' : ''}`} onClick={() => setUseFilter(value === '' ? 'all' : value)}>{label}</button>
+            ))}
             {!base.virtual && <label className="chip file-chip">Import CSV<input type="file" accept=".csv,text/csv" onChange={onCsv} /></label>}
           </div>
           {error && <p className="note">{error}</p>}
@@ -449,6 +558,7 @@ export function RegisterBase({ app, id, tableId }) {
               <thead>
                 <tr>
                   <th className="frozen num">#</th>
+                  {showUse && <th>Check</th>}
                   {fields.map((field, index) => (
                     <th key={field.id} className={index === 0 ? 'frozen second' : ''}>
                       <span className="reg-type" title={field.type}>{fieldIcon(field.type)}</span>
@@ -459,8 +569,8 @@ export function RegisterBase({ app, id, tableId }) {
               </thead>
               <tbody>
                 {grouped
-                  ? <GroupBlocks groups={applied.groups} depth={0} fields={fields} table={table} hidden={applied.hidden} rowColor={applied.rowColor} baseId={base.id} />
-                  : <DataRows rows={applied.rows} fields={fields} table={table} hidden={applied.hidden} rowColor={applied.rowColor} baseId={base.id} />}
+                  ? <GroupBlocks groups={applied.groups} depth={0} fields={fields} table={table} rowColor={applied.rowColor} baseId={base.id} showUse={showUse} now={now} />
+                  : <DataRows rows={applied.rows} fields={fields} table={table} rowColor={applied.rowColor} baseId={base.id} showUse={showUse} now={now} />}
               </tbody>
             </table>
           </div>
@@ -555,6 +665,8 @@ export function RegisterRecord({ app, id, tableId, rowId }) {
   const [values, setValues] = useState(existing?.values || {})
   const [error, setError] = useState('')
   const [saved, setSaved] = useState('')
+  const [reason, setReason] = useState('')
+  const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     if (existing) setValues(existing.values || {})
@@ -587,11 +699,58 @@ export function RegisterRecord({ app, id, tableId, rowId }) {
     go(`#/registers/${base.id}/${table.id}`)
   }
 
+  const check = rowUse(table, values)
+  const oosBase = bases.find((item) => item.kind === 'out_of_service')
+  const status = table.fields.find((item) => item.name === 'Status')
+  const stillOut = base.kind === 'out_of_service' && values[status?.id] !== 'Returned'
+
+  const takeOut = async () => {
+    setBusy(true)
+    setError('')
+    try {
+      const moved = await app.moveOutOfService(table.id, existing.id, reason)
+      const target = bases.find((item) => item.kind === 'out_of_service') || oosBase
+      if (moved?.oosRow && target) go(`#/registers/${target.id}/${moved.oosTableId}/${moved.oosRow.id}`)
+    } catch (err) {
+      setError(err.message || 'Could not take that item out of service.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const bringBack = async () => {
+    setBusy(true)
+    setError('')
+    try {
+      await app.returnToService(table.id, existing.id)
+      setSaved('Returned to service. This row stays in the history.')
+    } catch (err) {
+      setError(err.message || 'Could not return that item to service.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
-    <form className="reg-record" onSubmit={save}>
+    <form className={`reg-record${base.kind === 'out_of_service' ? ' hazard' : ''}`} onSubmit={save}>
       <p className="eyebrow"><a href={`#/registers/${base.id}/${table.id}`}>{base.name} · {table.name}</a></p>
       <h1>Record</h1>
       <p className="lede">Edit the whole record here. On a phone this is the way to change a row.</p>
+      {check?.state === 'locked' && (
+        <p className="lockout-banner">
+          {check.label}. {check.reason ? `${check.reason}. ` : ''}
+          {check.due ? `Can’t be used until it is re-tagged ${check.due.label} (${check.due.season}).` : 'Can’t be used until it is back in service.'}
+        </p>
+      )}
+      {check?.state === 'due' && <p className="due-banner">SERVICE DUE{check.next ? ` since ${check.next}` : ''}. Owned plant is serviced every 6 months.</p>}
+      {check?.state === 'in_date' && check.due && <p className="ok-banner">In date for {check.due.label} ({check.due.season}).</p>}
+      {values._oos && oosBase && (
+        <p className="lockout-banner">
+          OUT OF SERVICE. The movement is kept on the out-of-service register.
+          {' '}<a href={`#/registers/${oosBase.id}/${oosBase.tables?.[0]?.id}/${values._oosRowId}`}>Open that record</a>
+        </p>
+      )}
+      {values._example && <p className="example-banner">Example row. Clear example data from the register home when you want an empty register.</p>}
       {table.fields.map((field) => (
         <Field key={field.id} label={field.name}>
           {field.type === 'qr'
@@ -599,10 +758,19 @@ export function RegisterRecord({ app, id, tableId, rowId }) {
             : <Editor field={field} value={values[field.id]} onChange={(next) => setValues((prev) => ({ ...prev, [field.id]: next }))} />}
         </Field>
       ))}
+      {base.kind === 'gear' && !values._oos && !existing.readOnly && (
+        <div className="reg-move">
+          <Field label="Reason out of service">
+            <input aria-label="Reason out of service" value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Damaged, failed inspection" />
+          </Field>
+          <Button type="button" kind="ghost" disabled={busy} onClick={takeOut}>Take out of service</Button>
+        </div>
+      )}
       {error && <p className="note">{error}</p>}
       {saved && <p className="lede">{saved}</p>}
       <div className="admin-savebar">
         {!existing.readOnly && <Button type="submit">Save</Button>}
+        {stillOut && !existing.readOnly && <Button type="button" disabled={busy} onClick={bringBack}>Return to service</Button>}
         {!existing.readOnly && <Button type="button" kind="ghost" onClick={remove}>Delete</Button>}
         <Button type="button" kind="ghost" onClick={() => go(`#/registers/${base.id}/${table.id}`)}>Back</Button>
       </div>

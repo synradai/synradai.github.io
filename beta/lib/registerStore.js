@@ -20,20 +20,22 @@ function isDuplicate(err) {
   return message.includes('23505') || /duplicate key/i.test(message)
 }
 
-export function seedBases(supabase) {
-  const key = supabase?.supabaseUrl || 'remote'
+export function resetSeedLock() {
+  pendingSeeds.clear()
+}
+
+export function seedBases(supabase, userKey = '') {
+  const key = `${supabase?.supabaseUrl || 'remote'}:${userKey}`
   if (!pendingSeeds.has(key)) {
     const job = (async () => {
       let list = await pullBases(supabase)
-      if (list.length) return list
-      const { starterBases } = await import('./registers.js')
+      const { missingStarters } = await import('./registers.js')
+      const missing = missingStarters(list)
+      if (!missing.length) return list
       try {
-        await pushBases(supabase, starterBases())
+        await pushBases(supabase, missing)
       } catch (err) {
         if (!isDuplicate(err)) throw err
-        list = await pullBases(supabase)
-        if (list.length) return list
-        await pushBases(supabase, starterBases())
       }
       return pullBases(supabase)
     })()
@@ -233,5 +235,10 @@ export async function pushRow(supabase, tableId, item) {
 
 export async function removeRow(supabase, id) {
   const { error } = await supabase.from('register_rows').delete().eq('id', id)
+  if (error) throw error
+}
+
+export async function removeExampleRows(supabase) {
+  const { error } = await supabase.from('register_rows').delete().contains('values', { _example: true })
   if (error) throw error
 }
