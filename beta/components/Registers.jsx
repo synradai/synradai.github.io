@@ -101,8 +101,8 @@ function Cell({ field, value, row }) {
     return <span className="reg-chips">{items.map((item) => <Pill key={item} field={field} value={item} />)}</span>
   }
   if (field.type === 'checkbox') {
-    if (value === true) return <span className="reg-chip" style={{ background: '#1f8a4c', color: '#ffffff' }}>Yes</span>
-    if (value === false) return <span className="reg-chip" style={{ background: '#2a3140', color: '#ffffff' }}>No</span>
+    if (value === true) return <span className="reg-chip plain">Yes</span>
+    if (value === false) return <span className="reg-chip plain off">No</span>
     return null
   }
   if (field.type === 'attachment') {
@@ -154,8 +154,8 @@ function RegisterCard({ base, app }) {
         <strong>{base.name}</strong>
         <span className="reg-counts">
           <span><b>{stats.total}</b> total</span>
-          <span><b>{stats.locked}</b> locked out</span>
-          <span><b>{stats.dueSoon}</b> due soon</span>
+          <span className={stats.locked ? 'is-alert' : ''}><b>{stats.locked}</b> locked out</span>
+          <span className={stats.dueSoon ? 'is-due' : ''}><b>{stats.dueSoon}</b> due soon</span>
         </span>
         <span className="reg-card-meta">{openedAgo(base.openedAt)}</span>
       </a>
