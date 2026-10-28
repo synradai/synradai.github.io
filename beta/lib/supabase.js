@@ -9,7 +9,9 @@ const key = import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env?.V
 
 export const supabaseUrl = url
 export const supabaseKey = key
-export const liveProjectBlocked = Boolean(url && url.includes(LIVE_PROJECT_REF))
+// Only the /app/ build (vite --mode app) may connect to the live project.
+export const isLiveAppBuild = import.meta.env?.MODE === 'app'
+export const liveProjectBlocked = Boolean(url && url.includes(LIVE_PROJECT_REF)) && !isLiveAppBuild
 export const isBackendEnabled = Boolean(url && key) && !liveProjectBlocked
 export const proxyUrl = import.meta.env?.VITE_AI_PROXY_URL || ''
 // Magic-link emails must return to beta, not the site-root Site URL.

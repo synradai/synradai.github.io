@@ -17,17 +17,20 @@ export default defineConfig(({ mode }) => {
       'Refusing to build the beta in production mode. That mode loads .env.production (the live Supabase project). Use npm run build:beta.',
     )
   }
+  // Mode "app" is the same beta app built a second time against the LIVE
+  // project and served at /app/. Env comes from the workflow, not a file.
+  const isApp = mode === 'app'
   return {
     // Root is beta/ so the built index.html lands at dist-beta/index.html,
     // not dist-beta/beta/index.html. base '/beta/' then matches a folder
     // dropped onto GitHub Pages at /beta/.
     root: resolve(root, 'beta'),
-    base: '/beta/',
+    base: isApp ? '/app/' : '/beta/',
     envDir: root,
     publicDir: resolve(root, 'beta/public'),
     plugins: [react()],
     build: {
-      outDir: resolve(root, 'dist-beta'),
+      outDir: resolve(root, isApp ? 'dist-app' : 'dist-beta'),
       emptyOutDir: true,
     },
     server: {

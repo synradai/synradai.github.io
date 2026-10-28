@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "dev:beta": "vite --config vite.beta.config.js --mode beta",
     "build:beta": "vite build --config vite.beta.config.js --mode beta",
+    "build:app": "vite build --config vite.beta.config.js --mode app",
     "preview:beta": "vite preview --config vite.beta.config.js --mode beta --host",
     "test": "node --test src/utils/aal.test.js src/utils/foreignAuth.test.js src/utils/secureStore.test.js src/utils/pdf.test.js",
     "test:beta": "node --test beta/lib/beta.test.js beta/lib/registers.test.js supabase/functions/generate-grok/convert.test.js src/utils/aal.test.js src/utils/foreignAuth.test.js src/utils/secureStore.test.js src/utils/pdf.test.js"

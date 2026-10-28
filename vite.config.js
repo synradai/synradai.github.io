@@ -26,8 +26,8 @@ export default defineConfig({
         // globPatterns would otherwise precache those index.html files, and the
         // navigation fallback would serve this app's shell for those URLs
         // (including with no slash, and with a query string).
-        globIgnores: ['tracker/**', 'muay-thai/**', 'beta/**'],
-        navigateFallbackDenylist: [/^\/tracker\//, /^\/muay-thai(?:\/|\?|$)/, /^\/beta(?:\/|\?|$)/],
+        globIgnores: ['tracker/**', 'muay-thai/**', 'beta/**', 'app/**'],
+        navigateFallbackDenylist: [/^\/tracker\//, /^\/muay-thai(?:\/|\?|$)/, /^\/beta(?:\/|\?|$)/, /^\/app(?:\/|\?|$)/],
         cleanupOutdatedCaches: true,
         // App data/API calls (Supabase, AI proxy) always go to the network —
         // never cache them. Only same-origin static assets are precached, plus
